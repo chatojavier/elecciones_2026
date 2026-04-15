@@ -1,0 +1,212 @@
+{
+  "scopes": [
+    {
+      "scopeId": "010000",
+      "kind": "department",
+      "label": "AMAZONAS",
+      "electores": 345247,
+      "padronShare": 1.2635,
+      "displayOrder": 1
+    },
+    {
+      "scopeId": "020000",
+      "kind": "department",
+      "label": "ÁNCASH",
+      "electores": 971389,
+      "padronShare": 3.5549,
+      "displayOrder": 2
+    },
+    {
+      "scopeId": "030000",
+      "kind": "department",
+      "label": "APURÍMAC",
+      "electores": 361340,
+      "padronShare": 1.3224,
+      "displayOrder": 3
+    },
+    {
+      "scopeId": "040000",
+      "kind": "department",
+      "label": "AREQUIPA",
+      "electores": 1226520,
+      "padronShare": 4.4886,
+      "displayOrder": 4
+    },
+    {
+      "scopeId": "050000",
+      "kind": "department",
+      "label": "AYACUCHO",
+      "electores": 520237,
+      "padronShare": 1.9039,
+      "displayOrder": 5
+    },
+    {
+      "scopeId": "060000",
+      "kind": "department",
+      "label": "CAJAMARCA",
+      "electores": 1198774,
+      "padronShare": 4.387,
+      "displayOrder": 6
+    },
+    {
+      "scopeId": "240000",
+      "kind": "department",
+      "label": "CALLAO",
+      "electores": 858972,
+      "padronShare": 3.1435,
+      "displayOrder": 7
+    },
+    {
+      "scopeId": "070000",
+      "kind": "department",
+      "label": "CUSCO",
+      "electores": 1133754,
+      "padronShare": 4.1491,
+      "displayOrder": 8
+    },
+    {
+      "scopeId": "080000",
+      "kind": "department",
+      "label": "HUANCAVELICA",
+      "electores": 339450,
+      "padronShare": 1.2422,
+      "displayOrder": 9
+    },
+    {
+      "scopeId": "090000",
+      "kind": "department",
+      "label": "HUÁNUCO",
+      "electores": 656513,
+      "padronShare": 2.4026,
+      "displayOrder": 10
+    },
+    {
+      "scopeId": "100000",
+      "kind": "department",
+      "label": "ICA",
+      "electores": 714002,
+      "padronShare": 2.613,
+      "displayOrder": 11
+    },
+    {
+      "scopeId": "110000",
+      "kind": "department",
+      "label": "JUNÍN",
+      "electores": 1062508,
+      "padronShare": 3.8883,
+      "displayOrder": 12
+    },
+    {
+      "scopeId": "120000",
+      "kind": "department",
+      "label": "LA LIBERTAD",
+      "electores": 1552680,
+      "padronShare": 5.6822,
+      "displayOrder": 13
+    },
+    {
+      "scopeId": "130000",
+      "kind": "department",
+      "label": "LAMBAYEQUE",
+      "electores": 1051357,
+      "padronShare": 3.8475,
+      "displayOrder": 14
+    },
+    {
+      "scopeId": "140000",
+      "kind": "department",
+      "label": "LIMA",
+      "electores": 8651045,
+      "padronShare": 31.6592,
+      "displayOrder": 15
+    },
+    {
+      "scopeId": "150000",
+      "kind": "department",
+      "label": "LORETO",
+      "electores": 775930,
+      "padronShare": 2.8396,
+      "displayOrder": 16
+    },
+    {
+      "scopeId": "160000",
+      "kind": "department",
+      "label": "MADRE DE DIOS",
+      "electores": 147578,
+      "padronShare": 0.5401,
+      "displayOrder": 17
+    },
+    {
+      "scopeId": "170000",
+      "kind": "department",
+      "label": "MOQUEGUA",
+      "electores": 164628,
+      "padronShare": 0.6025,
+      "displayOrder": 18
+    },
+    {
+      "scopeId": "180000",
+      "kind": "department",
+      "label": "PASCO",
+      "electores": 223696,
+      "padronShare": 0.8186,
+      "displayOrder": 19
+    },
+    {
+      "scopeId": "190000",
+      "kind": "department",
+      "label": "PIURA",
+      "electores": 1534078,
+      "padronShare": 5.6141,
+      "displayOrder": 20
+    },
+    {
+      "scopeId": "200000",
+      "kind": "department",
+      "label": "PUNO",
+      "electores": 963491,
+      "padronShare": 3.526,
+      "displayOrder": 21
+    },
+    {
+      "scopeId": "210000",
+      "kind": "department",
+      "label": "SAN MARTÍN",
+      "electores": 723604,
+      "padronShare": 2.6481,
+      "displayOrder": 22
+    },
+    {
+      "scopeId": "220000",
+      "kind": "department",
+      "label": "TACNA",
+      "electores": 302614,
+      "padronShare": 1.1074,
+      "displayOrder": 23
+    },
+    {
+      "scopeId": "230000",
+      "kind": "department",
+      "label": "TUMBES",
+      "electores": 181318,
+      "padronShare": 0.6635,
+      "displayOrder": 24
+    },
+    {
+      "scopeId": "250000",
+      "kind": "department",
+      "label": "UCAYALI",
+      "electores": 453930,
+      "padronShare": 1.6612,
+      "displayOrder": 25
+    },
+    {
+      "scopeId": "2",
+      "kind": "foreign_total",
+      "label": "PERUANOS EN EL EXTRANJERO",
+      "electores": 1210847,
+      "padronShare": 4.4312,
+      "displayOrder": 26
+    }
+  ]
+}

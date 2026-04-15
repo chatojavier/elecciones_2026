@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { fetchSnapshot, refreshSnapshot } from "./lib/api";
 import {
@@ -11,11 +11,13 @@ import { getCandidateColor } from "./lib/constants";
 import {
   formatCompactNumber,
   formatDateTime,
+  getElapsedMinutes,
   formatNumber,
   formatPercent,
   formatRelativeMinutes,
   formatSignedDecimal,
-  formatSignedNumber
+  formatSignedNumber,
+  formatTitleCase
 } from "./lib/format";
 import type { ElectionSnapshot, ScopeResult } from "./lib/types";
 
@@ -40,7 +42,7 @@ function CandidatePill({
       type="button"
     >
       <span className="candidate-pill__dot" />
-      {label}
+      {formatTitleCase(label)}
     </button>
   );
 }
@@ -56,7 +58,7 @@ function FeaturedBar({
     <article className="featured-bar">
       <div className="featured-bar__header">
         <div>
-          <strong>{item.label}</strong>
+          <strong>{formatTitleCase(item.label)}</strong>
           <small>Actual total ONPE vs Proyectado total</small>
         </div>
         <strong className="featured-bar__delta-badge">
@@ -184,6 +186,8 @@ export default function App() {
   const [showOthers, setShowOthers] = useState(true);
   const [regionalComparisonMode, setRegionalComparisonMode] =
     useState<ComparisonMode>("projected");
+  const [clockNow, setClockNow] = useState(() => Date.now());
+  const lastAutoRefreshKeyRef = useRef<string | null>(null);
 
   async function loadSnapshot(background = false) {
     if (background) {
@@ -220,6 +224,14 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setClockNow(Date.now());
+    }, 15000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
     if (!snapshot) {
       return;
     }
@@ -232,6 +244,27 @@ export default function App() {
       return snapshot.featuredCandidateCodes[0] ?? "otros";
     });
   }, [snapshot]);
+
+  const sourceAgeMinutes = snapshot ? getElapsedMinutes(snapshot.sourceLastUpdatedAt, clockNow) : null;
+
+  useEffect(() => {
+    if (!snapshot || sourceAgeMinutes === null || loading || refreshing) {
+      return;
+    }
+
+    if (sourceAgeMinutes !== 16 && sourceAgeMinutes !== 31) {
+      return;
+    }
+
+    const refreshKey = `${snapshot.sourceLastUpdatedAt}:${sourceAgeMinutes}`;
+
+    if (lastAutoRefreshKeyRef.current === refreshKey) {
+      return;
+    }
+
+    lastAutoRefreshKeyRef.current = refreshKey;
+    void loadSnapshot(true);
+  }, [clockNow, loading, refreshing, snapshot, sourceAgeMinutes]);
 
   const featuredLegend = useMemo(() => {
     if (!snapshot) {
@@ -271,7 +304,7 @@ export default function App() {
 
   const projectedNationalDeltaVotes = snapshot
     ? snapshot.projectedNational.totalProjectedValidVotes -
-      (snapshot.national.totalVotosValidos + snapshot.foreign.totalVotosValidos)
+    (snapshot.national.totalVotosValidos + snapshot.foreign.totalVotosValidos)
     : 0;
 
   if (loading) {
@@ -320,7 +353,7 @@ export default function App() {
           </div>
           <div>
             <span>Fuente ONPE</span>
-            <strong>{formatRelativeMinutes(snapshot.sourceLastUpdatedAt)}</strong>
+            <strong>{formatRelativeMinutes(snapshot.sourceLastUpdatedAt, clockNow)}</strong>
           </div>
           <div>
             <div className="status-card__top">
@@ -439,18 +472,16 @@ export default function App() {
                 <span>Columna final</span>
                 <div className="toggle-group" role="tablist" aria-label="Comparación regional">
                   <button
-                    className={`toggle-button ${
-                      regionalComparisonMode === "projected" ? "is-active" : ""
-                    }`}
+                    className={`toggle-button ${regionalComparisonMode === "projected" ? "is-active" : ""
+                      }`}
                     type="button"
                     onClick={() => setRegionalComparisonMode("projected")}
                   >
                     Proyectado
                   </button>
                   <button
-                    className={`toggle-button ${
-                      regionalComparisonMode === "current" ? "is-active" : ""
-                    }`}
+                    className={`toggle-button ${regionalComparisonMode === "current" ? "is-active" : ""
+                      }`}
                     type="button"
                     onClick={() => setRegionalComparisonMode("current")}
                   >
@@ -482,8 +513,7 @@ export default function App() {
                   <th>% padrón</th>
                   <th>Actas</th>
                   <th>Participación</th>
-                  <th>Candidatos destacados</th>
-                  {showOthers ? <th>Otros</th> : null}
+                  <th>{showOthers ? "Candidatos destacados + Otros" : "Candidatos destacados"}</th>
                   <th>
                     {regionalComparisonMode === "projected"
                       ? "Proyección seleccionada"
@@ -504,14 +534,20 @@ export default function App() {
 
                   return (
                     <tr key={region.scopeId}>
-                      <td>
+                      <td data-label="Región">
                         <strong>{region.label}</strong>
                       </td>
-                      <td>{formatNumber(region.electores)}</td>
-                      <td>{formatPercent(region.padronShare, 2)}</td>
-                      <td>{formatPercent(region.actasContabilizadasPct, 2)}</td>
-                      <td>{formatPercent(region.participacionCiudadanaPct, 2)}</td>
-                      <td>
+                      <td data-label="Electores">{formatNumber(region.electores)}</td>
+                      <td data-label="% padrón">{formatPercent(region.padronShare, 2)}</td>
+                      <td data-label="Actas">{formatPercent(region.actasContabilizadasPct, 2)}</td>
+                      <td data-label="Participación">
+                        {formatPercent(region.participacionCiudadanaPct, 2)}
+                      </td>
+                      <td
+                        data-label={
+                          showOthers ? "Candidatos destacados + Otros" : "Candidatos destacados"
+                        }
+                      >
                         <div className="mini-stack">
                           {region.featuredCandidates.map((candidate) => (
                             <div key={candidate.code} className="mini-stack__row">
@@ -521,10 +557,25 @@ export default function App() {
                                   background: getCandidateColor(candidate.code)
                                 }}
                               />
-                              <span>{candidate.candidateName}</span>
+                              <span>{formatTitleCase(candidate.candidateName)}</span>
                               <strong>{formatPercent(candidate.pctValid, 2)}</strong>
                             </div>
                           ))}
+
+                          {showOthers ? (
+                            <div className="mini-stack__row">
+                              <span
+                                className="mini-stack__swatch"
+                                style={{
+                                  background: getCandidateColor(
+                                    "otros",
+                                  )
+                                }}
+                              />
+                              <span>Otros</span>
+                              <strong>{formatPercent(region.otros.pctValid, 2)}</strong>
+                            </div>
+                          ) : null}
                         </div>
                       </td>
                       {showOthers ? (
@@ -541,12 +592,18 @@ export default function App() {
                           </div>
                         </td>
                       ) : null}
-                      <td>
+                      <td
+                        data-label={
+                          regionalComparisonMode === "projected"
+                            ? "Proyección seleccionada"
+                            : "Actual seleccionado"
+                        }
+                      >
                         <div className="comparison-cell">
                           <strong>{formatNumber(comparisonVotes)}</strong>
                           <span>{formatPercent(comparisonPercentage, 2)}</span>
                           <small>
-                            {selectedComparison.label} ·{" "}
+                            {formatTitleCase(selectedComparison.label)} ·{" "}
                             {isProjectedMode ? "Proyectado" : "Actual ONPE"}
                           </small>
                         </div>

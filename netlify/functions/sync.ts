@@ -1,3 +1,4 @@
+import { connectLambda } from "@netlify/blobs";
 import type { Handler } from "@netlify/functions";
 
 import { jsonResponse } from "./_shared/http";
@@ -7,7 +8,9 @@ export const config = {
   schedule: "*/15 * * * *"
 };
 
-export const handler: Handler = async () => {
+export const handler: Handler = async (event) => {
+  connectLambda(event as unknown as Parameters<typeof connectLambda>[0]);
+
   try {
     const { health } = await runSync();
 

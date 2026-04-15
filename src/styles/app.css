@@ -433,7 +433,7 @@ small {
 .results-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 1120px;
+  min-width: 1000px;
 }
 
 .results-table th {

@@ -6,6 +6,8 @@ export const ONPE_ELECTION_ID = Number(process.env.ONPE_ELECTION_ID ?? "10");
 export const ONPE_USER_AGENT =
   process.env.ONPE_USER_AGENT ??
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.4 Safari/605.1.15";
+export const ONPE_ACCEPT_LANGUAGE =
+  process.env.ONPE_ACCEPT_LANGUAGE ?? "en-GB,en-US;q=0.9,en;q=0.8";
 export const ONPE_REFERER =
   process.env.ONPE_REFERER ??
   "https://resultadoelectoral.onpe.gob.pe/main/resumen";

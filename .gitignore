@@ -6,4 +6,4 @@ dist
 *.tsbuildinfo
 vite.config.js
 vite.config.d.ts
-public/dev-snapshot.json
+*dev-snapshot.json

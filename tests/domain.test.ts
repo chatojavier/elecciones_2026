@@ -93,7 +93,7 @@ const participants: OnpeParticipant[] = [
 ];
 
 describe("buildScopeResult", () => {
-  it("mantiene el orden editorial de destacados y agrupa Otros con votos reales", () => {
+  it("selecciona el top 5 por votos y agrupa el resto en Otros", () => {
     const catalog = buildCandidateCatalog(participants);
     const scope = buildScopeResult({
       scopeId: "040000",
@@ -107,16 +107,16 @@ describe("buildScopeResult", () => {
     });
 
     expect(scope.featuredCandidates.map((candidate) => candidate.code)).toEqual([
-      "8",
       "35",
+      "8",
       "16",
-      "10",
-      "14"
+      "99",
+      "10"
     ]);
-    expect(scope.otros.votesValid).toBe(25000);
-    expect(scope.otros.pctValid).toBe(25);
-    expect(scope.projectedVotes["8"]).toBe(200000);
-    expect(scope.projectedVotes.otros).toBe(250000);
+    expect(scope.otros.votesValid).toBe(15000);
+    expect(scope.otros.pctValid).toBe(15);
+    expect(scope.projectedVotes["35"]).toBe(31056);
+    expect(scope.projectedVotes.otros).toBe(18634);
   });
 });
 
@@ -145,10 +145,16 @@ describe("buildProjectedNationalSummary", () => {
       candidateCatalog: catalog
     });
 
-    const projected = buildProjectedNationalSummary([region], foreign, 1500000);
+    const projected = buildProjectedNationalSummary(
+      [region],
+      foreign,
+      1500000,
+      region.featuredCandidates.map((candidate) => candidate.code)
+    );
 
-    expect(projected.projectedVotes["35"]).toBe(375000);
-    expect(projected.projectedVotes.otros).toBe(375000);
+    expect(projected.totalProjectedValidVotes).toBe(248450);
+    expect(projected.projectedVotes["35"]).toBe(62112);
+    expect(projected.projectedVotes.otros).toBe(37268);
     expect(projected.projectedPercentages["8"]).toBe(20);
   });
 });

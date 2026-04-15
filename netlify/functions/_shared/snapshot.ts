@@ -6,7 +6,6 @@ import {
   computeIsStale,
   getScopeMetaTotals
 } from "../../../src/lib/domain";
-import { FEATURED_CANDIDATE_CODES } from "../../../src/lib/constants";
 import type {
   ElectionSnapshot,
   HealthStatus,
@@ -56,8 +55,8 @@ function getForeignMeta() {
   return scope;
 }
 
-function buildPeruNationalProjectedVotes(regions: ScopeResult[]) {
-  return FEATURED_CANDIDATE_CODES.reduce<Record<string, number>>(
+function buildPeruNationalProjectedVotes(regions: ScopeResult[], featuredCodes: string[]) {
+  return featuredCodes.reduce<Record<string, number>>(
     (acc, code) => {
       acc[code] = regions.reduce((sum, region) => sum + (region.projectedVotes[code] ?? 0), 0);
       return acc;
@@ -86,6 +85,17 @@ export async function buildElectionSnapshot() {
   const candidateCatalog = buildCandidateCatalog(nationalParticipants);
   const { peruElectores, totalElectores } = getScopeMetaTotals(scopesMeta);
   const foreignMeta = getForeignMeta();
+  const national = buildScopeResult({
+    scopeId: "1",
+    kind: "national",
+    label: "PERÚ",
+    electores: peruElectores,
+    padronShare: Number(((peruElectores / totalElectores) * 100).toFixed(4)),
+    totals: nationalTotals,
+    participants: nationalParticipants,
+    candidateCatalog
+  });
+  const featuredCandidateCodes = national.featuredCandidates.map((candidate) => candidate.code);
 
   const regionPayloads = await Promise.all(
     departmentList.map(async (department) => {
@@ -112,23 +122,13 @@ export async function buildElectionSnapshot() {
         padronShare: meta.padronShare,
         totals,
         participants,
-        candidateCatalog
+        candidateCatalog,
+        featuredCodes: featuredCandidateCodes
       })
     )
     .sort((left, right) => left.label.localeCompare(right.label, "es"));
 
-  const national = buildScopeResult({
-    scopeId: "1",
-    kind: "national",
-    label: "PERÚ",
-    electores: peruElectores,
-    padronShare: Number(((peruElectores / totalElectores) * 100).toFixed(4)),
-    totals: nationalTotals,
-    participants: nationalParticipants,
-    candidateCatalog
-  });
-
-  national.projectedVotes = buildPeruNationalProjectedVotes(regions);
+  national.projectedVotes = buildPeruNationalProjectedVotes(regions, featuredCandidateCodes);
 
   const foreign = buildScopeResult({
     scopeId: foreignMeta.scopeId,
@@ -138,7 +138,8 @@ export async function buildElectionSnapshot() {
     padronShare: foreignMeta.padronShare,
     totals: foreignTotals,
     participants: foreignParticipants,
-    candidateCatalog
+    candidateCatalog,
+    featuredCodes: featuredCandidateCodes
   });
 
   const sourceLastUpdatedAt = [national, foreign, ...regions]
@@ -151,7 +152,12 @@ export async function buildElectionSnapshot() {
   }
 
   const generatedAt = new Date().toISOString();
-  const projectedNational = buildProjectedNationalSummary(regions, foreign, totalElectores);
+  const projectedNational = buildProjectedNationalSummary(
+    regions,
+    foreign,
+    totalElectores,
+    featuredCandidateCodes
+  );
 
   const snapshot: ElectionSnapshot = {
     generatedAt,
@@ -161,7 +167,7 @@ export async function buildElectionSnapshot() {
     foreign,
     regions,
     projectedNational,
-    featuredCandidateCodes: [...FEATURED_CANDIDATE_CODES],
+    featuredCandidateCodes,
     isStale: computeIsStale(sourceLastUpdatedAt)
   };
 

@@ -1,13 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { fetchSnapshot } from "./lib/api";
-import { CANDIDATE_COLOR_MAP, FEATURED_CANDIDATE_CODES } from "./lib/constants";
+import { fetchSnapshot, refreshSnapshot } from "./lib/api";
+import {
+  buildNationalComparisonItems,
+  buildScopeComparisonItem,
+  type ComparisonItem,
+  type ComparisonMode
+} from "./lib/comparison";
+import { getCandidateColor } from "./lib/constants";
 import {
   formatCompactNumber,
   formatDateTime,
   formatNumber,
   formatPercent,
-  formatRelativeMinutes
+  formatRelativeMinutes,
+  formatSignedDecimal,
+  formatSignedNumber
 } from "./lib/format";
 import type { ElectionSnapshot, ScopeResult } from "./lib/types";
 
@@ -17,18 +25,20 @@ function CandidatePill({
   code,
   label,
   active,
+  featuredCodes,
   onClick
 }: {
   code: string;
   label: string;
   active: boolean;
+  featuredCodes: string[];
   onClick: (code: string) => void;
 }) {
   return (
     <button
       className={`candidate-pill ${active ? "is-active" : ""}`}
       onClick={() => onClick(code)}
-      style={{ ["--candidate-color" as string]: CANDIDATE_COLOR_MAP[code] }}
+      style={{ ["--candidate-color" as string]: getCandidateColor(code, featuredCodes) }}
       type="button"
     >
       <span className="candidate-pill__dot" />
@@ -38,32 +48,70 @@ function CandidatePill({
 }
 
 function FeaturedBar({
-  label,
-  percentage,
-  votes,
-  code
+  item,
+  featuredCodes
 }: {
-  label: string;
-  percentage: number;
-  votes: number;
-  code: string;
+  item: ComparisonItem;
+  featuredCodes: string[];
 }) {
+  const color = getCandidateColor(item.code, featuredCodes);
+
   return (
     <article className="featured-bar">
       <div className="featured-bar__header">
-        <strong>{label}</strong>
-        <span>{formatPercent(percentage, 2)}</span>
+        <div>
+          <strong>{item.label}</strong>
+          <small>Actual total ONPE vs Proyectado total</small>
+        </div>
+        <strong className="featured-bar__delta-badge">
+          {formatSignedDecimal(item.deltaPercentage, 2)} pp
+        </strong>
       </div>
-      <div className="featured-bar__track">
-        <div
-          className="featured-bar__fill"
-          style={{
-            width: `${Math.max(percentage, 0.5)}%`,
-            background: CANDIDATE_COLOR_MAP[code]
-          }}
-        />
+
+      <div className="featured-bar__tracks">
+        <div className="featured-bar__track-meta">
+          <span>Actual total ONPE</span>
+          <strong>{formatPercent(item.actualPercentage, 2)}</strong>
+        </div>
+        <div className="featured-bar__track featured-bar__track--overlay">
+          <div
+            className="featured-bar__fill featured-bar__fill--actual"
+            style={{
+              width: `${Math.max(item.actualPercentage, 0.5)}%`,
+              background: color
+            }}
+          />
+          <div
+            className="featured-bar__fill featured-bar__fill--projected"
+            style={{
+              width: `${Math.max(item.projectedPercentage, 0.5)}%`,
+              background: color
+            }}
+          />
+        </div>
+        <div className="featured-bar__track-meta">
+          <span>Proyectado</span>
+          <strong>{formatPercent(item.projectedPercentage, 2)}</strong>
+        </div>
       </div>
-      <small>{formatNumber(votes)} votos proyectados</small>
+
+      <div className="featured-bar__stats">
+        <div className="featured-bar__stat">
+          <span>Actual total ONPE</span>
+          <strong>{formatPercent(item.actualPercentage, 2)}</strong>
+          <small>{formatNumber(item.actualVotes)} votos</small>
+        </div>
+        <div className="featured-bar__stat">
+          <span>Proyectado</span>
+          <strong>{formatPercent(item.projectedPercentage, 2)}</strong>
+          <small>{formatNumber(item.projectedVotes)} votos</small>
+        </div>
+        <div className="featured-bar__stat featured-bar__stat--delta">
+          <span>Delta</span>
+          <strong>{formatSignedDecimal(item.deltaPercentage, 2)} pp</strong>
+          <small>{formatSignedNumber(item.deltaVotes)} votos</small>
+        </div>
+      </div>
     </article>
   );
 }
@@ -133,23 +181,61 @@ export default function App() {
   const [snapshot, setSnapshot] = useState<ElectionSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("projection");
-  const [selectedCode, setSelectedCode] = useState<string>(FEATURED_CANDIDATE_CODES[0]);
+  const [selectedCode, setSelectedCode] = useState<string>("");
   const [showOthers, setShowOthers] = useState(true);
+  const [regionalComparisonMode, setRegionalComparisonMode] =
+    useState<ComparisonMode>("projected");
+
+  async function loadSnapshot(background = false) {
+    if (background) {
+      setRefreshing(true);
+      setRefreshError(null);
+    } else {
+      setLoading(true);
+    }
+
+    try {
+      const data = background ? await refreshSnapshot() : await fetchSnapshot();
+      setSnapshot(data);
+      setError(null);
+      setRefreshError(null);
+    } catch (reason) {
+      const message = (reason as Error).message;
+
+      if (background && snapshot) {
+        setRefreshError(message);
+      } else {
+        setError(message);
+      }
+    } finally {
+      if (background) {
+        setRefreshing(false);
+      } else {
+        setLoading(false);
+      }
+    }
+  }
 
   useEffect(() => {
-    fetchSnapshot()
-      .then((data) => {
-        setSnapshot(data);
-        setError(null);
-      })
-      .catch((reason) => {
-        setError((reason as Error).message);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+    void loadSnapshot();
   }, []);
+
+  useEffect(() => {
+    if (!snapshot) {
+      return;
+    }
+
+    setSelectedCode((currentCode) => {
+      if (currentCode && snapshot.featuredCandidateCodes.includes(currentCode)) {
+        return currentCode;
+      }
+
+      return snapshot.featuredCandidateCodes[0] ?? "otros";
+    });
+  }, [snapshot]);
 
   const featuredLegend = useMemo(() => {
     if (!snapshot) {
@@ -170,27 +256,27 @@ export default function App() {
     return sortRegions(snapshot.regions, selectedCode, sortKey);
   }, [selectedCode, snapshot, sortKey]);
 
-  const featuredProjectionBars = useMemo(() => {
+  const nationalComparisonItems = useMemo(() => {
     if (!snapshot) {
       return [];
     }
 
-    return snapshot.national.featuredCandidates.map((candidate) => ({
-      code: candidate.code,
-      label: candidate.candidateName,
-      percentage: snapshot.projectedNational.projectedPercentages[candidate.code] ?? 0,
-      votes: snapshot.projectedNational.projectedVotes[candidate.code] ?? 0
-    }));
+    return buildNationalComparisonItems(snapshot);
   }, [snapshot]);
 
+  const featuredComparisonBars = useMemo(
+    () => nationalComparisonItems.filter((item) => item.code !== "otros"),
+    [nationalComparisonItems]
+  );
+
   const othersBar = snapshot
-    ? {
-        code: "otros",
-        label: "Otros",
-        percentage: snapshot.projectedNational.projectedPercentages.otros ?? 0,
-        votes: snapshot.projectedNational.projectedVotes.otros ?? 0
-      }
+    ? nationalComparisonItems.find((item) => item.code === "otros") ?? null
     : null;
+
+  const projectedNationalDeltaVotes = snapshot
+    ? snapshot.projectedNational.totalProjectedValidVotes -
+      (snapshot.national.totalVotosValidos + snapshot.foreign.totalVotosValidos)
+    : 0;
 
   if (loading) {
     return (
@@ -223,7 +309,7 @@ export default function App() {
           <h1>Perú 2026, una lectura pública del conteo y su proyección nacional.</h1>
           <p className="hero__lede">
             Snapshot server-side desde ONPE, con extranjero separado y una proyección agregada
-            sobre electores congelados por ámbito.
+            de votos válidos según avance de actas por ámbito.
           </p>
         </div>
 
@@ -241,10 +327,26 @@ export default function App() {
             <strong>{formatRelativeMinutes(snapshot.sourceLastUpdatedAt)}</strong>
           </div>
           <div>
-            <span>Estado</span>
-            <strong className={snapshot.isStale ? "status-badge is-stale" : "status-badge"}>
-              {snapshot.isStale ? "Stale" : "Al día"}
-            </strong>
+            <div className="status-card__top">
+              <div>
+                <span>Estado</span>
+                <strong className={snapshot.isStale ? "status-badge is-stale" : "status-badge"}>
+                  {snapshot.isStale ? "Stale" : "Al día"}
+                </strong>
+              </div>
+              <button
+                className={`refresh-button ${refreshing ? "is-loading" : ""}`}
+                type="button"
+                onClick={() => void loadSnapshot(true)}
+                disabled={refreshing}
+              >
+                {refreshing ? <span className="refresh-button__spinner" aria-hidden="true" /> : null}
+                {refreshing ? "Actualizando..." : "Actualizar datos"}
+              </button>
+            </div>
+            <small className="status-card__note">
+              {refreshError ?? "Fuerza una nueva consulta a ONPE."}
+            </small>
           </div>
         </div>
       </section>
@@ -258,11 +360,32 @@ export default function App() {
         />
         <section className="projection-card">
           <p className="eyebrow">Proyección nacional</p>
-          <h2>{formatNumber(snapshot.projectedNational.totalElectores)} electores considerados</h2>
+          <h2>
+            {formatNumber(snapshot.projectedNational.totalProjectedValidVotes)} votos válidos
+            proyectados
+          </h2>
           <p>
-            Suma de proyección regional Perú más el agregado de extranjero sobre padrón
-            congelado.
+            Suma de proyección regional Perú más el agregado de extranjero, extrapolada por avance
+            de actas contabilizadas.
           </p>
+          <div className="projection-card__comparison">
+            <div>
+              <span>Actual total ONPE</span>
+              <strong>
+                {formatNumber(
+                  snapshot.national.totalVotosValidos + snapshot.foreign.totalVotosValidos
+                )}
+              </strong>
+            </div>
+            <div>
+              <span>Proyectado</span>
+              <strong>{formatNumber(snapshot.projectedNational.totalProjectedValidVotes)}</strong>
+            </div>
+            <div>
+              <span>Delta</span>
+              <strong>{formatSignedNumber(projectedNationalDeltaVotes)}</strong>
+            </div>
+          </div>
         </section>
       </section>
 
@@ -271,27 +394,23 @@ export default function App() {
           <div className="panel__header">
             <div>
               <p className="eyebrow">Comparativa central</p>
-              <h2>Candidatos destacados + Otros</h2>
+              <h2>Candidatos destacados + Otros, total elección</h2>
             </div>
           </div>
 
           <div className="featured-bars">
-            {featuredProjectionBars.map((item) => (
+            {featuredComparisonBars.map((item) => (
               <FeaturedBar
                 key={item.code}
-                code={item.code}
-                label={item.label}
-                percentage={item.percentage}
-                votes={item.votes}
+                item={item}
+                featuredCodes={snapshot.featuredCandidateCodes}
               />
             ))}
 
             {showOthers && othersBar ? (
               <FeaturedBar
-                code={othersBar.code}
-                label={othersBar.label}
-                percentage={othersBar.percentage}
-                votes={othersBar.votes}
+                item={othersBar}
+                featuredCodes={snapshot.featuredCandidateCodes}
               />
             ) : null}
           </div>
@@ -323,6 +442,30 @@ export default function App() {
               >
                 {showOthers ? "Ocultar Otros" : "Mostrar Otros"}
               </button>
+
+              <div className="control">
+                <span>Columna final</span>
+                <div className="toggle-group" role="tablist" aria-label="Comparación regional">
+                  <button
+                    className={`toggle-button ${
+                      regionalComparisonMode === "projected" ? "is-active" : ""
+                    }`}
+                    type="button"
+                    onClick={() => setRegionalComparisonMode("projected")}
+                  >
+                    Proyectado
+                  </button>
+                  <button
+                    className={`toggle-button ${
+                      regionalComparisonMode === "current" ? "is-active" : ""
+                    }`}
+                    type="button"
+                    onClick={() => setRegionalComparisonMode("current")}
+                  >
+                    Actual ONPE
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -333,6 +476,7 @@ export default function App() {
                 code={candidate.code}
                 label={candidate.label}
                 active={candidate.code === selectedCode}
+                featuredCodes={snapshot.featuredCandidateCodes}
                 onClick={setSelectedCode}
               />
             ))}
@@ -349,14 +493,23 @@ export default function App() {
                   <th>Participación</th>
                   <th>Candidatos destacados</th>
                   {showOthers ? <th>Otros</th> : null}
-                  <th>Proyección seleccionada</th>
+                  <th>
+                    {regionalComparisonMode === "projected"
+                      ? "Proyección seleccionada"
+                      : "Actual seleccionado"}
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {sortedRegions.map((region) => {
-                  const selectedCandidate = region.featuredCandidates.find(
-                    (candidate) => candidate.code === selectedCode
-                  );
+                  const selectedComparison = buildScopeComparisonItem(region, selectedCode);
+                  const isProjectedMode = regionalComparisonMode === "projected";
+                  const comparisonVotes = isProjectedMode
+                    ? selectedComparison.projectedVotes
+                    : selectedComparison.actualVotes;
+                  const comparisonPercentage = isProjectedMode
+                    ? selectedComparison.projectedPercentage
+                    : selectedComparison.actualPercentage;
 
                   return (
                     <tr key={region.scopeId}>
@@ -373,7 +526,12 @@ export default function App() {
                             <div key={candidate.code} className="mini-stack__row">
                               <span
                                 className="mini-stack__swatch"
-                                style={{ background: CANDIDATE_COLOR_MAP[candidate.code] }}
+                                style={{
+                                  background: getCandidateColor(
+                                    candidate.code,
+                                    snapshot.featuredCandidateCodes
+                                  )
+                                }}
                               />
                               <span>{candidate.candidateName}</span>
                               <strong>{formatPercent(candidate.pctValid, 2)}</strong>
@@ -386,7 +544,12 @@ export default function App() {
                           <div className="mini-stack__row">
                             <span
                               className="mini-stack__swatch"
-                              style={{ background: CANDIDATE_COLOR_MAP.otros }}
+                              style={{
+                                background: getCandidateColor(
+                                  "otros",
+                                  snapshot.featuredCandidateCodes
+                                )
+                              }}
                             />
                             <span>Otros</span>
                             <strong>{formatPercent(region.otros.pctValid, 2)}</strong>
@@ -394,8 +557,14 @@ export default function App() {
                         </td>
                       ) : null}
                       <td>
-                        <strong>{formatNumber(region.projectedVotes[selectedCode] ?? 0)}</strong>
-                        <small>{selectedCandidate?.candidateName ?? "Sin dato"}</small>
+                        <div className="comparison-cell">
+                          <strong>{formatNumber(comparisonVotes)}</strong>
+                          <span>{formatPercent(comparisonPercentage, 2)}</span>
+                          <small>
+                            {selectedComparison.label} ·{" "}
+                            {isProjectedMode ? "Proyectado" : "Actual ONPE"}
+                          </small>
+                        </div>
                       </td>
                     </tr>
                   );

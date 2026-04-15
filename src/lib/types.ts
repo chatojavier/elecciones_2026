@@ -97,6 +97,7 @@ export interface ScopeResult {
 
 export interface ProjectedNationalSummary {
   totalElectores: number;
+  totalProjectedValidVotes: number;
   projectedVotes: Record<string, number>;
   projectedPercentages: Record<string, number>;
 }

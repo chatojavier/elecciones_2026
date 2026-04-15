@@ -1,5 +1,5 @@
 import {
-  FEATURED_CANDIDATE_CODES,
+  FEATURED_CANDIDATE_LIMIT,
   STALE_AFTER_MINUTES
 } from "./constants";
 import type {
@@ -23,6 +23,7 @@ type ScopeInput = {
   totals: OnpeTotals;
   participants: OnpeParticipant[];
   candidateCatalog: Map<string, CandidateCatalogItem>;
+  featuredCodes?: string[];
 };
 
 function round(value: number, digits = 3) {
@@ -31,6 +32,20 @@ function round(value: number, digits = 3) {
 
 function normalizeCode(code: string | number) {
   return String(code);
+}
+
+function projectVotesByCountedActas(votesValid: number, actasContabilizadasPct: number) {
+  const completionRatio = Math.min(Math.max(actasContabilizadasPct / 100, 0), 1);
+
+  if (completionRatio === 0) {
+    return 0;
+  }
+
+  return Math.round(votesValid / completionRatio);
+}
+
+function compareCandidatesByVotes(left: CandidateResult, right: CandidateResult) {
+  return right.votesValid - left.votesValid;
 }
 
 export function buildCandidateCatalog(
@@ -101,10 +116,13 @@ export function summarizeOthers(candidates: CandidateResult[]): AggregateResult 
 }
 
 export function buildScopeResult(input: ScopeInput): ScopeResult {
-  const featuredCodes: string[] = [...FEATURED_CANDIDATE_CODES];
   const candidates = input.participants
     .map((participant) => normalizeCandidate(participant, input.candidateCatalog))
-    .sort((left, right) => right.pctValid - left.pctValid);
+    .sort(compareCandidatesByVotes);
+  const featuredCodes =
+    input.featuredCodes && input.featuredCodes.length > 0
+      ? [...input.featuredCodes]
+      : candidates.slice(0, FEATURED_CANDIDATE_LIMIT).map((candidate) => candidate.code);
 
   const byCode = new Map(candidates.map((candidate) => [candidate.code, candidate]));
 
@@ -120,9 +138,12 @@ export function buildScopeResult(input: ScopeInput): ScopeResult {
     [
       ...featuredCandidates.map((candidate) => [
         candidate.code,
-        Math.round(input.electores * (candidate.pctValid / 100))
+        projectVotesByCountedActas(candidate.votesValid, input.totals.actasContabilizadas)
       ]),
-      ["otros", Math.round(input.electores * (others.pctValid / 100))]
+      [
+        "otros",
+        projectVotesByCountedActas(others.votesValid, input.totals.actasContabilizadas)
+      ]
     ]
   );
 
@@ -151,9 +172,10 @@ export function buildScopeResult(input: ScopeInput): ScopeResult {
 export function buildProjectedNationalSummary(
   regions: ScopeResult[],
   foreign: ScopeResult,
-  totalElectores: number
+  totalElectores: number,
+  featuredCodes: string[]
 ): ProjectedNationalSummary {
-  const projectedVotes = FEATURED_CANDIDATE_CODES.reduce<Record<string, number>>(
+  const projectedVotes = featuredCodes.reduce<Record<string, number>>(
     (acc, code) => {
       acc[code] =
         regions.reduce((sum, region) => sum + (region.projectedVotes[code] ?? 0), 0) +
@@ -166,16 +188,21 @@ export function buildProjectedNationalSummary(
         (foreign.projectedVotes.otros ?? 0)
     }
   );
+  const totalProjectedValidVotes = Object.values(projectedVotes).reduce(
+    (sum, votes) => sum + votes,
+    0
+  );
 
   const projectedPercentages = Object.fromEntries(
     Object.entries(projectedVotes).map(([code, votes]) => [
       code,
-      round((votes / totalElectores) * 100)
+      totalProjectedValidVotes > 0 ? round((votes / totalProjectedValidVotes) * 100) : 0
     ])
   );
 
   return {
     totalElectores,
+    totalProjectedValidVotes,
     projectedVotes,
     projectedPercentages
   };

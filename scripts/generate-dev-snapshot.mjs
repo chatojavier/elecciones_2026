@@ -5,7 +5,7 @@ import { dirname, resolve } from "node:path";
 
 const execFileAsync = promisify(execFile);
 
-const FEATURED_CANDIDATE_CODES = ["8", "35", "16", "10", "14"];
+const FEATURED_CANDIDATE_LIMIT = 5;
 const STALE_AFTER_MINUTES = 30;
 const DEFAULT_BASE_URL = "https://resultadoelectoral.onpe.gob.pe/presentacion-backend";
 const DEFAULT_REFERER = "https://resultadoelectoral.onpe.gob.pe/main/resumen";
@@ -21,6 +21,20 @@ function round(value, digits = 3) {
 
 function normalizeCode(code) {
   return String(code);
+}
+
+function projectVotesByCountedActas(votesValid, actasContabilizadasPct) {
+  const completionRatio = Math.min(Math.max(actasContabilizadasPct / 100, 0), 1);
+
+  if (completionRatio === 0) {
+    return 0;
+  }
+
+  return Math.round(votesValid / completionRatio);
+}
+
+function compareCandidatesByVotes(left, right) {
+  return right.votesValid - left.votesValid;
 }
 
 function parseDotEnv(contents) {
@@ -226,24 +240,29 @@ function buildScopeResult({
   padronShare,
   totals,
   participants,
-  candidateCatalog
+  candidateCatalog,
+  featuredCodes
 }) {
   const candidates = participants
     .map((participant) => normalizeCandidate(participant, candidateCatalog))
-    .sort((left, right) => right.pctValid - left.pctValid);
-  const featuredCandidates = FEATURED_CANDIDATE_CODES.map(
+    .sort(compareCandidatesByVotes);
+  const selectedFeaturedCodes =
+    featuredCodes?.length > 0
+      ? [...featuredCodes]
+      : candidates.slice(0, FEATURED_CANDIDATE_LIMIT).map((candidate) => candidate.code);
+  const featuredCandidates = selectedFeaturedCodes.map(
     (code) => candidates.find((candidate) => candidate.code === code) ?? createCandidatePlaceholder(code, candidateCatalog)
   );
   const otros = summarizeOthers(
-    candidates.filter((candidate) => !FEATURED_CANDIDATE_CODES.includes(candidate.code))
+    candidates.filter((candidate) => !selectedFeaturedCodes.includes(candidate.code))
   );
   const projectedVotes = Object.fromEntries(
     [
       ...featuredCandidates.map((candidate) => [
         candidate.code,
-        Math.round(electores * (candidate.pctValid / 100))
+        projectVotesByCountedActas(candidate.votesValid, totals.actasContabilizadas)
       ]),
-      ["otros", Math.round(electores * (otros.pctValid / 100))]
+      ["otros", projectVotesByCountedActas(otros.votesValid, totals.actasContabilizadas)]
     ]
   );
 
@@ -269,8 +288,8 @@ function buildScopeResult({
   };
 }
 
-function buildProjectedNationalSummary(regions, foreign, totalElectores) {
-  const projectedVotes = FEATURED_CANDIDATE_CODES.reduce(
+function buildProjectedNationalSummary(regions, foreign, totalElectores, featuredCodes) {
+  const projectedVotes = featuredCodes.reduce(
     (acc, code) => {
       acc[code] =
         regions.reduce((sum, region) => sum + (region.projectedVotes[code] ?? 0), 0) +
@@ -283,15 +302,20 @@ function buildProjectedNationalSummary(regions, foreign, totalElectores) {
         (foreign.projectedVotes.otros ?? 0)
     }
   );
+  const totalProjectedValidVotes = Object.values(projectedVotes).reduce(
+    (sum, votes) => sum + votes,
+    0
+  );
   const projectedPercentages = Object.fromEntries(
     Object.entries(projectedVotes).map(([code, votes]) => [
       code,
-      totalElectores > 0 ? round((votes / totalElectores) * 100) : 0
+      totalProjectedValidVotes > 0 ? round((votes / totalProjectedValidVotes) * 100) : 0
     ])
   );
 
   return {
     totalElectores,
+    totalProjectedValidVotes,
     projectedVotes,
     projectedPercentages
   };
@@ -363,6 +387,17 @@ async function buildElectionSnapshot(config) {
     })
   ]);
   const candidateCatalog = buildCandidateCatalog(nationalParticipants);
+  const national = buildScopeResult({
+    scopeId: "1",
+    kind: "national",
+    label: "PERÚ",
+    electores: peruElectores,
+    padronShare: round((peruElectores / totalElectores) * 100, 4),
+    totals: nationalTotals,
+    participants: nationalParticipants,
+    candidateCatalog
+  });
+  const featuredCandidateCodes = national.featuredCandidates.map((candidate) => candidate.code);
 
   const regionPayloads = await Promise.all(
     departmentMeta.map(async (scope) => {
@@ -399,23 +434,13 @@ async function buildElectionSnapshot(config) {
         padronShare: meta.padronShare,
         totals,
         participants,
-        candidateCatalog
+        candidateCatalog,
+        featuredCodes: featuredCandidateCodes
       })
     )
     .sort((left, right) => left.label.localeCompare(right.label, "es"));
 
-  const national = buildScopeResult({
-    scopeId: "1",
-    kind: "national",
-    label: "PERÚ",
-    electores: peruElectores,
-    padronShare: round((peruElectores / totalElectores) * 100, 4),
-    totals: nationalTotals,
-    participants: nationalParticipants,
-    candidateCatalog
-  });
-
-  national.projectedVotes = FEATURED_CANDIDATE_CODES.reduce(
+  national.projectedVotes = featuredCandidateCodes.reduce(
     (acc, code) => {
       acc[code] = regions.reduce((sum, region) => sum + (region.projectedVotes[code] ?? 0), 0);
       return acc;
@@ -433,7 +458,8 @@ async function buildElectionSnapshot(config) {
     padronShare: foreignMeta.padronShare,
     totals: foreignTotals,
     participants: foreignParticipants,
-    candidateCatalog
+    candidateCatalog,
+    featuredCodes: featuredCandidateCodes
   });
 
   const sourceLastUpdatedAt = [national, foreign, ...regions]
@@ -452,8 +478,13 @@ async function buildElectionSnapshot(config) {
     national,
     foreign,
     regions,
-    projectedNational: buildProjectedNationalSummary(regions, foreign, totalElectores),
-    featuredCandidateCodes: [...FEATURED_CANDIDATE_CODES],
+    projectedNational: buildProjectedNationalSummary(
+      regions,
+      foreign,
+      totalElectores,
+      featuredCandidateCodes
+    ),
+    featuredCandidateCodes,
     isStale: computeIsStale(sourceLastUpdatedAt)
   };
 }

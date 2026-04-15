@@ -1,6 +1,7 @@
 import { connectLambda } from "@netlify/blobs";
 import type { Handler } from "@netlify/functions";
 
+import bundledSnapshot from "../../public/dev-snapshot.json";
 import { jsonResponse } from "./_shared/http";
 import { runSync } from "./_shared/snapshot";
 import { readSnapshot } from "./_shared/storage";
@@ -15,13 +16,7 @@ export const handler: Handler = async (event) => {
       const result = await runSync();
       snapshot = result.snapshot;
     } catch (error) {
-      return jsonResponse(
-        {
-          error: "snapshot_unavailable",
-          message: (error as Error).message
-        },
-        503
-      );
+      return jsonResponse(bundledSnapshot);
     }
   }
 

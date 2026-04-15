@@ -255,6 +255,8 @@ small {
 .panel__header {
   display: flex;
   justify-content: space-between;
+  align-items: start;
+  flex-wrap: wrap;
   gap: 16px;
   margin-bottom: 22px;
 }
@@ -268,11 +270,13 @@ small {
   gap: 12px;
   align-items: end;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .control {
   display: grid;
   gap: 8px;
+  min-width: 0;
 }
 
 .control select,
@@ -282,6 +286,7 @@ small {
   color: var(--ink);
   border-radius: 999px;
   padding: 0.75rem 1rem;
+  max-width: 100%;
 }
 
 .toggle-button.is-active {
@@ -310,6 +315,7 @@ small {
   display: flex;
   justify-content: space-between;
   align-items: start;
+  flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 14px;
 }
@@ -333,6 +339,7 @@ small {
 .featured-bar__track-meta {
   display: flex;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
   font-size: 0.86rem;
 }
@@ -452,10 +459,15 @@ small {
 
 .mini-stack__row {
   display: grid;
-  grid-template-columns: 10px minmax(120px, 1fr) auto;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
   font-size: 0.9rem;
+}
+
+.mini-stack__row span:last-of-type {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .mini-stack__row strong {
@@ -541,11 +553,79 @@ small {
     grid-template-columns: 1fr;
   }
 
-  .toggle-group {
+  .controls,
+  .control,
+  .control select,
+  .controls > .toggle-button,
+  .toggle-group,
+  .toggle-group .toggle-button {
     width: 100%;
   }
 
+  .toggle-group {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
   .toggle-group .toggle-button {
-    flex: 1 1 160px;
+    flex: 1 1 auto;
+  }
+
+  .table-shell {
+    overflow: visible;
+  }
+
+  .results-table {
+    min-width: 0;
+    border-collapse: separate;
+  }
+
+  .results-table thead {
+    display: none;
+  }
+
+  .results-table tbody {
+    display: grid;
+    gap: 14px;
+  }
+
+  .results-table tr,
+  .results-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .results-table tr {
+    padding: 18px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(19, 36, 58, 0.08);
+  }
+
+  .results-table td {
+    padding: 0;
+    border-bottom: 0;
+  }
+
+  .results-table td + td {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(19, 36, 58, 0.08);
+  }
+
+  .results-table td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .results-table td:first-child strong {
+    display: block;
+    font-size: 1.08rem;
   }
 }

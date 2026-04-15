@@ -25,20 +25,18 @@ function CandidatePill({
   code,
   label,
   active,
-  featuredCodes,
   onClick
 }: {
   code: string;
   label: string;
   active: boolean;
-  featuredCodes: string[];
   onClick: (code: string) => void;
 }) {
   return (
     <button
       className={`candidate-pill ${active ? "is-active" : ""}`}
       onClick={() => onClick(code)}
-      style={{ ["--candidate-color" as string]: getCandidateColor(code, featuredCodes) }}
+      style={{ ["--candidate-color" as string]: getCandidateColor(code) }}
       type="button"
     >
       <span className="candidate-pill__dot" />
@@ -48,13 +46,11 @@ function CandidatePill({
 }
 
 function FeaturedBar({
-  item,
-  featuredCodes
+  item
 }: {
   item: ComparisonItem;
-  featuredCodes: string[];
 }) {
-  const color = getCandidateColor(item.code, featuredCodes);
+  const color = getCandidateColor(item.code);
 
   return (
     <article className="featured-bar">
@@ -403,15 +399,11 @@ export default function App() {
               <FeaturedBar
                 key={item.code}
                 item={item}
-                featuredCodes={snapshot.featuredCandidateCodes}
               />
             ))}
 
             {showOthers && othersBar ? (
-              <FeaturedBar
-                item={othersBar}
-                featuredCodes={snapshot.featuredCandidateCodes}
-              />
+              <FeaturedBar item={othersBar} />
             ) : null}
           </div>
         </section>
@@ -476,7 +468,6 @@ export default function App() {
                 code={candidate.code}
                 label={candidate.label}
                 active={candidate.code === selectedCode}
-                featuredCodes={snapshot.featuredCandidateCodes}
                 onClick={setSelectedCode}
               />
             ))}
@@ -527,10 +518,7 @@ export default function App() {
                               <span
                                 className="mini-stack__swatch"
                                 style={{
-                                  background: getCandidateColor(
-                                    candidate.code,
-                                    snapshot.featuredCandidateCodes
-                                  )
+                                  background: getCandidateColor(candidate.code)
                                 }}
                               />
                               <span>{candidate.candidateName}</span>
@@ -545,10 +533,7 @@ export default function App() {
                             <span
                               className="mini-stack__swatch"
                               style={{
-                                background: getCandidateColor(
-                                  "otros",
-                                  snapshot.featuredCandidateCodes
-                                )
+                                background: getCandidateColor("otros")
                               }}
                             />
                             <span>Otros</span>

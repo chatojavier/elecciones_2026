@@ -27,20 +27,18 @@ function CandidatePill({
   code,
   label,
   active,
-  featuredCodes,
   onClick
 }: {
   code: string;
   label: string;
   active: boolean;
-  featuredCodes: string[];
   onClick: (code: string) => void;
 }) {
   return (
     <button
       className={`candidate-pill ${active ? "is-active" : ""}`}
       onClick={() => onClick(code)}
-      style={{ ["--candidate-color" as string]: getCandidateColor(code, featuredCodes) }}
+      style={{ ["--candidate-color" as string]: getCandidateColor(code) }}
       type="button"
     >
       <span className="candidate-pill__dot" />
@@ -50,13 +48,11 @@ function CandidatePill({
 }
 
 function FeaturedBar({
-  item,
-  featuredCodes
+  item
 }: {
   item: ComparisonItem;
-  featuredCodes: string[];
 }) {
-  const color = getCandidateColor(item.code, featuredCodes);
+  const color = getCandidateColor(item.code);
 
   return (
     <article className="featured-bar">
@@ -308,7 +304,7 @@ export default function App() {
 
   const projectedNationalDeltaVotes = snapshot
     ? snapshot.projectedNational.totalProjectedValidVotes -
-      (snapshot.national.totalVotosValidos + snapshot.foreign.totalVotosValidos)
+    (snapshot.national.totalVotosValidos + snapshot.foreign.totalVotosValidos)
     : 0;
 
   if (loading) {
@@ -436,15 +432,11 @@ export default function App() {
               <FeaturedBar
                 key={item.code}
                 item={item}
-                featuredCodes={snapshot.featuredCandidateCodes}
               />
             ))}
 
             {showOthers && othersBar ? (
-              <FeaturedBar
-                item={othersBar}
-                featuredCodes={snapshot.featuredCandidateCodes}
-              />
+              <FeaturedBar item={othersBar} />
             ) : null}
           </div>
         </section>
@@ -480,18 +472,16 @@ export default function App() {
                 <span>Columna final</span>
                 <div className="toggle-group" role="tablist" aria-label="Comparación regional">
                   <button
-                    className={`toggle-button ${
-                      regionalComparisonMode === "projected" ? "is-active" : ""
-                    }`}
+                    className={`toggle-button ${regionalComparisonMode === "projected" ? "is-active" : ""
+                      }`}
                     type="button"
                     onClick={() => setRegionalComparisonMode("projected")}
                   >
                     Proyectado
                   </button>
                   <button
-                    className={`toggle-button ${
-                      regionalComparisonMode === "current" ? "is-active" : ""
-                    }`}
+                    className={`toggle-button ${regionalComparisonMode === "current" ? "is-active" : ""
+                      }`}
                     type="button"
                     onClick={() => setRegionalComparisonMode("current")}
                   >
@@ -509,7 +499,6 @@ export default function App() {
                 code={candidate.code}
                 label={candidate.label}
                 active={candidate.code === selectedCode}
-                featuredCodes={snapshot.featuredCandidateCodes}
                 onClick={setSelectedCode}
               />
             ))}
@@ -565,10 +554,7 @@ export default function App() {
                               <span
                                 className="mini-stack__swatch"
                                 style={{
-                                  background: getCandidateColor(
-                                    candidate.code,
-                                    snapshot.featuredCandidateCodes
-                                  )
+                                  background: getCandidateColor(candidate.code)
                                 }}
                               />
                               <span>{formatTitleCase(candidate.candidateName)}</span>
@@ -583,7 +569,6 @@ export default function App() {
                                 style={{
                                   background: getCandidateColor(
                                     "otros",
-                                    snapshot.featuredCandidateCodes
                                   )
                                 }}
                               />
@@ -593,6 +578,20 @@ export default function App() {
                           ) : null}
                         </div>
                       </td>
+                      {showOthers ? (
+                        <td>
+                          <div className="mini-stack__row">
+                            <span
+                              className="mini-stack__swatch"
+                              style={{
+                                background: getCandidateColor("otros")
+                              }}
+                            />
+                            <span>Otros</span>
+                            <strong>{formatPercent(region.otros.pctValid, 2)}</strong>
+                          </div>
+                        </td>
+                      ) : null}
                       <td
                         data-label={
                           regionalComparisonMode === "projected"

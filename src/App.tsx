@@ -545,14 +545,20 @@ export default function App() {
 
                   return (
                     <tr key={region.scopeId}>
-                      <td>
+                      <td data-label="Región">
                         <strong>{region.label}</strong>
                       </td>
-                      <td>{formatNumber(region.electores)}</td>
-                      <td>{formatPercent(region.padronShare, 2)}</td>
-                      <td>{formatPercent(region.actasContabilizadasPct, 2)}</td>
-                      <td>{formatPercent(region.participacionCiudadanaPct, 2)}</td>
-                      <td>
+                      <td data-label="Electores">{formatNumber(region.electores)}</td>
+                      <td data-label="% padrón">{formatPercent(region.padronShare, 2)}</td>
+                      <td data-label="Actas">{formatPercent(region.actasContabilizadasPct, 2)}</td>
+                      <td data-label="Participación">
+                        {formatPercent(region.participacionCiudadanaPct, 2)}
+                      </td>
+                      <td
+                        data-label={
+                          showOthers ? "Candidatos destacados + Otros" : "Candidatos destacados"
+                        }
+                      >
                         <div className="mini-stack">
                           {region.featuredCandidates.map((candidate) => (
                             <div key={candidate.code} className="mini-stack__row">
@@ -587,7 +593,13 @@ export default function App() {
                           ) : null}
                         </div>
                       </td>
-                      <td>
+                      <td
+                        data-label={
+                          regionalComparisonMode === "projected"
+                            ? "Proyección seleccionada"
+                            : "Actual seleccionado"
+                        }
+                      >
                         <div className="comparison-cell">
                           <strong>{formatNumber(comparisonVotes)}</strong>
                           <span>{formatPercent(comparisonPercentage, 2)}</span>

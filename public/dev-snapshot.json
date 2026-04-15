@@ -1,116 +1,116 @@
 {
-  "generatedAt": "2026-04-15T18:17:35.342Z",
+  "generatedAt": "2026-04-15T19:03:50.496Z",
   "sourceElectionId": 10,
-  "sourceLastUpdatedAt": "2026-04-15T18:07:52.053Z",
+  "sourceLastUpdatedAt": "2026-04-15T18:57:18.059Z",
   "national": {
     "scopeId": "1",
     "kind": "national",
     "label": "PERÚ",
     "electores": 26114655,
     "padronShare": 95.5688,
-    "actasContabilizadasPct": 92.778,
-    "contabilizadas": 83707,
+    "actasContabilizadasPct": 92.83,
+    "contabilizadas": 83754,
     "totalActas": 90223,
-    "participacionCiudadanaPct": 70.339,
-    "enviadasJee": 4398,
-    "pendientesJee": 2118,
-    "totalVotosEmitidos": 18368842,
-    "totalVotosValidos": 15327710,
-    "sourceUpdatedAt": "2026-04-15T18:07:52.053Z",
+    "participacionCiudadanaPct": 70.369,
+    "enviadasJee": 4412,
+    "pendientesJee": 2057,
+    "totalVotosEmitidos": 18376687,
+    "totalVotosValidos": 15333940,
+    "sourceUpdatedAt": "2026-04-15T18:47:38.542Z",
     "candidates": [
       {
         "code": "8",
         "partyName": "FUERZA POPULAR",
         "candidateName": "KEIKO SOFIA FUJIMORI HIGUCHI",
-        "votesValid": 2613502,
+        "votesValid": 2614514,
         "pctValid": 17.051,
-        "pctEmitted": 14.228
+        "pctEmitted": 14.227
       },
       {
         "code": "10",
         "partyName": "JUNTOS POR EL PERÚ",
         "candidateName": "ROBERTO HELBERT SANCHEZ PALOMINO",
-        "votesValid": 1862906,
-        "pctValid": 12.154,
-        "pctEmitted": 10.142
+        "votesValid": 1864558,
+        "pctValid": 12.16,
+        "pctEmitted": 10.146
       },
       {
         "code": "35",
         "partyName": "RENOVACIÓN POPULAR",
         "candidateName": "RAFAEL BERNARDO LÓPEZ ALIAGA CAZORLA",
-        "votesValid": 1793619,
-        "pctValid": 11.702,
-        "pctEmitted": 9.764
+        "votesValid": 1793922,
+        "pctValid": 11.699,
+        "pctEmitted": 9.762
       },
       {
         "code": "16",
         "partyName": "PARTIDO DEL BUEN GOBIERNO",
         "candidateName": "JORGE NIETO MONTESINOS",
-        "votesValid": 1695062,
-        "pctValid": 11.059,
-        "pctEmitted": 9.228
+        "votesValid": 1695622,
+        "pctValid": 11.058,
+        "pctEmitted": 9.227
       },
       {
         "code": "14",
         "partyName": "PARTIDO CÍVICO OBRAS",
         "candidateName": "RICARDO PABLO BELMONT CASSINELLI",
-        "votesValid": 1558326,
-        "pctValid": 10.167,
-        "pctEmitted": 8.484
+        "votesValid": 1558833,
+        "pctValid": 10.166,
+        "pctEmitted": 8.483
       },
       {
         "code": "23",
         "partyName": "PARTIDO PAÍS PARA TODOS",
         "candidateName": "CARLOS GONSALO ALVAREZ LOAYZA",
-        "votesValid": 1200218,
-        "pctValid": 7.83,
-        "pctEmitted": 6.534
+        "votesValid": 1200556,
+        "pctValid": 7.829,
+        "pctEmitted": 6.533
       },
       {
         "code": "2",
         "partyName": "AHORA NACIÓN - AN",
         "candidateName": "PABLO ALFONSO LOPEZ CHAU NAVA",
-        "votesValid": 1128947,
+        "votesValid": 1129286,
         "pctValid": 7.365,
-        "pctEmitted": 6.146
+        "pctEmitted": 6.145
       },
       {
         "code": "33",
         "partyName": "PRIMERO LA GENTE – COMUNIDAD, ECOLOGÍA, LIBERTAD Y PROGRESO",
         "candidateName": "MARIA SOLEDAD PEREZ TELLO",
-        "votesValid": 525459,
+        "votesValid": 525599,
         "pctValid": 3.428,
-        "pctEmitted": 2.861
+        "pctEmitted": 2.86
       },
       {
         "code": "31",
         "partyName": "PARTIDO SICREO",
         "candidateName": "ALFONSO CARLOS ESPA Y GARCES-ALVEAR",
-        "votesValid": 522152,
-        "pctValid": 3.407,
-        "pctEmitted": 2.843
+        "votesValid": 522343,
+        "pctValid": 3.406,
+        "pctEmitted": 2.842
       },
       {
         "code": "21",
         "partyName": "PARTIDO FRENTE DE LA ESPERANZA 2021",
         "candidateName": "LUIS FERNANDO OLIVERA VEGA",
-        "votesValid": 285545,
+        "votesValid": 285651,
         "pctValid": 1.863,
-        "pctEmitted": 1.555
+        "pctEmitted": 1.554
       },
       {
         "code": "32",
         "partyName": "PODEMOS PERÚ",
         "candidateName": "JOSE LEON LUNA GALVEZ",
-        "votesValid": 245569,
-        "pctValid": 1.602,
+        "votesValid": 245735,
+        "pctValid": 1.603,
         "pctEmitted": 1.337
       },
       {
         "code": "25",
         "partyName": "PARTIDO POLÍTICO COOPERACIÓN POPULAR",
         "candidateName": "YONHY LESCANO ANCIETA",
-        "votesValid": 202144,
+        "votesValid": 202205,
         "pctValid": 1.319,
         "pctEmitted": 1.1
       },
@@ -118,7 +118,7 @@
         "code": "1",
         "partyName": "ALIANZA PARA EL PROGRESO",
         "candidateName": "CESAR ACUÑA PERALTA",
-        "votesValid": 174780,
+        "votesValid": 174879,
         "pctValid": 1.14,
         "pctEmitted": 0.952
       },
@@ -126,7 +126,7 @@
         "code": "12",
         "partyName": "PARTIDO APRISTA PERUANO",
         "candidateName": "PITTER ENRIQUE VALDERRAMA PEÑA",
-        "votesValid": 146627,
+        "votesValid": 146685,
         "pctValid": 0.957,
         "pctEmitted": 0.798
       },
@@ -134,23 +134,23 @@
         "code": "20",
         "partyName": "PARTIDO DEMOCRÁTICO SOMOS PERÚ",
         "candidateName": "GEORGE PATRICK FORSYTH SOMMER",
-        "votesValid": 137912,
+        "votesValid": 137967,
         "pctValid": 0.9,
         "pctEmitted": 0.751
-      },
-      {
-        "code": "24",
-        "partyName": "PARTIDO PATRIÓTICO DEL PERÚ",
-        "candidateName": "HERBERT CALLER GUTIERREZ",
-        "votesValid": 132870,
-        "pctValid": 0.867,
-        "pctEmitted": 0.723
       },
       {
         "code": "29",
         "partyName": "PARTIDO POLÍTICO PERÚ PRIMERO",
         "candidateName": "MARIO ENRIQUE VIZCARRA CORNEJO",
-        "votesValid": 132860,
+        "votesValid": 132936,
+        "pctValid": 0.867,
+        "pctEmitted": 0.723
+      },
+      {
+        "code": "24",
+        "partyName": "PARTIDO PATRIÓTICO DEL PERÚ",
+        "candidateName": "HERBERT CALLER GUTIERREZ",
+        "votesValid": 132935,
         "pctValid": 0.867,
         "pctEmitted": 0.723
       },
@@ -158,7 +158,7 @@
         "code": "3",
         "partyName": "ALIANZA ELECTORAL VENCEREMOS",
         "candidateName": "RONALD DARWIN ATENCIO SOTOMAYOR",
-        "votesValid": 129851,
+        "votesValid": 129942,
         "pctValid": 0.847,
         "pctEmitted": 0.707
       },
@@ -166,7 +166,7 @@
         "code": "37",
         "partyName": "UN CAMINO DIFERENTE",
         "candidateName": "ROSARIO DEL PILAR FERNANDEZ BAZAN",
-        "votesValid": 113558,
+        "votesValid": 113643,
         "pctValid": 0.741,
         "pctEmitted": 0.618
       },
@@ -174,7 +174,7 @@
         "code": "17",
         "partyName": "PARTIDO DEMÓCRATA UNIDO PERÚ",
         "candidateName": "CHARLIE CARRASCO SALAZAR",
-        "votesValid": 109298,
+        "votesValid": 109342,
         "pctValid": 0.713,
         "pctEmitted": 0.595
       },
@@ -182,7 +182,7 @@
         "code": "27",
         "partyName": "PARTIDO POLÍTICO NACIONAL PERÚ LIBRE",
         "candidateName": "VLADIMIR ROY CERRON ROJAS",
-        "votesValid": 91950,
+        "votesValid": 91996,
         "pctValid": 0.6,
         "pctEmitted": 0.501
       },
@@ -190,7 +190,7 @@
         "code": "22",
         "partyName": "PARTIDO MORADO",
         "candidateName": "MESIAS ANTONIO GUEVARA AMASIFUEN",
-        "votesValid": 75182,
+        "votesValid": 75212,
         "pctValid": 0.49,
         "pctEmitted": 0.409
       },
@@ -198,7 +198,7 @@
         "code": "38",
         "partyName": "UNIDAD NACIONAL",
         "candidateName": "ROBERTO ENRIQUE CHIABRA LEON",
-        "votesValid": 61563,
+        "votesValid": 61590,
         "pctValid": 0.402,
         "pctEmitted": 0.335
       },
@@ -206,7 +206,7 @@
         "code": "34",
         "partyName": "PROGRESEMOS",
         "candidateName": "PAUL DAVIS JAIMES BLANCO",
-        "votesValid": 60734,
+        "votesValid": 60752,
         "pctValid": 0.396,
         "pctEmitted": 0.331
       },
@@ -214,7 +214,7 @@
         "code": "26",
         "partyName": "PARTIDO POLÍTICO INTEGRIDAD DEMOCRÁTICA",
         "candidateName": "WOLFGANG MARIO GROZO COSTA",
-        "votesValid": 58442,
+        "votesValid": 58458,
         "pctValid": 0.381,
         "pctEmitted": 0.318
       },
@@ -222,7 +222,7 @@
         "code": "18",
         "partyName": "PARTIDO DEMÓCRATA VERDE",
         "candidateName": "ALEX GONZALES CASTILLO",
-        "votesValid": 58053,
+        "votesValid": 58085,
         "pctValid": 0.379,
         "pctEmitted": 0.316
       },
@@ -230,7 +230,7 @@
         "code": "11",
         "partyName": "LIBERTAD POPULAR",
         "candidateName": "RAFAEL JORGE BELAUNDE LLOSA",
-        "votesValid": 37217,
+        "votesValid": 37229,
         "pctValid": 0.243,
         "pctEmitted": 0.203
       },
@@ -238,7 +238,7 @@
         "code": "7",
         "partyName": "AVANZA PAÍS - PARTIDO DE INTEGRACIÓN SOCIAL",
         "candidateName": "JOSE DANIEL WILLIAMS ZAPATA",
-        "votesValid": 30027,
+        "votesValid": 30045,
         "pctValid": 0.196,
         "pctEmitted": 0.163
       },
@@ -246,7 +246,7 @@
         "code": "28",
         "partyName": "PARTIDO POLÍTICO PERÚ ACCIÓN",
         "candidateName": "FRANCISCO ERNESTO DIEZ-CANSECO TÁVARA",
-        "votesValid": 28625,
+        "votesValid": 28635,
         "pctValid": 0.187,
         "pctEmitted": 0.156
       },
@@ -254,7 +254,7 @@
         "code": "9",
         "partyName": "FUERZA Y LIBERTAD",
         "candidateName": "FIORELLA GIANNINA MOLINELLI ARISTONDO",
-        "votesValid": 24896,
+        "votesValid": 24915,
         "pctValid": 0.162,
         "pctEmitted": 0.136
       },
@@ -262,7 +262,7 @@
         "code": "5",
         "partyName": "FE EN EL PERÚ",
         "candidateName": "ALVARO GONZALO PAZ DE LA BARRA FREIGEIRO",
-        "votesValid": 21334,
+        "votesValid": 21342,
         "pctValid": 0.139,
         "pctEmitted": 0.116
       },
@@ -270,7 +270,7 @@
         "code": "19",
         "partyName": "PARTIDO DEMOCRATICO FEDERAL",
         "candidateName": "ARMANDO JOAQUIN MASSE FERNANDEZ",
-        "votesValid": 19976,
+        "votesValid": 19993,
         "pctValid": 0.13,
         "pctEmitted": 0.109
       },
@@ -278,7 +278,7 @@
         "code": "36",
         "partyName": "SALVEMOS AL PERÚ",
         "candidateName": "ANTONIO ORTIZ VILLANO",
-        "votesValid": 16052,
+        "votesValid": 16060,
         "pctValid": 0.105,
         "pctEmitted": 0.087
       },
@@ -286,7 +286,7 @@
         "code": "30",
         "partyName": "PARTIDO POLÍTICO PRIN",
         "candidateName": "WALTER GILMER CHIRINOS PURIZAGA",
-        "votesValid": 13227,
+        "votesValid": 13239,
         "pctValid": 0.086,
         "pctEmitted": 0.072
       },
@@ -294,7 +294,7 @@
         "code": "15",
         "partyName": "PARTIDO DE LOS TRABAJADORES Y EMPRENDEDORES PTE - PERÚ",
         "candidateName": "NAPOLEON BECERRA GARCIA",
-        "votesValid": 10406,
+        "votesValid": 10411,
         "pctValid": 0.068,
         "pctEmitted": 0.057
       },
@@ -302,7 +302,7 @@
         "code": "4",
         "partyName": "PERÚ MODERNO",
         "candidateName": "CARLOS ERNESTO JAICO CARRANZA",
-        "votesValid": 8821,
+        "votesValid": 8825,
         "pctValid": 0.058,
         "pctEmitted": 0.048
       }
@@ -312,57 +312,57 @@
         "code": "8",
         "partyName": "FUERZA POPULAR",
         "candidateName": "KEIKO SOFIA FUJIMORI HIGUCHI",
-        "votesValid": 2613502,
+        "votesValid": 2614514,
         "pctValid": 17.051,
-        "pctEmitted": 14.228
+        "pctEmitted": 14.227
       },
       {
         "code": "10",
         "partyName": "JUNTOS POR EL PERÚ",
         "candidateName": "ROBERTO HELBERT SANCHEZ PALOMINO",
-        "votesValid": 1862906,
-        "pctValid": 12.154,
-        "pctEmitted": 10.142
+        "votesValid": 1864558,
+        "pctValid": 12.16,
+        "pctEmitted": 10.146
       },
       {
         "code": "35",
         "partyName": "RENOVACIÓN POPULAR",
         "candidateName": "RAFAEL BERNARDO LÓPEZ ALIAGA CAZORLA",
-        "votesValid": 1793619,
-        "pctValid": 11.702,
-        "pctEmitted": 9.764
+        "votesValid": 1793922,
+        "pctValid": 11.699,
+        "pctEmitted": 9.762
       },
       {
         "code": "16",
         "partyName": "PARTIDO DEL BUEN GOBIERNO",
         "candidateName": "JORGE NIETO MONTESINOS",
-        "votesValid": 1695062,
-        "pctValid": 11.059,
-        "pctEmitted": 9.228
+        "votesValid": 1695622,
+        "pctValid": 11.058,
+        "pctEmitted": 9.227
       },
       {
         "code": "14",
         "partyName": "PARTIDO CÍVICO OBRAS",
         "candidateName": "RICARDO PABLO BELMONT CASSINELLI",
-        "votesValid": 1558326,
-        "pctValid": 10.167,
-        "pctEmitted": 8.484
+        "votesValid": 1558833,
+        "pctValid": 10.166,
+        "pctEmitted": 8.483
       }
     ],
     "otros": {
       "code": "otros",
       "label": "Otros",
-      "votesValid": 5804295,
-      "pctValid": 37.868,
-      "pctEmitted": 31.6
+      "votesValid": 5806491,
+      "pctValid": 37.867,
+      "pctEmitted": 31.595
     },
     "projectedVotes": {
-      "8": 2828760,
-      "10": 1996850,
-      "14": 1670430,
-      "16": 1817198,
-      "35": 1928320,
-      "otros": 6246791
+      "8": 2828360,
+      "10": 1997257,
+      "14": 1670273,
+      "16": 1817123,
+      "35": 1928051,
+      "otros": 6246224
     }
   },
   "foreign": {
@@ -379,7 +379,7 @@
     "pendientesJee": 1191,
     "totalVotosEmitidos": 167554,
     "totalVotosValidos": 132241,
-    "sourceUpdatedAt": "2026-04-15T18:07:52.053Z",
+    "sourceUpdatedAt": "2026-04-15T18:57:18.059Z",
     "candidates": [
       {
         "code": "35",
@@ -735,181 +735,181 @@
       "label": "AMAZONAS",
       "electores": 345247,
       "padronShare": 1.2635,
-      "actasContabilizadasPct": 91.002,
-      "contabilizadas": 1163,
+      "actasContabilizadasPct": 92.879,
+      "contabilizadas": 1187,
       "totalActas": 1278,
-      "participacionCiudadanaPct": 56.855,
-      "enviadasJee": 76,
-      "pendientesJee": 39,
-      "totalVotosEmitidos": 196290,
-      "totalVotosValidos": 149472,
-      "sourceUpdatedAt": "2026-04-15T18:07:52.053Z",
+      "participacionCiudadanaPct": 57.857,
+      "enviadasJee": 81,
+      "pendientesJee": 10,
+      "totalVotosEmitidos": 199748,
+      "totalVotosValidos": 152098,
+      "sourceUpdatedAt": "2026-04-15T18:57:18.059Z",
       "candidates": [
         {
           "code": "10",
           "partyName": "JUNTOS POR EL PERÚ",
           "candidateName": "ROBERTO HELBERT SANCHEZ PALOMINO",
-          "votesValid": 53419,
-          "pctValid": 35.738,
-          "pctEmitted": 27.214
+          "votesValid": 54797,
+          "pctValid": 36.027,
+          "pctEmitted": 27.433
         },
         {
           "code": "8",
           "partyName": "FUERZA POPULAR",
           "candidateName": "KEIKO SOFIA FUJIMORI HIGUCHI",
-          "votesValid": 26142,
-          "pctValid": 17.49,
-          "pctEmitted": 13.318
+          "votesValid": 26488,
+          "pctValid": 17.415,
+          "pctEmitted": 13.261
         },
         {
           "code": "14",
           "partyName": "PARTIDO CÍVICO OBRAS",
           "candidateName": "RICARDO PABLO BELMONT CASSINELLI",
-          "votesValid": 15977,
-          "pctValid": 10.689,
-          "pctEmitted": 8.139
+          "votesValid": 16195,
+          "pctValid": 10.648,
+          "pctEmitted": 8.108
         },
         {
           "code": "2",
           "partyName": "AHORA NACIÓN - AN",
           "candidateName": "PABLO ALFONSO LOPEZ CHAU NAVA",
-          "votesValid": 9103,
-          "pctValid": 6.09,
-          "pctEmitted": 4.638
+          "votesValid": 9216,
+          "pctValid": 6.059,
+          "pctEmitted": 4.614
         },
         {
           "code": "35",
           "partyName": "RENOVACIÓN POPULAR",
           "candidateName": "RAFAEL BERNARDO LÓPEZ ALIAGA CAZORLA",
-          "votesValid": 5633,
-          "pctValid": 3.769,
-          "pctEmitted": 2.87
+          "votesValid": 5688,
+          "pctValid": 3.74,
+          "pctEmitted": 2.848
         },
         {
           "code": "16",
           "partyName": "PARTIDO DEL BUEN GOBIERNO",
           "candidateName": "JORGE NIETO MONTESINOS",
-          "votesValid": 5563,
-          "pctValid": 3.722,
-          "pctEmitted": 2.834
+          "votesValid": 5605,
+          "pctValid": 3.685,
+          "pctEmitted": 2.806
         },
         {
           "code": "32",
           "partyName": "PODEMOS PERÚ",
           "candidateName": "JOSE LEON LUNA GALVEZ",
-          "votesValid": 3956,
-          "pctValid": 2.647,
-          "pctEmitted": 2.015
+          "votesValid": 4067,
+          "pctValid": 2.674,
+          "pctEmitted": 2.036
         },
         {
           "code": "23",
           "partyName": "PARTIDO PAÍS PARA TODOS",
           "candidateName": "CARLOS GONSALO ALVAREZ LOAYZA",
-          "votesValid": 3772,
-          "pctValid": 2.524,
-          "pctEmitted": 1.922
+          "votesValid": 3806,
+          "pctValid": 2.502,
+          "pctEmitted": 1.905
         },
         {
           "code": "20",
           "partyName": "PARTIDO DEMOCRÁTICO SOMOS PERÚ",
           "candidateName": "GEORGE PATRICK FORSYTH SOMMER",
-          "votesValid": 3239,
-          "pctValid": 2.167,
-          "pctEmitted": 1.65
+          "votesValid": 3261,
+          "pctValid": 2.144,
+          "pctEmitted": 1.633
         },
         {
           "code": "1",
           "partyName": "ALIANZA PARA EL PROGRESO",
           "candidateName": "CESAR ACUÑA PERALTA",
-          "votesValid": 3079,
-          "pctValid": 2.06,
-          "pctEmitted": 1.569
+          "votesValid": 3122,
+          "pctValid": 2.053,
+          "pctEmitted": 1.563
         },
         {
           "code": "33",
           "partyName": "PRIMERO LA GENTE – COMUNIDAD, ECOLOGÍA, LIBERTAD Y PROGRESO",
           "candidateName": "MARIA SOLEDAD PEREZ TELLO",
-          "votesValid": 2506,
-          "pctValid": 1.677,
-          "pctEmitted": 1.277
+          "votesValid": 2528,
+          "pctValid": 1.662,
+          "pctEmitted": 1.266
         },
         {
           "code": "31",
           "partyName": "PARTIDO SICREO",
           "candidateName": "ALFONSO CARLOS ESPA Y GARCES-ALVEAR",
-          "votesValid": 2141,
-          "pctValid": 1.432,
-          "pctEmitted": 1.091
+          "votesValid": 2162,
+          "pctValid": 1.421,
+          "pctEmitted": 1.082
         },
         {
           "code": "3",
           "partyName": "ALIANZA ELECTORAL VENCEREMOS",
           "candidateName": "RONALD DARWIN ATENCIO SOTOMAYOR",
-          "votesValid": 1763,
-          "pctValid": 1.179,
-          "pctEmitted": 0.898
+          "votesValid": 1781,
+          "pctValid": 1.171,
+          "pctEmitted": 0.892
         },
         {
           "code": "24",
           "partyName": "PARTIDO PATRIÓTICO DEL PERÚ",
           "candidateName": "HERBERT CALLER GUTIERREZ",
-          "votesValid": 1625,
-          "pctValid": 1.087,
-          "pctEmitted": 0.828
+          "votesValid": 1649,
+          "pctValid": 1.084,
+          "pctEmitted": 0.826
         },
         {
           "code": "27",
           "partyName": "PARTIDO POLÍTICO NACIONAL PERÚ LIBRE",
           "candidateName": "VLADIMIR ROY CERRON ROJAS",
-          "votesValid": 1348,
-          "pctValid": 0.902,
-          "pctEmitted": 0.687
+          "votesValid": 1368,
+          "pctValid": 0.899,
+          "pctEmitted": 0.685
         },
         {
           "code": "25",
           "partyName": "PARTIDO POLÍTICO COOPERACIÓN POPULAR",
           "candidateName": "YONHY LESCANO ANCIETA",
-          "votesValid": 1240,
-          "pctValid": 0.83,
-          "pctEmitted": 0.632
+          "votesValid": 1251,
+          "pctValid": 0.822,
+          "pctEmitted": 0.626
         },
         {
           "code": "21",
           "partyName": "PARTIDO FRENTE DE LA ESPERANZA 2021",
           "candidateName": "LUIS FERNANDO OLIVERA VEGA",
-          "votesValid": 1226,
-          "pctValid": 0.82,
-          "pctEmitted": 0.625
+          "votesValid": 1250,
+          "pctValid": 0.822,
+          "pctEmitted": 0.626
         },
         {
           "code": "12",
           "partyName": "PARTIDO APRISTA PERUANO",
           "candidateName": "PITTER ENRIQUE VALDERRAMA PEÑA",
-          "votesValid": 1121,
-          "pctValid": 0.75,
-          "pctEmitted": 0.571
+          "votesValid": 1134,
+          "pctValid": 0.746,
+          "pctEmitted": 0.568
         },
         {
           "code": "29",
           "partyName": "PARTIDO POLÍTICO PERÚ PRIMERO",
           "candidateName": "MARIO ENRIQUE VIZCARRA CORNEJO",
-          "votesValid": 1051,
-          "pctValid": 0.703,
-          "pctEmitted": 0.535
+          "votesValid": 1081,
+          "pctValid": 0.711,
+          "pctEmitted": 0.541
         },
         {
           "code": "17",
           "partyName": "PARTIDO DEMÓCRATA UNIDO PERÚ",
           "candidateName": "CHARLIE CARRASCO SALAZAR",
-          "votesValid": 793,
-          "pctValid": 0.531,
-          "pctEmitted": 0.404
+          "votesValid": 809,
+          "pctValid": 0.532,
+          "pctEmitted": 0.405
         },
         {
           "code": "18",
           "partyName": "PARTIDO DEMÓCRATA VERDE",
           "candidateName": "ALEX GONZALES CASTILLO",
-          "votesValid": 597,
+          "votesValid": 607,
           "pctValid": 0.399,
           "pctEmitted": 0.304
         },
@@ -917,111 +917,111 @@
           "code": "37",
           "partyName": "UN CAMINO DIFERENTE",
           "candidateName": "ROSARIO DEL PILAR FERNANDEZ BAZAN",
-          "votesValid": 570,
-          "pctValid": 0.381,
-          "pctEmitted": 0.29
+          "votesValid": 583,
+          "pctValid": 0.383,
+          "pctEmitted": 0.292
         },
         {
           "code": "22",
           "partyName": "PARTIDO MORADO",
           "candidateName": "MESIAS ANTONIO GUEVARA AMASIFUEN",
-          "votesValid": 498,
-          "pctValid": 0.333,
-          "pctEmitted": 0.254
+          "votesValid": 503,
+          "pctValid": 0.331,
+          "pctEmitted": 0.252
         },
         {
           "code": "38",
           "partyName": "UNIDAD NACIONAL",
           "candidateName": "ROBERTO ENRIQUE CHIABRA LEON",
-          "votesValid": 464,
-          "pctValid": 0.31,
-          "pctEmitted": 0.236
+          "votesValid": 468,
+          "pctValid": 0.308,
+          "pctEmitted": 0.234
         },
         {
           "code": "26",
           "partyName": "PARTIDO POLÍTICO INTEGRIDAD DEMOCRÁTICA",
           "candidateName": "WOLFGANG MARIO GROZO COSTA",
-          "votesValid": 341,
-          "pctValid": 0.228,
-          "pctEmitted": 0.174
+          "votesValid": 346,
+          "pctValid": 0.227,
+          "pctEmitted": 0.173
         },
         {
           "code": "34",
           "partyName": "PROGRESEMOS",
           "candidateName": "PAUL DAVIS JAIMES BLANCO",
-          "votesValid": 318,
-          "pctValid": 0.213,
+          "votesValid": 323,
+          "pctValid": 0.212,
           "pctEmitted": 0.162
-        },
-        {
-          "code": "28",
-          "partyName": "PARTIDO POLÍTICO PERÚ ACCIÓN",
-          "candidateName": "FRANCISCO ERNESTO DIEZ-CANSECO TÁVARA",
-          "votesValid": 298,
-          "pctValid": 0.199,
-          "pctEmitted": 0.152
         },
         {
           "code": "7",
           "partyName": "AVANZA PAÍS - PARTIDO DE INTEGRACIÓN SOCIAL",
           "candidateName": "JOSE DANIEL WILLIAMS ZAPATA",
-          "votesValid": 298,
-          "pctValid": 0.199,
-          "pctEmitted": 0.152
+          "votesValid": 305,
+          "pctValid": 0.201,
+          "pctEmitted": 0.153
+        },
+        {
+          "code": "28",
+          "partyName": "PARTIDO POLÍTICO PERÚ ACCIÓN",
+          "candidateName": "FRANCISCO ERNESTO DIEZ-CANSECO TÁVARA",
+          "votesValid": 300,
+          "pctValid": 0.197,
+          "pctEmitted": 0.15
         },
         {
           "code": "19",
           "partyName": "PARTIDO DEMOCRATICO FEDERAL",
           "candidateName": "ARMANDO JOAQUIN MASSE FERNANDEZ",
-          "votesValid": 262,
-          "pctValid": 0.175,
-          "pctEmitted": 0.133
+          "votesValid": 264,
+          "pctValid": 0.174,
+          "pctEmitted": 0.132
         },
         {
           "code": "36",
           "partyName": "SALVEMOS AL PERÚ",
           "candidateName": "ANTONIO ORTIZ VILLANO",
-          "votesValid": 233,
-          "pctValid": 0.156,
-          "pctEmitted": 0.119
+          "votesValid": 236,
+          "pctValid": 0.155,
+          "pctEmitted": 0.118
         },
         {
           "code": "5",
           "partyName": "FE EN EL PERÚ",
           "candidateName": "ALVARO GONZALO PAZ DE LA BARRA FREIGEIRO",
-          "votesValid": 211,
+          "votesValid": 215,
           "pctValid": 0.141,
-          "pctEmitted": 0.107
+          "pctEmitted": 0.108
         },
         {
           "code": "11",
           "partyName": "LIBERTAD POPULAR",
           "candidateName": "RAFAEL JORGE BELAUNDE LLOSA",
-          "votesValid": 198,
-          "pctValid": 0.132,
-          "pctEmitted": 0.101
+          "votesValid": 200,
+          "pctValid": 0.131,
+          "pctEmitted": 0.1
         },
         {
           "code": "9",
           "partyName": "FUERZA Y LIBERTAD",
           "candidateName": "FIORELLA GIANNINA MOLINELLI ARISTONDO",
-          "votesValid": 188,
-          "pctValid": 0.126,
-          "pctEmitted": 0.096
+          "votesValid": 189,
+          "pctValid": 0.124,
+          "pctEmitted": 0.095
         },
         {
           "code": "30",
           "partyName": "PARTIDO POLÍTICO PRIN",
           "candidateName": "WALTER GILMER CHIRINOS PURIZAGA",
-          "votesValid": 148,
-          "pctValid": 0.099,
+          "votesValid": 149,
+          "pctValid": 0.098,
           "pctEmitted": 0.075
         },
         {
           "code": "15",
           "partyName": "PARTIDO DE LOS TRABAJADORES Y EMPRENDEDORES PTE - PERÚ",
           "candidateName": "NAPOLEON BECERRA GARCIA",
-          "votesValid": 93,
+          "votesValid": 94,
           "pctValid": 0.062,
           "pctEmitted": 0.047
         },
@@ -1030,8 +1030,8 @@
           "partyName": "PERÚ MODERNO",
           "candidateName": "CARLOS ERNESTO JAICO CARRANZA",
           "votesValid": 58,
-          "pctValid": 0.039,
-          "pctEmitted": 0.03
+          "pctValid": 0.038,
+          "pctEmitted": 0.029
         }
       ],
       "featuredCandidates": [
@@ -1039,57 +1039,57 @@
           "code": "8",
           "partyName": "FUERZA POPULAR",
           "candidateName": "KEIKO SOFIA FUJIMORI HIGUCHI",
-          "votesValid": 26142,
-          "pctValid": 17.49,
-          "pctEmitted": 13.318
+          "votesValid": 26488,
+          "pctValid": 17.415,
+          "pctEmitted": 13.261
         },
         {
           "code": "10",
           "partyName": "JUNTOS POR EL PERÚ",
           "candidateName": "ROBERTO HELBERT SANCHEZ PALOMINO",
-          "votesValid": 53419,
-          "pctValid": 35.738,
-          "pctEmitted": 27.214
+          "votesValid": 54797,
+          "pctValid": 36.027,
+          "pctEmitted": 27.433
         },
         {
           "code": "35",
           "partyName": "RENOVACIÓN POPULAR",
           "candidateName": "RAFAEL BERNARDO LÓPEZ ALIAGA CAZORLA",
-          "votesValid": 5633,
-          "pctValid": 3.769,
-          "pctEmitted": 2.87
+          "votesValid": 5688,
+          "pctValid": 3.74,
+          "pctEmitted": 2.848
         },
         {
           "code": "16",
           "partyName": "PARTIDO DEL BUEN GOBIERNO",
           "candidateName": "JORGE NIETO MONTESINOS",
-          "votesValid": 5563,
-          "pctValid": 3.722,
-          "pctEmitted": 2.834
+          "votesValid": 5605,
+          "pctValid": 3.685,
+          "pctEmitted": 2.806
         },
         {
           "code": "14",
           "partyName": "PARTIDO CÍVICO OBRAS",
           "candidateName": "RICARDO PABLO BELMONT CASSINELLI",
-          "votesValid": 15977,
-          "pctValid": 10.689,
-          "pctEmitted": 8.139
+          "votesValid": 16195,
+          "pctValid": 10.648,
+          "pctEmitted": 8.108
         }
       ],
       "otros": {
         "code": "otros",
         "label": "Otros",
-        "votesValid": 42738,
-        "pctValid": 28.591,
-        "pctEmitted": 21.774
+        "votesValid": 43325,
+        "pctValid": 28.483,
+        "pctEmitted": 21.692
       },
       "projectedVotes": {
-        "8": 28727,
-        "10": 58701,
-        "14": 17557,
-        "16": 6113,
-        "35": 6190,
-        "otros": 46964
+        "8": 28519,
+        "10": 58998,
+        "14": 17437,
+        "16": 6035,
+        "35": 6124,
+        "otros": 46647
       }
     },
     {
@@ -1106,7 +1106,7 @@
       "pendientesJee": 75,
       "totalVotosEmitidos": 635770,
       "totalVotosValidos": 495520,
-      "sourceUpdatedAt": "2026-04-15T18:07:52.053Z",
+      "sourceUpdatedAt": "2026-04-15T18:57:18.059Z",
       "candidates": [
         {
           "code": "8",
@@ -1469,7 +1469,7 @@
       "pendientesJee": 1,
       "totalVotosEmitidos": 246096,
       "totalVotosValidos": 193872,
-      "sourceUpdatedAt": "2026-04-15T18:07:52.053Z",
+      "sourceUpdatedAt": "2026-04-15T18:57:18.059Z",
       "candidates": [
         {
           "code": "10",
@@ -1824,109 +1824,109 @@
       "label": "AREQUIPA",
       "electores": 1226520,
       "padronShare": 4.4886,
-      "actasContabilizadasPct": 97.343,
-      "contabilizadas": 4103,
+      "actasContabilizadasPct": 97.628,
+      "contabilizadas": 4115,
       "totalActas": 4215,
-      "participacionCiudadanaPct": 78.903,
+      "participacionCiudadanaPct": 79.142,
       "enviadasJee": 69,
-      "pendientesJee": 43,
-      "totalVotosEmitidos": 967763,
-      "totalVotosValidos": 857141,
-      "sourceUpdatedAt": "2026-04-15T18:07:52.053Z",
+      "pendientesJee": 31,
+      "totalVotosEmitidos": 970702,
+      "totalVotosValidos": 859729,
+      "sourceUpdatedAt": "2026-04-15T18:57:18.059Z",
       "candidates": [
         {
           "code": "16",
           "partyName": "PARTIDO DEL BUEN GOBIERNO",
           "candidateName": "JORGE NIETO MONTESINOS",
-          "votesValid": 159785,
-          "pctValid": 18.642,
-          "pctEmitted": 16.511
+          "votesValid": 160361,
+          "pctValid": 18.653,
+          "pctEmitted": 16.52
         },
         {
           "code": "14",
           "partyName": "PARTIDO CÍVICO OBRAS",
           "candidateName": "RICARDO PABLO BELMONT CASSINELLI",
-          "votesValid": 93424,
-          "pctValid": 10.899,
-          "pctEmitted": 9.654
+          "votesValid": 93663,
+          "pctValid": 10.894,
+          "pctEmitted": 9.649
         },
         {
           "code": "35",
           "partyName": "RENOVACIÓN POPULAR",
           "candidateName": "RAFAEL BERNARDO LÓPEZ ALIAGA CAZORLA",
-          "votesValid": 91233,
-          "pctValid": 10.644,
-          "pctEmitted": 9.427
+          "votesValid": 91446,
+          "pctValid": 10.637,
+          "pctEmitted": 9.421
         },
         {
           "code": "10",
           "partyName": "JUNTOS POR EL PERÚ",
           "candidateName": "ROBERTO HELBERT SANCHEZ PALOMINO",
-          "votesValid": 86325,
-          "pctValid": 10.071,
-          "pctEmitted": 8.92
+          "votesValid": 86498,
+          "pctValid": 10.061,
+          "pctEmitted": 8.911
         },
         {
           "code": "2",
           "partyName": "AHORA NACIÓN - AN",
           "candidateName": "PABLO ALFONSO LOPEZ CHAU NAVA",
-          "votesValid": 79779,
-          "pctValid": 9.308,
-          "pctEmitted": 8.244
+          "votesValid": 80043,
+          "pctValid": 9.31,
+          "pctEmitted": 8.246
         },
         {
           "code": "23",
           "partyName": "PARTIDO PAÍS PARA TODOS",
           "candidateName": "CARLOS GONSALO ALVAREZ LOAYZA",
-          "votesValid": 71309,
-          "pctValid": 8.319,
-          "pctEmitted": 7.368
+          "votesValid": 71537,
+          "pctValid": 8.321,
+          "pctEmitted": 7.37
         },
         {
           "code": "8",
           "partyName": "FUERZA POPULAR",
           "candidateName": "KEIKO SOFIA FUJIMORI HIGUCHI",
-          "votesValid": 62732,
-          "pctValid": 7.319,
-          "pctEmitted": 6.482
+          "votesValid": 62932,
+          "pctValid": 7.32,
+          "pctEmitted": 6.483
         },
         {
           "code": "31",
           "partyName": "PARTIDO SICREO",
           "candidateName": "ALFONSO CARLOS ESPA Y GARCES-ALVEAR",
-          "votesValid": 39687,
-          "pctValid": 4.63,
-          "pctEmitted": 4.101
+          "votesValid": 39836,
+          "pctValid": 4.634,
+          "pctEmitted": 4.104
         },
         {
           "code": "33",
           "partyName": "PRIMERO LA GENTE – COMUNIDAD, ECOLOGÍA, LIBERTAD Y PROGRESO",
           "candidateName": "MARIA SOLEDAD PEREZ TELLO",
-          "votesValid": 39239,
-          "pctValid": 4.578,
-          "pctEmitted": 4.055
+          "votesValid": 39367,
+          "pctValid": 4.579,
+          "pctEmitted": 4.056
         },
         {
           "code": "21",
           "partyName": "PARTIDO FRENTE DE LA ESPERANZA 2021",
           "candidateName": "LUIS FERNANDO OLIVERA VEGA",
-          "votesValid": 27992,
-          "pctValid": 3.266,
+          "votesValid": 28072,
+          "pctValid": 3.265,
           "pctEmitted": 2.892
         },
         {
           "code": "25",
           "partyName": "PARTIDO POLÍTICO COOPERACIÓN POPULAR",
           "candidateName": "YONHY LESCANO ANCIETA",
-          "votesValid": 19678,
-          "pctValid": 2.296,
-          "pctEmitted": 2.033
+          "votesValid": 19746,
+          "pctValid": 2.297,
+          "pctEmitted": 2.034
         },
         {
           "code": "32",
           "partyName": "PODEMOS PERÚ",
           "candidateName": "JOSE LEON LUNA GALVEZ",
-          "votesValid": 8429,
+          "votesValid": 8451,
           "pctValid": 0.983,
           "pctEmitted": 0.871
         },
@@ -1934,31 +1934,31 @@
           "code": "3",
           "partyName": "ALIANZA ELECTORAL VENCEREMOS",
           "candidateName": "RONALD DARWIN ATENCIO SOTOMAYOR",
-          "votesValid": 8312,
-          "pctValid": 0.97,
-          "pctEmitted": 0.859
+          "votesValid": 8332,
+          "pctValid": 0.969,
+          "pctEmitted": 0.858
         },
         {
           "code": "17",
           "partyName": "PARTIDO DEMÓCRATA UNIDO PERÚ",
           "candidateName": "CHARLIE CARRASCO SALAZAR",
-          "votesValid": 7765,
-          "pctValid": 0.906,
-          "pctEmitted": 0.802
+          "votesValid": 7776,
+          "pctValid": 0.904,
+          "pctEmitted": 0.801
         },
         {
           "code": "24",
           "partyName": "PARTIDO PATRIÓTICO DEL PERÚ",
           "candidateName": "HERBERT CALLER GUTIERREZ",
-          "votesValid": 7587,
-          "pctValid": 0.885,
-          "pctEmitted": 0.784
+          "votesValid": 7602,
+          "pctValid": 0.884,
+          "pctEmitted": 0.783
         },
         {
           "code": "29",
           "partyName": "PARTIDO POLÍTICO PERÚ PRIMERO",
           "candidateName": "MARIO ENRIQUE VIZCARRA CORNEJO",
-          "votesValid": 6988,
+          "votesValid": 7009,
           "pctValid": 0.815,
           "pctEmitted": 0.722
         },
@@ -1966,7 +1966,7 @@
           "code": "27",
           "partyName": "PARTIDO POLÍTICO NACIONAL PERÚ LIBRE",
           "candidateName": "VLADIMIR ROY CERRON ROJAS",
-          "votesValid": 5097,
+          "votesValid": 5113,
           "pctValid": 0.595,
           "pctEmitted": 0.527
         },
@@ -1974,7 +1974,7 @@
           "code": "22",
           "partyName": "PARTIDO MORADO",
           "candidateName": "MESIAS ANTONIO GUEVARA AMASIFUEN",
-          "votesValid": 5024,
+          "votesValid": 5039,
           "pctValid": 0.586,
           "pctEmitted": 0.519
         },
@@ -1982,23 +1982,23 @@
           "code": "12",
           "partyName": "PARTIDO APRISTA PERUANO",
           "candidateName": "PITTER ENRIQUE VALDERRAMA PEÑA",
-          "votesValid": 4817,
-          "pctValid": 0.562,
-          "pctEmitted": 0.498
+          "votesValid": 4827,
+          "pctValid": 0.561,
+          "pctEmitted": 0.497
         },
         {
           "code": "1",
           "partyName": "ALIANZA PARA EL PROGRESO",
           "candidateName": "CESAR ACUÑA PERALTA",
-          "votesValid": 3589,
-          "pctValid": 0.419,
-          "pctEmitted": 0.371
+          "votesValid": 3608,
+          "pctValid": 0.42,
+          "pctEmitted": 0.372
         },
         {
           "code": "20",
           "partyName": "PARTIDO DEMOCRÁTICO SOMOS PERÚ",
           "candidateName": "GEORGE PATRICK FORSYTH SOMMER",
-          "votesValid": 3531,
+          "votesValid": 3543,
           "pctValid": 0.412,
           "pctEmitted": 0.365
         },
@@ -2006,15 +2006,15 @@
           "code": "34",
           "partyName": "PROGRESEMOS",
           "candidateName": "PAUL DAVIS JAIMES BLANCO",
-          "votesValid": 3401,
+          "votesValid": 3413,
           "pctValid": 0.397,
-          "pctEmitted": 0.351
+          "pctEmitted": 0.352
         },
         {
           "code": "26",
           "partyName": "PARTIDO POLÍTICO INTEGRIDAD DEMOCRÁTICA",
           "candidateName": "WOLFGANG MARIO GROZO COSTA",
-          "votesValid": 3104,
+          "votesValid": 3115,
           "pctValid": 0.362,
           "pctEmitted": 0.321
         },
@@ -2022,15 +2022,15 @@
           "code": "18",
           "partyName": "PARTIDO DEMÓCRATA VERDE",
           "candidateName": "ALEX GONZALES CASTILLO",
-          "votesValid": 2876,
+          "votesValid": 2890,
           "pctValid": 0.336,
-          "pctEmitted": 0.297
+          "pctEmitted": 0.298
         },
         {
           "code": "38",
           "partyName": "UNIDAD NACIONAL",
           "candidateName": "ROBERTO ENRIQUE CHIABRA LEON",
-          "votesValid": 2682,
+          "votesValid": 2693,
           "pctValid": 0.313,
           "pctEmitted": 0.277
         },
@@ -2038,7 +2038,7 @@
           "code": "37",
           "partyName": "UN CAMINO DIFERENTE",
           "candidateName": "ROSARIO DEL PILAR FERNANDEZ BAZAN",
-          "votesValid": 1730,
+          "votesValid": 1739,
           "pctValid": 0.202,
           "pctEmitted": 0.179
         },
@@ -2046,39 +2046,39 @@
           "code": "28",
           "partyName": "PARTIDO POLÍTICO PERÚ ACCIÓN",
           "candidateName": "FRANCISCO ERNESTO DIEZ-CANSECO TÁVARA",
-          "votesValid": 1689,
+          "votesValid": 1692,
           "pctValid": 0.197,
-          "pctEmitted": 0.175
+          "pctEmitted": 0.174
         },
         {
           "code": "19",
           "partyName": "PARTIDO DEMOCRATICO FEDERAL",
           "candidateName": "ARMANDO JOAQUIN MASSE FERNANDEZ",
-          "votesValid": 1593,
-          "pctValid": 0.186,
-          "pctEmitted": 0.165
+          "votesValid": 1608,
+          "pctValid": 0.187,
+          "pctEmitted": 0.166
         },
         {
           "code": "11",
           "partyName": "LIBERTAD POPULAR",
           "candidateName": "RAFAEL JORGE BELAUNDE LLOSA",
-          "votesValid": 1571,
-          "pctValid": 0.183,
-          "pctEmitted": 0.162
+          "votesValid": 1580,
+          "pctValid": 0.184,
+          "pctEmitted": 0.163
         },
         {
           "code": "9",
           "partyName": "FUERZA Y LIBERTAD",
           "candidateName": "FIORELLA GIANNINA MOLINELLI ARISTONDO",
-          "votesValid": 1444,
-          "pctValid": 0.168,
-          "pctEmitted": 0.149
+          "votesValid": 1455,
+          "pctValid": 0.169,
+          "pctEmitted": 0.15
         },
         {
           "code": "5",
           "partyName": "FE EN EL PERÚ",
           "candidateName": "ALVARO GONZALO PAZ DE LA BARRA FREIGEIRO",
-          "votesValid": 1141,
+          "votesValid": 1143,
           "pctValid": 0.133,
           "pctEmitted": 0.118
         },
@@ -2086,7 +2086,7 @@
           "code": "7",
           "partyName": "AVANZA PAÍS - PARTIDO DE INTEGRACIÓN SOCIAL",
           "candidateName": "JOSE DANIEL WILLIAMS ZAPATA",
-          "votesValid": 942,
+          "votesValid": 943,
           "pctValid": 0.11,
           "pctEmitted": 0.097
         },
@@ -2094,7 +2094,7 @@
           "code": "36",
           "partyName": "SALVEMOS AL PERÚ",
           "candidateName": "ANTONIO ORTIZ VILLANO",
-          "votesValid": 823,
+          "votesValid": 825,
           "pctValid": 0.096,
           "pctEmitted": 0.085
         },
@@ -2102,7 +2102,7 @@
           "code": "4",
           "partyName": "PERÚ MODERNO",
           "candidateName": "CARLOS ERNESTO JAICO CARRANZA",
-          "votesValid": 631,
+          "votesValid": 634,
           "pctValid": 0.074,
           "pctEmitted": 0.065
         },
@@ -2110,7 +2110,7 @@
           "code": "15",
           "partyName": "PARTIDO DE LOS TRABAJADORES Y EMPRENDEDORES PTE - PERÚ",
           "candidateName": "NAPOLEON BECERRA GARCIA",
-          "votesValid": 628,
+          "votesValid": 629,
           "pctValid": 0.073,
           "pctEmitted": 0.065
         },
@@ -2118,9 +2118,9 @@
           "code": "30",
           "partyName": "PARTIDO POLÍTICO PRIN",
           "candidateName": "WALTER GILMER CHIRINOS PURIZAGA",
-          "votesValid": 564,
+          "votesValid": 569,
           "pctValid": 0.066,
-          "pctEmitted": 0.058
+          "pctEmitted": 0.059
         }
       ],
       "featuredCandidates": [
@@ -2128,57 +2128,57 @@
           "code": "8",
           "partyName": "FUERZA POPULAR",
           "candidateName": "KEIKO SOFIA FUJIMORI HIGUCHI",
-          "votesValid": 62732,
-          "pctValid": 7.319,
-          "pctEmitted": 6.482
+          "votesValid": 62932,
+          "pctValid": 7.32,
+          "pctEmitted": 6.483
         },
         {
           "code": "10",
           "partyName": "JUNTOS POR EL PERÚ",
           "candidateName": "ROBERTO HELBERT SANCHEZ PALOMINO",
-          "votesValid": 86325,
-          "pctValid": 10.071,
-          "pctEmitted": 8.92
+          "votesValid": 86498,
+          "pctValid": 10.061,
+          "pctEmitted": 8.911
         },
         {
           "code": "35",
           "partyName": "RENOVACIÓN POPULAR",
           "candidateName": "RAFAEL BERNARDO LÓPEZ ALIAGA CAZORLA",
-          "votesValid": 91233,
-          "pctValid": 10.644,
-          "pctEmitted": 9.427
+          "votesValid": 91446,
+          "pctValid": 10.637,
+          "pctEmitted": 9.421
         },
         {
           "code": "16",
           "partyName": "PARTIDO DEL BUEN GOBIERNO",
           "candidateName": "JORGE NIETO MONTESINOS",
-          "votesValid": 159785,
-          "pctValid": 18.642,
-          "pctEmitted": 16.511
+          "votesValid": 160361,
+          "pctValid": 18.653,
+          "pctEmitted": 16.52
         },
         {
           "code": "14",
           "partyName": "PARTIDO CÍVICO OBRAS",
           "candidateName": "RICARDO PABLO BELMONT CASSINELLI",
-          "votesValid": 93424,
-          "pctValid": 10.899,
-          "pctEmitted": 9.654
+          "votesValid": 93663,
+          "pctValid": 10.894,
+          "pctEmitted": 9.649
         }
       ],
       "otros": {
         "code": "otros",
         "label": "Otros",
-        "votesValid": 363642,
-        "pctValid": 42.426,
-        "pctEmitted": 37.575
+        "votesValid": 364829,
+        "pctValid": 42.434,
+        "pctEmitted": 37.586
       },
       "projectedVotes": {
-        "8": 64444,
-        "10": 88681,
-        "14": 95974,
-        "16": 164146,
-        "35": 93723,
-        "otros": 373568
+        "8": 64461,
+        "10": 88600,
+        "14": 95939,
+        "16": 164257,
+        "35": 93668,
+        "otros": 373693
       }
     },
     {
@@ -2195,7 +2195,7 @@
       "pendientesJee": 0,
       "totalVotosEmitidos": 338463,
       "totalVotosValidos": 270409,
-      "sourceUpdatedAt": "2026-04-15T18:07:52.053Z",
+      "sourceUpdatedAt": "2026-04-15T18:57:18.059Z",
       "candidates": [
         {
           "code": "10",
@@ -2558,7 +2558,7 @@
       "pendientesJee": 13,
       "totalVotosEmitidos": 777177,
       "totalVotosValidos": 609370,
-      "sourceUpdatedAt": "2026-04-15T18:07:52.053Z",
+      "sourceUpdatedAt": "2026-04-15T18:47:38.542Z",
       "candidates": [
         {
           "code": "10",
@@ -2921,7 +2921,7 @@
       "pendientesJee": 20,
       "totalVotosEmitidos": 637869,
       "totalVotosValidos": 550766,
-      "sourceUpdatedAt": "2026-04-15T18:07:52.053Z",
+      "sourceUpdatedAt": "2026-04-15T18:57:18.059Z",
       "candidates": [
         {
           "code": "8",
@@ -3284,7 +3284,7 @@
       "pendientesJee": 275,
       "totalVotosEmitidos": 775397,
       "totalVotosValidos": 641005,
-      "sourceUpdatedAt": "2026-04-15T18:07:52.053Z",
+      "sourceUpdatedAt": "2026-04-15T18:57:18.059Z",
       "candidates": [
         {
           "code": "10",
@@ -3647,7 +3647,7 @@
       "pendientesJee": 20,
       "totalVotosEmitidos": 206857,
       "totalVotosValidos": 164462,
-      "sourceUpdatedAt": "2026-04-15T18:07:52.053Z",
+      "sourceUpdatedAt": "2026-04-15T18:57:18.059Z",
       "candidates": [
         {
           "code": "10",
@@ -4010,7 +4010,7 @@
       "pendientesJee": 5,
       "totalVotosEmitidos": 400978,
       "totalVotosValidos": 312709,
-      "sourceUpdatedAt": "2026-04-15T18:07:52.053Z",
+      "sourceUpdatedAt": "2026-04-15T18:57:18.059Z",
       "candidates": [
         {
           "code": "10",
@@ -4373,7 +4373,7 @@
       "pendientesJee": 7,
       "totalVotosEmitidos": 527701,
       "totalVotosValidos": 437507,
-      "sourceUpdatedAt": "2026-04-15T18:07:52.053Z",
+      "sourceUpdatedAt": "2026-04-15T18:57:18.059Z",
       "candidates": [
         {
           "code": "8",
@@ -4736,7 +4736,7 @@
       "pendientesJee": 6,
       "totalVotosEmitidos": 749561,
       "totalVotosValidos": 607965,
-      "sourceUpdatedAt": "2026-04-15T18:07:52.053Z",
+      "sourceUpdatedAt": "2026-04-15T18:57:18.059Z",
       "candidates": [
         {
           "code": "8",
@@ -5091,29 +5091,29 @@
       "label": "LA LIBERTAD",
       "electores": 1552680,
       "padronShare": 5.6822,
-      "actasContabilizadasPct": 91.192,
-      "contabilizadas": 4835,
+      "actasContabilizadasPct": 91.249,
+      "contabilizadas": 4838,
       "totalActas": 5302,
-      "participacionCiudadanaPct": 68.41,
-      "enviadasJee": 362,
-      "pendientesJee": 105,
-      "totalVotosEmitidos": 1062196,
-      "totalVotosValidos": 850524,
-      "sourceUpdatedAt": "2026-04-15T18:07:52.053Z",
+      "participacionCiudadanaPct": 68.456,
+      "enviadasJee": 367,
+      "pendientesJee": 97,
+      "totalVotosEmitidos": 1062912,
+      "totalVotosValidos": 851131,
+      "sourceUpdatedAt": "2026-04-15T18:57:18.059Z",
       "candidates": [
         {
           "code": "8",
           "partyName": "FUERZA POPULAR",
           "candidateName": "KEIKO SOFIA FUJIMORI HIGUCHI",
-          "votesValid": 172004,
-          "pctValid": 20.223,
-          "pctEmitted": 16.193
+          "votesValid": 172140,
+          "pctValid": 20.225,
+          "pctEmitted": 16.195
         },
         {
           "code": "16",
           "partyName": "PARTIDO DEL BUEN GOBIERNO",
           "candidateName": "JORGE NIETO MONTESINOS",
-          "votesValid": 83877,
+          "votesValid": 83939,
           "pctValid": 9.862,
           "pctEmitted": 7.897
         },
@@ -5121,71 +5121,71 @@
           "code": "10",
           "partyName": "JUNTOS POR EL PERÚ",
           "candidateName": "ROBERTO HELBERT SANCHEZ PALOMINO",
-          "votesValid": 80879,
-          "pctValid": 9.509,
-          "pctEmitted": 7.614
+          "votesValid": 80899,
+          "pctValid": 9.505,
+          "pctEmitted": 7.611
         },
         {
           "code": "37",
           "partyName": "UN CAMINO DIFERENTE",
           "candidateName": "ROSARIO DEL PILAR FERNANDEZ BAZAN",
-          "votesValid": 75458,
-          "pctValid": 8.872,
-          "pctEmitted": 7.104
+          "votesValid": 75524,
+          "pctValid": 8.873,
+          "pctEmitted": 7.105
         },
         {
           "code": "35",
           "partyName": "RENOVACIÓN POPULAR",
           "candidateName": "RAFAEL BERNARDO LÓPEZ ALIAGA CAZORLA",
-          "votesValid": 70379,
-          "pctValid": 8.275,
-          "pctEmitted": 6.626
+          "votesValid": 70407,
+          "pctValid": 8.272,
+          "pctEmitted": 6.624
         },
         {
           "code": "23",
           "partyName": "PARTIDO PAÍS PARA TODOS",
           "candidateName": "CARLOS GONSALO ALVAREZ LOAYZA",
-          "votesValid": 67404,
-          "pctValid": 7.925,
-          "pctEmitted": 6.346
+          "votesValid": 67460,
+          "pctValid": 7.926,
+          "pctEmitted": 6.347
         },
         {
           "code": "14",
           "partyName": "PARTIDO CÍVICO OBRAS",
           "candidateName": "RICARDO PABLO BELMONT CASSINELLI",
-          "votesValid": 60353,
+          "votesValid": 60400,
           "pctValid": 7.096,
-          "pctEmitted": 5.682
+          "pctEmitted": 5.683
         },
         {
           "code": "2",
           "partyName": "AHORA NACIÓN - AN",
           "candidateName": "PABLO ALFONSO LOPEZ CHAU NAVA",
-          "votesValid": 34767,
-          "pctValid": 4.088,
+          "votesValid": 34787,
+          "pctValid": 4.087,
           "pctEmitted": 3.273
         },
         {
           "code": "31",
           "partyName": "PARTIDO SICREO",
           "candidateName": "ALFONSO CARLOS ESPA Y GARCES-ALVEAR",
-          "votesValid": 31838,
-          "pctValid": 3.743,
-          "pctEmitted": 2.997
+          "votesValid": 31877,
+          "pctValid": 3.745,
+          "pctEmitted": 2.999
         },
         {
           "code": "1",
           "partyName": "ALIANZA PARA EL PROGRESO",
           "candidateName": "CESAR ACUÑA PERALTA",
-          "votesValid": 29590,
-          "pctValid": 3.479,
+          "votesValid": 29617,
+          "pctValid": 3.48,
           "pctEmitted": 2.786
         },
         {
           "code": "33",
           "partyName": "PRIMERO LA GENTE – COMUNIDAD, ECOLOGÍA, LIBERTAD Y PROGRESO",
           "candidateName": "MARIA SOLEDAD PEREZ TELLO",
-          "votesValid": 27396,
+          "votesValid": 27413,
           "pctValid": 3.221,
           "pctEmitted": 2.579
         },
@@ -5193,23 +5193,23 @@
           "code": "12",
           "partyName": "PARTIDO APRISTA PERUANO",
           "candidateName": "PITTER ENRIQUE VALDERRAMA PEÑA",
-          "votesValid": 25109,
-          "pctValid": 2.952,
-          "pctEmitted": 2.364
+          "votesValid": 25134,
+          "pctValid": 2.953,
+          "pctEmitted": 2.365
         },
         {
           "code": "32",
           "partyName": "PODEMOS PERÚ",
           "candidateName": "JOSE LEON LUNA GALVEZ",
-          "votesValid": 19057,
-          "pctValid": 2.241,
+          "votesValid": 19065,
+          "pctValid": 2.24,
           "pctEmitted": 1.794
         },
         {
           "code": "21",
           "partyName": "PARTIDO FRENTE DE LA ESPERANZA 2021",
           "candidateName": "LUIS FERNANDO OLIVERA VEGA",
-          "votesValid": 12908,
+          "votesValid": 12916,
           "pctValid": 1.518,
           "pctEmitted": 1.215
         },
@@ -5217,7 +5217,7 @@
           "code": "24",
           "partyName": "PARTIDO PATRIÓTICO DEL PERÚ",
           "candidateName": "HERBERT CALLER GUTIERREZ",
-          "votesValid": 7517,
+          "votesValid": 7525,
           "pctValid": 0.884,
           "pctEmitted": 0.708
         },
@@ -5225,7 +5225,7 @@
           "code": "29",
           "partyName": "PARTIDO POLÍTICO PERÚ PRIMERO",
           "candidateName": "MARIO ENRIQUE VIZCARRA CORNEJO",
-          "votesValid": 6336,
+          "votesValid": 6341,
           "pctValid": 0.745,
           "pctEmitted": 0.597
         },
@@ -5241,7 +5241,7 @@
           "code": "3",
           "partyName": "ALIANZA ELECTORAL VENCEREMOS",
           "candidateName": "RONALD DARWIN ATENCIO SOTOMAYOR",
-          "votesValid": 4363,
+          "votesValid": 4368,
           "pctValid": 0.513,
           "pctEmitted": 0.411
         },
@@ -5249,7 +5249,7 @@
           "code": "27",
           "partyName": "PARTIDO POLÍTICO NACIONAL PERÚ LIBRE",
           "candidateName": "VLADIMIR ROY CERRON ROJAS",
-          "votesValid": 4362,
+          "votesValid": 4365,
           "pctValid": 0.513,
           "pctEmitted": 0.411
         },
@@ -5257,7 +5257,7 @@
           "code": "17",
           "partyName": "PARTIDO DEMÓCRATA UNIDO PERÚ",
           "candidateName": "CHARLIE CARRASCO SALAZAR",
-          "votesValid": 3748,
+          "votesValid": 3750,
           "pctValid": 0.441,
           "pctEmitted": 0.353
         },
@@ -5265,7 +5265,7 @@
           "code": "22",
           "partyName": "PARTIDO MORADO",
           "candidateName": "MESIAS ANTONIO GUEVARA AMASIFUEN",
-          "votesValid": 3560,
+          "votesValid": 3563,
           "pctValid": 0.419,
           "pctEmitted": 0.335
         },
@@ -5273,7 +5273,7 @@
           "code": "26",
           "partyName": "PARTIDO POLÍTICO INTEGRIDAD DEMOCRÁTICA",
           "candidateName": "WOLFGANG MARIO GROZO COSTA",
-          "votesValid": 3358,
+          "votesValid": 3362,
           "pctValid": 0.395,
           "pctEmitted": 0.316
         },
@@ -5281,7 +5281,7 @@
           "code": "25",
           "partyName": "PARTIDO POLÍTICO COOPERACIÓN POPULAR",
           "candidateName": "YONHY LESCANO ANCIETA",
-          "votesValid": 2825,
+          "votesValid": 2828,
           "pctValid": 0.332,
           "pctEmitted": 0.266
         },
@@ -5289,7 +5289,7 @@
           "code": "18",
           "partyName": "PARTIDO DEMÓCRATA VERDE",
           "candidateName": "ALEX GONZALES CASTILLO",
-          "votesValid": 2668,
+          "votesValid": 2670,
           "pctValid": 0.314,
           "pctEmitted": 0.251
         },
@@ -5305,7 +5305,7 @@
           "code": "34",
           "partyName": "PROGRESEMOS",
           "candidateName": "PAUL DAVIS JAIMES BLANCO",
-          "votesValid": 2292,
+          "votesValid": 2293,
           "pctValid": 0.269,
           "pctEmitted": 0.216
         },
@@ -5313,7 +5313,7 @@
           "code": "7",
           "partyName": "AVANZA PAÍS - PARTIDO DE INTEGRACIÓN SOCIAL",
           "candidateName": "JOSE DANIEL WILLIAMS ZAPATA",
-          "votesValid": 2094,
+          "votesValid": 2096,
           "pctValid": 0.246,
           "pctEmitted": 0.197
         },
@@ -5321,7 +5321,7 @@
           "code": "11",
           "partyName": "LIBERTAD POPULAR",
           "candidateName": "RAFAEL JORGE BELAUNDE LLOSA",
-          "votesValid": 1678,
+          "votesValid": 1679,
           "pctValid": 0.197,
           "pctEmitted": 0.158
         },
@@ -5329,7 +5329,7 @@
           "code": "28",
           "partyName": "PARTIDO POLÍTICO PERÚ ACCIÓN",
           "candidateName": "FRANCISCO ERNESTO DIEZ-CANSECO TÁVARA",
-          "votesValid": 1622,
+          "votesValid": 1623,
           "pctValid": 0.191,
           "pctEmitted": 0.153
         },
@@ -5337,7 +5337,7 @@
           "code": "5",
           "partyName": "FE EN EL PERÚ",
           "candidateName": "ALVARO GONZALO PAZ DE LA BARRA FREIGEIRO",
-          "votesValid": 1195,
+          "votesValid": 1198,
           "pctValid": 0.141,
           "pctEmitted": 0.113
         },
@@ -5354,16 +5354,16 @@
           "partyName": "PARTIDO DEMOCRATICO FEDERAL",
           "candidateName": "ARMANDO JOAQUIN MASSE FERNANDEZ",
           "votesValid": 957,
-          "pctValid": 0.113,
+          "pctValid": 0.112,
           "pctEmitted": 0.09
         },
         {
           "code": "30",
           "partyName": "PARTIDO POLÍTICO PRIN",
           "candidateName": "WALTER GILMER CHIRINOS PURIZAGA",
-          "votesValid": 904,
-          "pctValid": 0.106,
-          "pctEmitted": 0.085
+          "votesValid": 909,
+          "pctValid": 0.107,
+          "pctEmitted": 0.086
         },
         {
           "code": "36",
@@ -5395,31 +5395,31 @@
           "code": "8",
           "partyName": "FUERZA POPULAR",
           "candidateName": "KEIKO SOFIA FUJIMORI HIGUCHI",
-          "votesValid": 172004,
-          "pctValid": 20.223,
-          "pctEmitted": 16.193
+          "votesValid": 172140,
+          "pctValid": 20.225,
+          "pctEmitted": 16.195
         },
         {
           "code": "10",
           "partyName": "JUNTOS POR EL PERÚ",
           "candidateName": "ROBERTO HELBERT SANCHEZ PALOMINO",
-          "votesValid": 80879,
-          "pctValid": 9.509,
-          "pctEmitted": 7.614
+          "votesValid": 80899,
+          "pctValid": 9.505,
+          "pctEmitted": 7.611
         },
         {
           "code": "35",
           "partyName": "RENOVACIÓN POPULAR",
           "candidateName": "RAFAEL BERNARDO LÓPEZ ALIAGA CAZORLA",
-          "votesValid": 70379,
-          "pctValid": 8.275,
-          "pctEmitted": 6.626
+          "votesValid": 70407,
+          "pctValid": 8.272,
+          "pctEmitted": 6.624
         },
         {
           "code": "16",
           "partyName": "PARTIDO DEL BUEN GOBIERNO",
           "candidateName": "JORGE NIETO MONTESINOS",
-          "votesValid": 83877,
+          "votesValid": 83939,
           "pctValid": 9.862,
           "pctEmitted": 7.897
         },
@@ -5427,25 +5427,25 @@
           "code": "14",
           "partyName": "PARTIDO CÍVICO OBRAS",
           "candidateName": "RICARDO PABLO BELMONT CASSINELLI",
-          "votesValid": 60353,
+          "votesValid": 60400,
           "pctValid": 7.096,
-          "pctEmitted": 5.682
+          "pctEmitted": 5.683
         }
       ],
       "otros": {
         "code": "otros",
         "label": "Otros",
-        "votesValid": 383032,
-        "pctValid": 45.036,
-        "pctEmitted": 36.061
+        "votesValid": 383346,
+        "pctValid": 45.04,
+        "pctEmitted": 36.067
       },
       "projectedVotes": {
-        "8": 188617,
-        "10": 88691,
-        "14": 66182,
-        "16": 91978,
-        "35": 77177,
-        "otros": 420028
+        "8": 188649,
+        "10": 88657,
+        "14": 66193,
+        "16": 91989,
+        "35": 77159,
+        "otros": 420110
       }
     },
     {
@@ -5462,7 +5462,7 @@
       "pendientesJee": 2,
       "totalVotosEmitidos": 779709,
       "totalVotosValidos": 637639,
-      "sourceUpdatedAt": "2026-04-15T18:07:52.053Z",
+      "sourceUpdatedAt": "2026-04-15T18:57:18.059Z",
       "candidates": [
         {
           "code": "8",
@@ -5817,21 +5817,21 @@
       "label": "LIMA",
       "electores": 8651045,
       "padronShare": 31.6592,
-      "actasContabilizadasPct": 92.994,
-      "contabilizadas": 27198,
+      "actasContabilizadasPct": 92.998,
+      "contabilizadas": 27199,
       "totalActas": 29247,
-      "participacionCiudadanaPct": 74.26,
-      "enviadasJee": 865,
-      "pendientesJee": 1184,
-      "totalVotosEmitidos": 6424267,
-      "totalVotosValidos": 5671229,
-      "sourceUpdatedAt": "2026-04-15T18:07:52.053Z",
+      "participacionCiudadanaPct": 74.263,
+      "enviadasJee": 868,
+      "pendientesJee": 1180,
+      "totalVotosEmitidos": 6424512,
+      "totalVotosValidos": 5671414,
+      "sourceUpdatedAt": "2026-04-15T18:47:38.542Z",
       "candidates": [
         {
           "code": "35",
           "partyName": "RENOVACIÓN POPULAR",
           "candidateName": "RAFAEL BERNARDO LÓPEZ ALIAGA CAZORLA",
-          "votesValid": 1131625,
+          "votesValid": 1131649,
           "pctValid": 19.954,
           "pctEmitted": 17.615
         },
@@ -5839,7 +5839,7 @@
           "code": "8",
           "partyName": "FUERZA POPULAR",
           "candidateName": "KEIKO SOFIA FUJIMORI HIGUCHI",
-          "votesValid": 1012760,
+          "votesValid": 1012795,
           "pctValid": 17.858,
           "pctEmitted": 15.765
         },
@@ -5847,7 +5847,7 @@
           "code": "16",
           "partyName": "PARTIDO DEL BUEN GOBIERNO",
           "candidateName": "JORGE NIETO MONTESINOS",
-          "votesValid": 856361,
+          "votesValid": 856379,
           "pctValid": 15.1,
           "pctEmitted": 13.33
         },
@@ -5855,7 +5855,7 @@
           "code": "14",
           "partyName": "PARTIDO CÍVICO OBRAS",
           "candidateName": "RICARDO PABLO BELMONT CASSINELLI",
-          "votesValid": 517393,
+          "votesValid": 517417,
           "pctValid": 9.123,
           "pctEmitted": 8.054
         },
@@ -5863,7 +5863,7 @@
           "code": "23",
           "partyName": "PARTIDO PAÍS PARA TODOS",
           "candidateName": "CARLOS GONSALO ALVAREZ LOAYZA",
-          "votesValid": 504708,
+          "votesValid": 504724,
           "pctValid": 8.899,
           "pctEmitted": 7.856
         },
@@ -5871,7 +5871,7 @@
           "code": "2",
           "partyName": "AHORA NACIÓN - AN",
           "candidateName": "PABLO ALFONSO LOPEZ CHAU NAVA",
-          "votesValid": 388074,
+          "votesValid": 388090,
           "pctValid": 6.843,
           "pctEmitted": 6.041
         },
@@ -5879,7 +5879,7 @@
           "code": "33",
           "partyName": "PRIMERO LA GENTE – COMUNIDAD, ECOLOGÍA, LIBERTAD Y PROGRESO",
           "candidateName": "MARIA SOLEDAD PEREZ TELLO",
-          "votesValid": 241776,
+          "votesValid": 241780,
           "pctValid": 4.263,
           "pctEmitted": 3.763
         },
@@ -5887,7 +5887,7 @@
           "code": "31",
           "partyName": "PARTIDO SICREO",
           "candidateName": "ALFONSO CARLOS ESPA Y GARCES-ALVEAR",
-          "votesValid": 222862,
+          "votesValid": 222867,
           "pctValid": 3.93,
           "pctEmitted": 3.469
         },
@@ -5895,7 +5895,7 @@
           "code": "10",
           "partyName": "JUNTOS POR EL PERÚ",
           "candidateName": "ROBERTO HELBERT SANCHEZ PALOMINO",
-          "votesValid": 185713,
+          "votesValid": 185722,
           "pctValid": 3.275,
           "pctEmitted": 2.891
         },
@@ -5903,7 +5903,7 @@
           "code": "21",
           "partyName": "PARTIDO FRENTE DE LA ESPERANZA 2021",
           "candidateName": "LUIS FERNANDO OLIVERA VEGA",
-          "votesValid": 79745,
+          "votesValid": 79748,
           "pctValid": 1.406,
           "pctEmitted": 1.241
         },
@@ -5911,7 +5911,7 @@
           "code": "32",
           "partyName": "PODEMOS PERÚ",
           "candidateName": "JOSE LEON LUNA GALVEZ",
-          "votesValid": 55000,
+          "votesValid": 55006,
           "pctValid": 0.97,
           "pctEmitted": 0.856
         },
@@ -5919,7 +5919,7 @@
           "code": "12",
           "partyName": "PARTIDO APRISTA PERUANO",
           "candidateName": "PITTER ENRIQUE VALDERRAMA PEÑA",
-          "votesValid": 46927,
+          "votesValid": 46929,
           "pctValid": 0.827,
           "pctEmitted": 0.73
         },
@@ -5927,7 +5927,7 @@
           "code": "20",
           "partyName": "PARTIDO DEMOCRÁTICO SOMOS PERÚ",
           "candidateName": "GEORGE PATRICK FORSYTH SOMMER",
-          "votesValid": 41361,
+          "votesValid": 41365,
           "pctValid": 0.729,
           "pctEmitted": 0.644
         },
@@ -5935,9 +5935,9 @@
           "code": "24",
           "partyName": "PARTIDO PATRIÓTICO DEL PERÚ",
           "candidateName": "HERBERT CALLER GUTIERREZ",
-          "votesValid": 36071,
+          "votesValid": 36076,
           "pctValid": 0.636,
-          "pctEmitted": 0.561
+          "pctEmitted": 0.562
         },
         {
           "code": "38",
@@ -5951,7 +5951,7 @@
           "code": "22",
           "partyName": "PARTIDO MORADO",
           "candidateName": "MESIAS ANTONIO GUEVARA AMASIFUEN",
-          "votesValid": 30166,
+          "votesValid": 30169,
           "pctValid": 0.532,
           "pctEmitted": 0.47
         },
@@ -5959,7 +5959,7 @@
           "code": "25",
           "partyName": "PARTIDO POLÍTICO COOPERACIÓN POPULAR",
           "candidateName": "YONHY LESCANO ANCIETA",
-          "votesValid": 29759,
+          "votesValid": 29760,
           "pctValid": 0.525,
           "pctEmitted": 0.463
         },
@@ -5983,7 +5983,7 @@
           "code": "17",
           "partyName": "PARTIDO DEMÓCRATA UNIDO PERÚ",
           "candidateName": "CHARLIE CARRASCO SALAZAR",
-          "votesValid": 27089,
+          "votesValid": 27092,
           "pctValid": 0.478,
           "pctEmitted": 0.422
         },
@@ -5991,7 +5991,7 @@
           "code": "26",
           "partyName": "PARTIDO POLÍTICO INTEGRIDAD DEMOCRÁTICA",
           "candidateName": "WOLFGANG MARIO GROZO COSTA",
-          "votesValid": 26245,
+          "votesValid": 26246,
           "pctValid": 0.463,
           "pctEmitted": 0.409
         },
@@ -5999,7 +5999,7 @@
           "code": "3",
           "partyName": "ALIANZA ELECTORAL VENCEREMOS",
           "candidateName": "RONALD DARWIN ATENCIO SOTOMAYOR",
-          "votesValid": 21829,
+          "votesValid": 21831,
           "pctValid": 0.385,
           "pctEmitted": 0.34
         },
@@ -6007,7 +6007,7 @@
           "code": "34",
           "partyName": "PROGRESEMOS",
           "candidateName": "PAUL DAVIS JAIMES BLANCO",
-          "votesValid": 20038,
+          "votesValid": 20039,
           "pctValid": 0.353,
           "pctEmitted": 0.312
         },
@@ -6015,7 +6015,7 @@
           "code": "27",
           "partyName": "PARTIDO POLÍTICO NACIONAL PERÚ LIBRE",
           "candidateName": "VLADIMIR ROY CERRON ROJAS",
-          "votesValid": 16380,
+          "votesValid": 16381,
           "pctValid": 0.289,
           "pctEmitted": 0.255
         },
@@ -6079,7 +6079,7 @@
           "code": "5",
           "partyName": "FE EN EL PERÚ",
           "candidateName": "ALVARO GONZALO PAZ DE LA BARRA FREIGEIRO",
-          "votesValid": 5768,
+          "votesValid": 5769,
           "pctValid": 0.102,
           "pctEmitted": 0.09
         },
@@ -6103,7 +6103,7 @@
           "code": "36",
           "partyName": "SALVEMOS AL PERÚ",
           "candidateName": "ANTONIO ORTIZ VILLANO",
-          "votesValid": 2988,
+          "votesValid": 2989,
           "pctValid": 0.053,
           "pctEmitted": 0.047
         },
@@ -6121,7 +6121,7 @@
           "code": "8",
           "partyName": "FUERZA POPULAR",
           "candidateName": "KEIKO SOFIA FUJIMORI HIGUCHI",
-          "votesValid": 1012760,
+          "votesValid": 1012795,
           "pctValid": 17.858,
           "pctEmitted": 15.765
         },
@@ -6129,7 +6129,7 @@
           "code": "10",
           "partyName": "JUNTOS POR EL PERÚ",
           "candidateName": "ROBERTO HELBERT SANCHEZ PALOMINO",
-          "votesValid": 185713,
+          "votesValid": 185722,
           "pctValid": 3.275,
           "pctEmitted": 2.891
         },
@@ -6137,7 +6137,7 @@
           "code": "35",
           "partyName": "RENOVACIÓN POPULAR",
           "candidateName": "RAFAEL BERNARDO LÓPEZ ALIAGA CAZORLA",
-          "votesValid": 1131625,
+          "votesValid": 1131649,
           "pctValid": 19.954,
           "pctEmitted": 17.615
         },
@@ -6145,7 +6145,7 @@
           "code": "16",
           "partyName": "PARTIDO DEL BUEN GOBIERNO",
           "candidateName": "JORGE NIETO MONTESINOS",
-          "votesValid": 856361,
+          "votesValid": 856379,
           "pctValid": 15.1,
           "pctEmitted": 13.33
         },
@@ -6153,7 +6153,7 @@
           "code": "14",
           "partyName": "PARTIDO CÍVICO OBRAS",
           "candidateName": "RICARDO PABLO BELMONT CASSINELLI",
-          "votesValid": 517393,
+          "votesValid": 517417,
           "pctValid": 9.123,
           "pctEmitted": 8.054
         }
@@ -6161,17 +6161,17 @@
       "otros": {
         "code": "otros",
         "label": "Otros",
-        "votesValid": 1967377,
+        "votesValid": 1967452,
         "pctValid": 34.692,
-        "pctEmitted": 30.624
+        "pctEmitted": 30.625
       },
       "projectedVotes": {
-        "8": 1089060,
-        "10": 199704,
-        "14": 556372,
-        "16": 920878,
-        "35": 1216880,
-        "otros": 2115596
+        "8": 1089050,
+        "10": 199705,
+        "14": 556374,
+        "16": 920857,
+        "35": 1216853,
+        "otros": 2115585
       }
     },
     {
@@ -6180,165 +6180,165 @@
       "label": "LORETO",
       "electores": 775930,
       "padronShare": 2.8396,
-      "actasContabilizadasPct": 80.386,
-      "contabilizadas": 2168,
+      "actasContabilizadasPct": 80.608,
+      "contabilizadas": 2174,
       "totalActas": 2697,
-      "participacionCiudadanaPct": 47.705,
+      "participacionCiudadanaPct": 47.791,
       "enviadasJee": 334,
-      "pendientesJee": 195,
-      "totalVotosEmitidos": 370152,
-      "totalVotosValidos": 281002,
-      "sourceUpdatedAt": "2026-04-15T18:07:52.053Z",
+      "pendientesJee": 189,
+      "totalVotosEmitidos": 370818,
+      "totalVotosValidos": 281465,
+      "sourceUpdatedAt": "2026-04-15T18:57:18.059Z",
       "candidates": [
         {
           "code": "8",
           "partyName": "FUERZA POPULAR",
           "candidateName": "KEIKO SOFIA FUJIMORI HIGUCHI",
-          "votesValid": 79771,
-          "pctValid": 28.388,
-          "pctEmitted": 21.551
+          "votesValid": 79921,
+          "pctValid": 28.395,
+          "pctEmitted": 21.553
         },
         {
           "code": "23",
           "partyName": "PARTIDO PAÍS PARA TODOS",
           "candidateName": "CARLOS GONSALO ALVAREZ LOAYZA",
-          "votesValid": 34058,
-          "pctValid": 12.12,
-          "pctEmitted": 9.201
+          "votesValid": 34063,
+          "pctValid": 12.102,
+          "pctEmitted": 9.186
         },
         {
           "code": "10",
           "partyName": "JUNTOS POR EL PERÚ",
           "candidateName": "ROBERTO HELBERT SANCHEZ PALOMINO",
-          "votesValid": 25568,
-          "pctValid": 9.099,
-          "pctEmitted": 6.907
+          "votesValid": 25787,
+          "pctValid": 9.162,
+          "pctEmitted": 6.954
         },
         {
           "code": "1",
           "partyName": "ALIANZA PARA EL PROGRESO",
           "candidateName": "CESAR ACUÑA PERALTA",
-          "votesValid": 19620,
-          "pctValid": 6.982,
-          "pctEmitted": 5.301
+          "votesValid": 19631,
+          "pctValid": 6.975,
+          "pctEmitted": 5.294
         },
         {
           "code": "20",
           "partyName": "PARTIDO DEMOCRÁTICO SOMOS PERÚ",
           "candidateName": "GEORGE PATRICK FORSYTH SOMMER",
-          "votesValid": 19471,
-          "pctValid": 6.929,
-          "pctEmitted": 5.26
+          "votesValid": 19477,
+          "pctValid": 6.92,
+          "pctEmitted": 5.252
         },
         {
           "code": "35",
           "partyName": "RENOVACIÓN POPULAR",
           "candidateName": "RAFAEL BERNARDO LÓPEZ ALIAGA CAZORLA",
-          "votesValid": 19251,
-          "pctValid": 6.851,
-          "pctEmitted": 5.201
+          "votesValid": 19255,
+          "pctValid": 6.841,
+          "pctEmitted": 5.193
         },
         {
           "code": "2",
           "partyName": "AHORA NACIÓN - AN",
           "candidateName": "PABLO ALFONSO LOPEZ CHAU NAVA",
-          "votesValid": 12290,
-          "pctValid": 4.374,
-          "pctEmitted": 3.32
+          "votesValid": 12293,
+          "pctValid": 4.368,
+          "pctEmitted": 3.315
         },
         {
           "code": "14",
           "partyName": "PARTIDO CÍVICO OBRAS",
           "candidateName": "RICARDO PABLO BELMONT CASSINELLI",
-          "votesValid": 11954,
-          "pctValid": 4.254,
-          "pctEmitted": 3.229
+          "votesValid": 11971,
+          "pctValid": 4.253,
+          "pctEmitted": 3.228
         },
         {
           "code": "16",
           "partyName": "PARTIDO DEL BUEN GOBIERNO",
           "candidateName": "JORGE NIETO MONTESINOS",
-          "votesValid": 10457,
-          "pctValid": 3.721,
-          "pctEmitted": 2.825
+          "votesValid": 10459,
+          "pctValid": 3.716,
+          "pctEmitted": 2.821
         },
         {
           "code": "29",
           "partyName": "PARTIDO POLÍTICO PERÚ PRIMERO",
           "candidateName": "MARIO ENRIQUE VIZCARRA CORNEJO",
-          "votesValid": 7264,
-          "pctValid": 2.585,
-          "pctEmitted": 1.962
+          "votesValid": 7271,
+          "pctValid": 2.583,
+          "pctEmitted": 1.961
         },
         {
           "code": "32",
           "partyName": "PODEMOS PERÚ",
           "candidateName": "JOSE LEON LUNA GALVEZ",
-          "votesValid": 7210,
-          "pctValid": 2.566,
-          "pctEmitted": 1.948
+          "votesValid": 7216,
+          "pctValid": 2.564,
+          "pctEmitted": 1.946
         },
         {
           "code": "33",
           "partyName": "PRIMERO LA GENTE – COMUNIDAD, ECOLOGÍA, LIBERTAD Y PROGRESO",
           "candidateName": "MARIA SOLEDAD PEREZ TELLO",
-          "votesValid": 5176,
-          "pctValid": 1.842,
-          "pctEmitted": 1.398
+          "votesValid": 5177,
+          "pctValid": 1.839,
+          "pctEmitted": 1.396
         },
         {
           "code": "31",
           "partyName": "PARTIDO SICREO",
           "candidateName": "ALFONSO CARLOS ESPA Y GARCES-ALVEAR",
-          "votesValid": 4621,
-          "pctValid": 1.644,
-          "pctEmitted": 1.248
+          "votesValid": 4623,
+          "pctValid": 1.642,
+          "pctEmitted": 1.247
         },
         {
           "code": "21",
           "partyName": "PARTIDO FRENTE DE LA ESPERANZA 2021",
           "candidateName": "LUIS FERNANDO OLIVERA VEGA",
-          "votesValid": 2423,
-          "pctValid": 0.862,
-          "pctEmitted": 0.655
+          "votesValid": 2424,
+          "pctValid": 0.861,
+          "pctEmitted": 0.654
         },
         {
           "code": "12",
           "partyName": "PARTIDO APRISTA PERUANO",
           "candidateName": "PITTER ENRIQUE VALDERRAMA PEÑA",
-          "votesValid": 2283,
-          "pctValid": 0.812,
-          "pctEmitted": 0.617
+          "votesValid": 2284,
+          "pctValid": 0.811,
+          "pctEmitted": 0.616
         },
         {
           "code": "27",
           "partyName": "PARTIDO POLÍTICO NACIONAL PERÚ LIBRE",
           "candidateName": "VLADIMIR ROY CERRON ROJAS",
-          "votesValid": 2159,
-          "pctValid": 0.768,
-          "pctEmitted": 0.583
+          "votesValid": 2166,
+          "pctValid": 0.77,
+          "pctEmitted": 0.584
         },
         {
           "code": "25",
           "partyName": "PARTIDO POLÍTICO COOPERACIÓN POPULAR",
           "candidateName": "YONHY LESCANO ANCIETA",
           "votesValid": 1956,
-          "pctValid": 0.696,
-          "pctEmitted": 0.528
+          "pctValid": 0.695,
+          "pctEmitted": 0.527
         },
         {
           "code": "3",
           "partyName": "ALIANZA ELECTORAL VENCEREMOS",
           "candidateName": "RONALD DARWIN ATENCIO SOTOMAYOR",
-          "votesValid": 1687,
+          "votesValid": 1689,
           "pctValid": 0.6,
-          "pctEmitted": 0.456
+          "pctEmitted": 0.455
         },
         {
           "code": "24",
           "partyName": "PARTIDO PATRIÓTICO DEL PERÚ",
           "candidateName": "HERBERT CALLER GUTIERREZ",
-          "votesValid": 1666,
+          "votesValid": 1669,
           "pctValid": 0.593,
           "pctEmitted": 0.45
         },
@@ -6347,22 +6347,22 @@
           "partyName": "PARTIDO DEMÓCRATA VERDE",
           "candidateName": "ALEX GONZALES CASTILLO",
           "votesValid": 1616,
-          "pctValid": 0.575,
-          "pctEmitted": 0.437
+          "pctValid": 0.574,
+          "pctEmitted": 0.436
         },
         {
           "code": "22",
           "partyName": "PARTIDO MORADO",
           "candidateName": "MESIAS ANTONIO GUEVARA AMASIFUEN",
           "votesValid": 1224,
-          "pctValid": 0.436,
-          "pctEmitted": 0.331
+          "pctValid": 0.435,
+          "pctEmitted": 0.33
         },
         {
           "code": "34",
           "partyName": "PROGRESEMOS",
           "candidateName": "PAUL DAVIS JAIMES BLANCO",
-          "votesValid": 1073,
+          "votesValid": 1075,
           "pctValid": 0.382,
           "pctEmitted": 0.29
         },
@@ -6370,9 +6370,9 @@
           "code": "17",
           "partyName": "PARTIDO DEMÓCRATA UNIDO PERÚ",
           "candidateName": "CHARLIE CARRASCO SALAZAR",
-          "votesValid": 1053,
+          "votesValid": 1056,
           "pctValid": 0.375,
-          "pctEmitted": 0.284
+          "pctEmitted": 0.285
         },
         {
           "code": "11",
@@ -6386,23 +6386,23 @@
           "code": "38",
           "partyName": "UNIDAD NACIONAL",
           "candidateName": "ROBERTO ENRIQUE CHIABRA LEON",
-          "votesValid": 811,
-          "pctValid": 0.289,
-          "pctEmitted": 0.219
+          "votesValid": 817,
+          "pctValid": 0.29,
+          "pctEmitted": 0.22
         },
         {
           "code": "9",
           "partyName": "FUERZA Y LIBERTAD",
           "candidateName": "FIORELLA GIANNINA MOLINELLI ARISTONDO",
           "votesValid": 769,
-          "pctValid": 0.274,
-          "pctEmitted": 0.208
+          "pctValid": 0.273,
+          "pctEmitted": 0.207
         },
         {
           "code": "4",
           "partyName": "PERÚ MODERNO",
           "candidateName": "CARLOS ERNESTO JAICO CARRANZA",
-          "votesValid": 711,
+          "votesValid": 713,
           "pctValid": 0.253,
           "pctEmitted": 0.192
         },
@@ -6411,14 +6411,14 @@
           "partyName": "PARTIDO POLÍTICO INTEGRIDAD DEMOCRÁTICA",
           "candidateName": "WOLFGANG MARIO GROZO COSTA",
           "votesValid": 643,
-          "pctValid": 0.229,
-          "pctEmitted": 0.174
+          "pctValid": 0.228,
+          "pctEmitted": 0.173
         },
         {
           "code": "36",
           "partyName": "SALVEMOS AL PERÚ",
           "candidateName": "ANTONIO ORTIZ VILLANO",
-          "votesValid": 595,
+          "votesValid": 596,
           "pctValid": 0.212,
           "pctEmitted": 0.161
         },
@@ -6426,7 +6426,7 @@
           "code": "5",
           "partyName": "FE EN EL PERÚ",
           "candidateName": "ALVARO GONZALO PAZ DE LA BARRA FREIGEIRO",
-          "votesValid": 593,
+          "votesValid": 594,
           "pctValid": 0.211,
           "pctEmitted": 0.16
         },
@@ -6442,16 +6442,16 @@
           "code": "7",
           "partyName": "AVANZA PAÍS - PARTIDO DE INTEGRACIÓN SOCIAL",
           "candidateName": "JOSE DANIEL WILLIAMS ZAPATA",
-          "votesValid": 483,
+          "votesValid": 484,
           "pctValid": 0.172,
-          "pctEmitted": 0.13
+          "pctEmitted": 0.131
         },
         {
           "code": "37",
           "partyName": "UN CAMINO DIFERENTE",
           "candidateName": "ROSARIO DEL PILAR FERNANDEZ BAZAN",
           "votesValid": 426,
-          "pctValid": 0.152,
+          "pctValid": 0.151,
           "pctEmitted": 0.115
         },
         {
@@ -6460,7 +6460,7 @@
           "candidateName": "ARMANDO JOAQUIN MASSE FERNANDEZ",
           "votesValid": 335,
           "pctValid": 0.119,
-          "pctEmitted": 0.091
+          "pctEmitted": 0.09
         },
         {
           "code": "15",
@@ -6476,7 +6476,7 @@
           "candidateName": "WALTER GILMER CHIRINOS PURIZAGA",
           "votesValid": 176,
           "pctValid": 0.063,
-          "pctEmitted": 0.048
+          "pctEmitted": 0.047
         }
       ],
       "featuredCandidates": [
@@ -6484,57 +6484,57 @@
           "code": "8",
           "partyName": "FUERZA POPULAR",
           "candidateName": "KEIKO SOFIA FUJIMORI HIGUCHI",
-          "votesValid": 79771,
-          "pctValid": 28.388,
-          "pctEmitted": 21.551
+          "votesValid": 79921,
+          "pctValid": 28.395,
+          "pctEmitted": 21.553
         },
         {
           "code": "10",
           "partyName": "JUNTOS POR EL PERÚ",
           "candidateName": "ROBERTO HELBERT SANCHEZ PALOMINO",
-          "votesValid": 25568,
-          "pctValid": 9.099,
-          "pctEmitted": 6.907
+          "votesValid": 25787,
+          "pctValid": 9.162,
+          "pctEmitted": 6.954
         },
         {
           "code": "35",
           "partyName": "RENOVACIÓN POPULAR",
           "candidateName": "RAFAEL BERNARDO LÓPEZ ALIAGA CAZORLA",
-          "votesValid": 19251,
-          "pctValid": 6.851,
-          "pctEmitted": 5.201
+          "votesValid": 19255,
+          "pctValid": 6.841,
+          "pctEmitted": 5.193
         },
         {
           "code": "16",
           "partyName": "PARTIDO DEL BUEN GOBIERNO",
           "candidateName": "JORGE NIETO MONTESINOS",
-          "votesValid": 10457,
-          "pctValid": 3.721,
-          "pctEmitted": 2.825
+          "votesValid": 10459,
+          "pctValid": 3.716,
+          "pctEmitted": 2.821
         },
         {
           "code": "14",
           "partyName": "PARTIDO CÍVICO OBRAS",
           "candidateName": "RICARDO PABLO BELMONT CASSINELLI",
-          "votesValid": 11954,
-          "pctValid": 4.254,
-          "pctEmitted": 3.229
+          "votesValid": 11971,
+          "pctValid": 4.253,
+          "pctEmitted": 3.228
         }
       ],
       "otros": {
         "code": "otros",
         "label": "Otros",
-        "votesValid": 134001,
-        "pctValid": 47.687,
-        "pctEmitted": 36.202
+        "votesValid": 134072,
+        "pctValid": 47.633,
+        "pctEmitted": 36.155
       },
       "projectedVotes": {
-        "8": 99235,
-        "10": 31807,
-        "14": 14871,
-        "16": 13008,
-        "35": 23948,
-        "otros": 166697
+        "8": 99148,
+        "10": 31991,
+        "14": 14851,
+        "16": 12975,
+        "35": 23887,
+        "otros": 166326
       }
     },
     {
@@ -6551,7 +6551,7 @@
       "pendientesJee": 1,
       "totalVotosEmitidos": 93108,
       "totalVotosValidos": 72373,
-      "sourceUpdatedAt": "2026-04-15T17:57:12.634Z",
+      "sourceUpdatedAt": "2026-04-15T18:57:18.059Z",
       "candidates": [
         {
           "code": "10",
@@ -6914,7 +6914,7 @@
       "pendientesJee": 0,
       "totalVotosEmitidos": 124803,
       "totalVotosValidos": 108556,
-      "sourceUpdatedAt": "2026-04-15T17:57:12.634Z",
+      "sourceUpdatedAt": "2026-04-15T18:57:18.059Z",
       "candidates": [
         {
           "code": "10",
@@ -7277,7 +7277,7 @@
       "pendientesJee": 9,
       "totalVotosEmitidos": 135412,
       "totalVotosValidos": 107625,
-      "sourceUpdatedAt": "2026-04-15T17:57:12.634Z",
+      "sourceUpdatedAt": "2026-04-15T18:57:18.059Z",
       "candidates": [
         {
           "code": "10",
@@ -7632,93 +7632,93 @@
       "label": "PIURA",
       "electores": 1534078,
       "padronShare": 5.6141,
-      "actasContabilizadasPct": 90.797,
-      "contabilizadas": 4795,
+      "actasContabilizadasPct": 90.911,
+      "contabilizadas": 4801,
       "totalActas": 5281,
-      "participacionCiudadanaPct": 68.05,
+      "participacionCiudadanaPct": 68.115,
       "enviadasJee": 391,
-      "pendientesJee": 95,
-      "totalVotosEmitidos": 1043943,
-      "totalVotosValidos": 802493,
-      "sourceUpdatedAt": "2026-04-15T17:57:12.634Z",
+      "pendientesJee": 89,
+      "totalVotosEmitidos": 1044937,
+      "totalVotosValidos": 803237,
+      "sourceUpdatedAt": "2026-04-15T18:47:38.542Z",
       "candidates": [
         {
           "code": "8",
           "partyName": "FUERZA POPULAR",
           "candidateName": "KEIKO SOFIA FUJIMORI HIGUCHI",
-          "votesValid": 224772,
-          "pctValid": 28.009,
-          "pctEmitted": 21.531
+          "votesValid": 224944,
+          "pctValid": 28.005,
+          "pctEmitted": 21.527
         },
         {
           "code": "10",
           "partyName": "JUNTOS POR EL PERÚ",
           "candidateName": "ROBERTO HELBERT SANCHEZ PALOMINO",
-          "votesValid": 89630,
-          "pctValid": 11.169,
-          "pctEmitted": 8.586
+          "votesValid": 89805,
+          "pctValid": 11.18,
+          "pctEmitted": 8.594
         },
         {
           "code": "23",
           "partyName": "PARTIDO PAÍS PARA TODOS",
           "candidateName": "CARLOS GONSALO ALVAREZ LOAYZA",
-          "votesValid": 86321,
-          "pctValid": 10.757,
-          "pctEmitted": 8.269
+          "votesValid": 86340,
+          "pctValid": 10.749,
+          "pctEmitted": 8.263
         },
         {
           "code": "16",
           "partyName": "PARTIDO DEL BUEN GOBIERNO",
           "candidateName": "JORGE NIETO MONTESINOS",
-          "votesValid": 70875,
-          "pctValid": 8.832,
-          "pctEmitted": 6.789
+          "votesValid": 70911,
+          "pctValid": 8.828,
+          "pctEmitted": 6.786
         },
         {
           "code": "14",
           "partyName": "PARTIDO CÍVICO OBRAS",
           "candidateName": "RICARDO PABLO BELMONT CASSINELLI",
-          "votesValid": 59972,
-          "pctValid": 7.473,
+          "votesValid": 60034,
+          "pctValid": 7.474,
           "pctEmitted": 5.745
         },
         {
           "code": "35",
           "partyName": "RENOVACIÓN POPULAR",
           "candidateName": "RAFAEL BERNARDO LÓPEZ ALIAGA CAZORLA",
-          "votesValid": 53842,
-          "pctValid": 6.709,
-          "pctEmitted": 5.158
+          "votesValid": 53877,
+          "pctValid": 6.707,
+          "pctEmitted": 5.156
         },
         {
           "code": "2",
           "partyName": "AHORA NACIÓN - AN",
           "candidateName": "PABLO ALFONSO LOPEZ CHAU NAVA",
-          "votesValid": 37377,
-          "pctValid": 4.658,
-          "pctEmitted": 3.58
+          "votesValid": 37425,
+          "pctValid": 4.659,
+          "pctEmitted": 3.582
         },
         {
           "code": "33",
           "partyName": "PRIMERO LA GENTE – COMUNIDAD, ECOLOGÍA, LIBERTAD Y PROGRESO",
           "candidateName": "MARIA SOLEDAD PEREZ TELLO",
-          "votesValid": 26808,
-          "pctValid": 3.341,
-          "pctEmitted": 2.568
+          "votesValid": 26822,
+          "pctValid": 3.339,
+          "pctEmitted": 2.567
         },
         {
           "code": "31",
           "partyName": "PARTIDO SICREO",
           "candidateName": "ALFONSO CARLOS ESPA Y GARCES-ALVEAR",
-          "votesValid": 22084,
-          "pctValid": 2.752,
+          "votesValid": 22096,
+          "pctValid": 2.751,
           "pctEmitted": 2.115
         },
         {
           "code": "32",
           "partyName": "PODEMOS PERÚ",
           "candidateName": "JOSE LEON LUNA GALVEZ",
-          "votesValid": 18217,
+          "votesValid": 18234,
           "pctValid": 2.27,
           "pctEmitted": 1.745
         },
@@ -7726,39 +7726,39 @@
           "code": "29",
           "partyName": "PARTIDO POLÍTICO PERÚ PRIMERO",
           "candidateName": "MARIO ENRIQUE VIZCARRA CORNEJO",
-          "votesValid": 15154,
+          "votesValid": 15165,
           "pctValid": 1.888,
-          "pctEmitted": 1.452
+          "pctEmitted": 1.451
         },
         {
           "code": "1",
           "partyName": "ALIANZA PARA EL PROGRESO",
           "candidateName": "CESAR ACUÑA PERALTA",
-          "votesValid": 14128,
-          "pctValid": 1.761,
+          "votesValid": 14135,
+          "pctValid": 1.76,
           "pctEmitted": 1.353
         },
         {
           "code": "21",
           "partyName": "PARTIDO FRENTE DE LA ESPERANZA 2021",
           "candidateName": "LUIS FERNANDO OLIVERA VEGA",
-          "votesValid": 10260,
-          "pctValid": 1.279,
-          "pctEmitted": 0.983
+          "votesValid": 10265,
+          "pctValid": 1.278,
+          "pctEmitted": 0.982
         },
         {
           "code": "12",
           "partyName": "PARTIDO APRISTA PERUANO",
           "candidateName": "PITTER ENRIQUE VALDERRAMA PEÑA",
-          "votesValid": 10130,
-          "pctValid": 1.262,
-          "pctEmitted": 0.97
+          "votesValid": 10144,
+          "pctValid": 1.263,
+          "pctEmitted": 0.971
         },
         {
           "code": "24",
           "partyName": "PARTIDO PATRIÓTICO DEL PERÚ",
           "candidateName": "HERBERT CALLER GUTIERREZ",
-          "votesValid": 8867,
+          "votesValid": 8876,
           "pctValid": 1.105,
           "pctEmitted": 0.849
         },
@@ -7766,23 +7766,23 @@
           "code": "3",
           "partyName": "ALIANZA ELECTORAL VENCEREMOS",
           "candidateName": "RONALD DARWIN ATENCIO SOTOMAYOR",
-          "votesValid": 6585,
-          "pctValid": 0.821,
-          "pctEmitted": 0.631
+          "votesValid": 6633,
+          "pctValid": 0.826,
+          "pctEmitted": 0.635
         },
         {
           "code": "20",
           "partyName": "PARTIDO DEMOCRÁTICO SOMOS PERÚ",
           "candidateName": "GEORGE PATRICK FORSYTH SOMMER",
-          "votesValid": 6024,
-          "pctValid": 0.751,
-          "pctEmitted": 0.577
+          "votesValid": 6042,
+          "pctValid": 0.752,
+          "pctEmitted": 0.578
         },
         {
           "code": "25",
           "partyName": "PARTIDO POLÍTICO COOPERACIÓN POPULAR",
           "candidateName": "YONHY LESCANO ANCIETA",
-          "votesValid": 4334,
+          "votesValid": 4336,
           "pctValid": 0.54,
           "pctEmitted": 0.415
         },
@@ -7790,7 +7790,7 @@
           "code": "37",
           "partyName": "UN CAMINO DIFERENTE",
           "candidateName": "ROSARIO DEL PILAR FERNANDEZ BAZAN",
-          "votesValid": 4147,
+          "votesValid": 4149,
           "pctValid": 0.517,
           "pctEmitted": 0.397
         },
@@ -7798,23 +7798,23 @@
           "code": "17",
           "partyName": "PARTIDO DEMÓCRATA UNIDO PERÚ",
           "candidateName": "CHARLIE CARRASCO SALAZAR",
-          "votesValid": 3863,
-          "pctValid": 0.481,
-          "pctEmitted": 0.37
+          "votesValid": 3875,
+          "pctValid": 0.482,
+          "pctEmitted": 0.371
         },
         {
           "code": "27",
           "partyName": "PARTIDO POLÍTICO NACIONAL PERÚ LIBRE",
           "candidateName": "VLADIMIR ROY CERRON ROJAS",
-          "votesValid": 3784,
+          "votesValid": 3789,
           "pctValid": 0.472,
-          "pctEmitted": 0.362
+          "pctEmitted": 0.363
         },
         {
           "code": "26",
           "partyName": "PARTIDO POLÍTICO INTEGRIDAD DEMOCRÁTICA",
           "candidateName": "WOLFGANG MARIO GROZO COSTA",
-          "votesValid": 3449,
+          "votesValid": 3450,
           "pctValid": 0.43,
           "pctEmitted": 0.33
         },
@@ -7822,7 +7822,7 @@
           "code": "34",
           "partyName": "PROGRESEMOS",
           "candidateName": "PAUL DAVIS JAIMES BLANCO",
-          "votesValid": 3054,
+          "votesValid": 3057,
           "pctValid": 0.381,
           "pctEmitted": 0.293
         },
@@ -7830,23 +7830,23 @@
           "code": "18",
           "partyName": "PARTIDO DEMÓCRATA VERDE",
           "candidateName": "ALEX GONZALES CASTILLO",
-          "votesValid": 3021,
-          "pctValid": 0.376,
-          "pctEmitted": 0.289
+          "votesValid": 3028,
+          "pctValid": 0.377,
+          "pctEmitted": 0.29
         },
         {
           "code": "38",
           "partyName": "UNIDAD NACIONAL",
           "candidateName": "ROBERTO ENRIQUE CHIABRA LEON",
           "votesValid": 2461,
-          "pctValid": 0.307,
+          "pctValid": 0.306,
           "pctEmitted": 0.236
         },
         {
           "code": "22",
           "partyName": "PARTIDO MORADO",
           "candidateName": "MESIAS ANTONIO GUEVARA AMASIFUEN",
-          "votesValid": 2434,
+          "votesValid": 2437,
           "pctValid": 0.303,
           "pctEmitted": 0.233
         },
@@ -7862,7 +7862,7 @@
           "code": "11",
           "partyName": "LIBERTAD POPULAR",
           "candidateName": "RAFAEL JORGE BELAUNDE LLOSA",
-          "votesValid": 1687,
+          "votesValid": 1689,
           "pctValid": 0.21,
           "pctEmitted": 0.162
         },
@@ -7871,14 +7871,14 @@
           "partyName": "FUERZA Y LIBERTAD",
           "candidateName": "FIORELLA GIANNINA MOLINELLI ARISTONDO",
           "votesValid": 1265,
-          "pctValid": 0.158,
+          "pctValid": 0.157,
           "pctEmitted": 0.121
         },
         {
           "code": "19",
           "partyName": "PARTIDO DEMOCRATICO FEDERAL",
           "candidateName": "ARMANDO JOAQUIN MASSE FERNANDEZ",
-          "votesValid": 1204,
+          "votesValid": 1206,
           "pctValid": 0.15,
           "pctEmitted": 0.115
         },
@@ -7894,7 +7894,7 @@
           "code": "36",
           "partyName": "SALVEMOS AL PERÚ",
           "candidateName": "ANTONIO ORTIZ VILLANO",
-          "votesValid": 1143,
+          "votesValid": 1144,
           "pctValid": 0.142,
           "pctEmitted": 0.109
         },
@@ -7910,7 +7910,7 @@
           "code": "30",
           "partyName": "PARTIDO POLÍTICO PRIN",
           "candidateName": "WALTER GILMER CHIRINOS PURIZAGA",
-          "votesValid": 851,
+          "votesValid": 853,
           "pctValid": 0.106,
           "pctEmitted": 0.082
         },
@@ -7936,57 +7936,57 @@
           "code": "8",
           "partyName": "FUERZA POPULAR",
           "candidateName": "KEIKO SOFIA FUJIMORI HIGUCHI",
-          "votesValid": 224772,
-          "pctValid": 28.009,
-          "pctEmitted": 21.531
+          "votesValid": 224944,
+          "pctValid": 28.005,
+          "pctEmitted": 21.527
         },
         {
           "code": "10",
           "partyName": "JUNTOS POR EL PERÚ",
           "candidateName": "ROBERTO HELBERT SANCHEZ PALOMINO",
-          "votesValid": 89630,
-          "pctValid": 11.169,
-          "pctEmitted": 8.586
+          "votesValid": 89805,
+          "pctValid": 11.18,
+          "pctEmitted": 8.594
         },
         {
           "code": "35",
           "partyName": "RENOVACIÓN POPULAR",
           "candidateName": "RAFAEL BERNARDO LÓPEZ ALIAGA CAZORLA",
-          "votesValid": 53842,
-          "pctValid": 6.709,
-          "pctEmitted": 5.158
+          "votesValid": 53877,
+          "pctValid": 6.707,
+          "pctEmitted": 5.156
         },
         {
           "code": "16",
           "partyName": "PARTIDO DEL BUEN GOBIERNO",
           "candidateName": "JORGE NIETO MONTESINOS",
-          "votesValid": 70875,
-          "pctValid": 8.832,
-          "pctEmitted": 6.789
+          "votesValid": 70911,
+          "pctValid": 8.828,
+          "pctEmitted": 6.786
         },
         {
           "code": "14",
           "partyName": "PARTIDO CÍVICO OBRAS",
           "candidateName": "RICARDO PABLO BELMONT CASSINELLI",
-          "votesValid": 59972,
-          "pctValid": 7.473,
+          "votesValid": 60034,
+          "pctValid": 7.474,
           "pctEmitted": 5.745
         }
       ],
       "otros": {
         "code": "otros",
         "label": "Otros",
-        "votesValid": 303402,
-        "pctValid": 37.81,
-        "pctEmitted": 29.061
+        "votesValid": 303666,
+        "pctValid": 37.805,
+        "pctEmitted": 29.063
       },
       "projectedVotes": {
-        "8": 247554,
-        "10": 98715,
-        "14": 66051,
-        "16": 78059,
-        "35": 59299,
-        "otros": 334154
+        "8": 247433,
+        "10": 98783,
+        "14": 66036,
+        "16": 78000,
+        "35": 59263,
+        "otros": 334026
       }
     },
     {
@@ -8003,7 +8003,7 @@
       "pendientesJee": 8,
       "totalVotosEmitidos": 746600,
       "totalVotosValidos": 631810,
-      "sourceUpdatedAt": "2026-04-15T17:57:12.634Z",
+      "sourceUpdatedAt": "2026-04-15T18:57:18.059Z",
       "candidates": [
         {
           "code": "10",
@@ -8358,101 +8358,101 @@
       "label": "SAN MARTÍN",
       "electores": 723604,
       "padronShare": 2.6481,
-      "actasContabilizadasPct": 93.449,
-      "contabilizadas": 2368,
+      "actasContabilizadasPct": 93.607,
+      "contabilizadas": 2372,
       "totalActas": 2534,
-      "participacionCiudadanaPct": 68.907,
-      "enviadasJee": 158,
-      "pendientesJee": 8,
-      "totalVotosEmitidos": 498613,
-      "totalVotosValidos": 364927,
-      "sourceUpdatedAt": "2026-04-15T18:07:52.053Z",
+      "participacionCiudadanaPct": 69.024,
+      "enviadasJee": 161,
+      "pendientesJee": 1,
+      "totalVotosEmitidos": 499462,
+      "totalVotosValidos": 365553,
+      "sourceUpdatedAt": "2026-04-15T18:47:38.542Z",
       "candidates": [
         {
           "code": "10",
           "partyName": "JUNTOS POR EL PERÚ",
           "candidateName": "ROBERTO HELBERT SANCHEZ PALOMINO",
-          "votesValid": 86795,
-          "pctValid": 23.784,
-          "pctEmitted": 17.407
+          "votesValid": 86916,
+          "pctValid": 23.777,
+          "pctEmitted": 17.402
         },
         {
           "code": "8",
           "partyName": "FUERZA POPULAR",
           "candidateName": "KEIKO SOFIA FUJIMORI HIGUCHI",
-          "votesValid": 84881,
-          "pctValid": 23.26,
-          "pctEmitted": 17.023
+          "votesValid": 85003,
+          "pctValid": 23.253,
+          "pctEmitted": 17.019
         },
         {
           "code": "14",
           "partyName": "PARTIDO CÍVICO OBRAS",
           "candidateName": "RICARDO PABLO BELMONT CASSINELLI",
-          "votesValid": 41525,
-          "pctValid": 11.379,
-          "pctEmitted": 8.328
+          "votesValid": 41614,
+          "pctValid": 11.384,
+          "pctEmitted": 8.332
         },
         {
           "code": "35",
           "partyName": "RENOVACIÓN POPULAR",
           "candidateName": "RAFAEL BERNARDO LÓPEZ ALIAGA CAZORLA",
-          "votesValid": 21487,
-          "pctValid": 5.888,
-          "pctEmitted": 4.309
+          "votesValid": 21517,
+          "pctValid": 5.886,
+          "pctEmitted": 4.308
         },
         {
           "code": "23",
           "partyName": "PARTIDO PAÍS PARA TODOS",
           "candidateName": "CARLOS GONSALO ALVAREZ LOAYZA",
-          "votesValid": 18508,
-          "pctValid": 5.072,
-          "pctEmitted": 3.712
+          "votesValid": 18566,
+          "pctValid": 5.079,
+          "pctEmitted": 3.717
         },
         {
           "code": "16",
           "partyName": "PARTIDO DEL BUEN GOBIERNO",
           "candidateName": "JORGE NIETO MONTESINOS",
-          "votesValid": 16380,
-          "pctValid": 4.489,
-          "pctEmitted": 3.285
+          "votesValid": 16402,
+          "pctValid": 4.487,
+          "pctEmitted": 3.284
         },
         {
           "code": "2",
           "partyName": "AHORA NACIÓN - AN",
           "candidateName": "PABLO ALFONSO LOPEZ CHAU NAVA",
-          "votesValid": 16137,
-          "pctValid": 4.422,
-          "pctEmitted": 3.236
+          "votesValid": 16168,
+          "pctValid": 4.423,
+          "pctEmitted": 3.237
         },
         {
           "code": "1",
           "partyName": "ALIANZA PARA EL PROGRESO",
           "candidateName": "CESAR ACUÑA PERALTA",
-          "votesValid": 7902,
-          "pctValid": 2.165,
-          "pctEmitted": 1.585
+          "votesValid": 7912,
+          "pctValid": 2.164,
+          "pctEmitted": 1.584
         },
         {
           "code": "32",
           "partyName": "PODEMOS PERÚ",
           "candidateName": "JOSE LEON LUNA GALVEZ",
-          "votesValid": 7767,
+          "votesValid": 7778,
           "pctValid": 2.128,
-          "pctEmitted": 1.558
+          "pctEmitted": 1.557
         },
         {
           "code": "31",
           "partyName": "PARTIDO SICREO",
           "candidateName": "ALFONSO CARLOS ESPA Y GARCES-ALVEAR",
-          "votesValid": 7375,
-          "pctValid": 2.021,
-          "pctEmitted": 1.479
+          "votesValid": 7393,
+          "pctValid": 2.022,
+          "pctEmitted": 1.48
         },
         {
           "code": "33",
           "partyName": "PRIMERO LA GENTE – COMUNIDAD, ECOLOGÍA, LIBERTAD Y PROGRESO",
           "candidateName": "MARIA SOLEDAD PEREZ TELLO",
-          "votesValid": 6096,
+          "votesValid": 6106,
           "pctValid": 1.67,
           "pctEmitted": 1.223
         },
@@ -8460,7 +8460,7 @@
           "code": "24",
           "partyName": "PARTIDO PATRIÓTICO DEL PERÚ",
           "candidateName": "HERBERT CALLER GUTIERREZ",
-          "votesValid": 4200,
+          "votesValid": 4207,
           "pctValid": 1.151,
           "pctEmitted": 0.842
         },
@@ -8468,31 +8468,31 @@
           "code": "20",
           "partyName": "PARTIDO DEMOCRÁTICO SOMOS PERÚ",
           "candidateName": "GEORGE PATRICK FORSYTH SOMMER",
-          "votesValid": 4087,
-          "pctValid": 1.12,
-          "pctEmitted": 0.82
+          "votesValid": 4091,
+          "pctValid": 1.119,
+          "pctEmitted": 0.819
         },
         {
           "code": "7",
           "partyName": "AVANZA PAÍS - PARTIDO DE INTEGRACIÓN SOCIAL",
           "candidateName": "JOSE DANIEL WILLIAMS ZAPATA",
-          "votesValid": 3963,
-          "pctValid": 1.086,
+          "votesValid": 3973,
+          "pctValid": 1.087,
           "pctEmitted": 0.795
         },
         {
           "code": "29",
           "partyName": "PARTIDO POLÍTICO PERÚ PRIMERO",
           "candidateName": "MARIO ENRIQUE VIZCARRA CORNEJO",
-          "votesValid": 3957,
-          "pctValid": 1.084,
-          "pctEmitted": 0.794
+          "votesValid": 3969,
+          "pctValid": 1.086,
+          "pctEmitted": 0.795
         },
         {
           "code": "12",
           "partyName": "PARTIDO APRISTA PERUANO",
           "candidateName": "PITTER ENRIQUE VALDERRAMA PEÑA",
-          "votesValid": 3924,
+          "votesValid": 3931,
           "pctValid": 1.075,
           "pctEmitted": 0.787
         },
@@ -8500,31 +8500,31 @@
           "code": "21",
           "partyName": "PARTIDO FRENTE DE LA ESPERANZA 2021",
           "candidateName": "LUIS FERNANDO OLIVERA VEGA",
-          "votesValid": 3620,
-          "pctValid": 0.992,
-          "pctEmitted": 0.726
+          "votesValid": 3635,
+          "pctValid": 0.994,
+          "pctEmitted": 0.728
         },
         {
           "code": "17",
           "partyName": "PARTIDO DEMÓCRATA UNIDO PERÚ",
           "candidateName": "CHARLIE CARRASCO SALAZAR",
-          "votesValid": 3344,
+          "votesValid": 3348,
           "pctValid": 0.916,
-          "pctEmitted": 0.671
+          "pctEmitted": 0.67
         },
         {
           "code": "3",
           "partyName": "ALIANZA ELECTORAL VENCEREMOS",
           "candidateName": "RONALD DARWIN ATENCIO SOTOMAYOR",
-          "votesValid": 3159,
-          "pctValid": 0.866,
-          "pctEmitted": 0.634
+          "votesValid": 3161,
+          "pctValid": 0.865,
+          "pctEmitted": 0.633
         },
         {
           "code": "27",
           "partyName": "PARTIDO POLÍTICO NACIONAL PERÚ LIBRE",
           "candidateName": "VLADIMIR ROY CERRON ROJAS",
-          "votesValid": 2915,
+          "votesValid": 2920,
           "pctValid": 0.799,
           "pctEmitted": 0.585
         },
@@ -8532,7 +8532,7 @@
           "code": "25",
           "partyName": "PARTIDO POLÍTICO COOPERACIÓN POPULAR",
           "candidateName": "YONHY LESCANO ANCIETA",
-          "votesValid": 2357,
+          "votesValid": 2361,
           "pctValid": 0.646,
           "pctEmitted": 0.473
         },
@@ -8540,15 +8540,15 @@
           "code": "18",
           "partyName": "PARTIDO DEMÓCRATA VERDE",
           "candidateName": "ALEX GONZALES CASTILLO",
-          "votesValid": 1954,
-          "pctValid": 0.535,
+          "votesValid": 1959,
+          "pctValid": 0.536,
           "pctEmitted": 0.392
         },
         {
           "code": "38",
           "partyName": "UNIDAD NACIONAL",
           "candidateName": "ROBERTO ENRIQUE CHIABRA LEON",
-          "votesValid": 1931,
+          "votesValid": 1933,
           "pctValid": 0.529,
           "pctEmitted": 0.387
         },
@@ -8556,23 +8556,23 @@
           "code": "22",
           "partyName": "PARTIDO MORADO",
           "candidateName": "MESIAS ANTONIO GUEVARA AMASIFUEN",
-          "votesValid": 1777,
+          "votesValid": 1782,
           "pctValid": 0.487,
-          "pctEmitted": 0.356
+          "pctEmitted": 0.357
         },
         {
           "code": "37",
           "partyName": "UN CAMINO DIFERENTE",
           "candidateName": "ROSARIO DEL PILAR FERNANDEZ BAZAN",
-          "votesValid": 1328,
-          "pctValid": 0.364,
-          "pctEmitted": 0.266
+          "votesValid": 1333,
+          "pctValid": 0.365,
+          "pctEmitted": 0.267
         },
         {
           "code": "26",
           "partyName": "PARTIDO POLÍTICO INTEGRIDAD DEMOCRÁTICA",
           "candidateName": "WOLFGANG MARIO GROZO COSTA",
-          "votesValid": 1181,
+          "votesValid": 1183,
           "pctValid": 0.324,
           "pctEmitted": 0.237
         },
@@ -8582,14 +8582,14 @@
           "candidateName": "PAUL DAVIS JAIMES BLANCO",
           "votesValid": 1005,
           "pctValid": 0.275,
-          "pctEmitted": 0.202
+          "pctEmitted": 0.201
         },
         {
           "code": "28",
           "partyName": "PARTIDO POLÍTICO PERÚ ACCIÓN",
           "candidateName": "FRANCISCO ERNESTO DIEZ-CANSECO TÁVARA",
-          "votesValid": 971,
-          "pctValid": 0.266,
+          "votesValid": 975,
+          "pctValid": 0.267,
           "pctEmitted": 0.195
         },
         {
@@ -8598,7 +8598,7 @@
           "candidateName": "WALTER GILMER CHIRINOS PURIZAGA",
           "votesValid": 821,
           "pctValid": 0.225,
-          "pctEmitted": 0.165
+          "pctEmitted": 0.164
         },
         {
           "code": "5",
@@ -8614,7 +8614,7 @@
           "candidateName": "ARMANDO JOAQUIN MASSE FERNANDEZ",
           "votesValid": 636,
           "pctValid": 0.174,
-          "pctEmitted": 0.128
+          "pctEmitted": 0.127
         },
         {
           "code": "11",
@@ -8628,9 +8628,9 @@
           "code": "9",
           "partyName": "FUERZA Y LIBERTAD",
           "candidateName": "FIORELLA GIANNINA MOLINELLI ARISTONDO",
-          "votesValid": 579,
-          "pctValid": 0.159,
-          "pctEmitted": 0.116
+          "votesValid": 588,
+          "pctValid": 0.161,
+          "pctEmitted": 0.118
         },
         {
           "code": "36",
@@ -8644,7 +8644,7 @@
           "code": "15",
           "partyName": "PARTIDO DE LOS TRABAJADORES Y EMPRENDEDORES PTE - PERÚ",
           "candidateName": "NAPOLEON BECERRA GARCIA",
-          "votesValid": 298,
+          "votesValid": 300,
           "pctValid": 0.082,
           "pctEmitted": 0.06
         },
@@ -8662,57 +8662,57 @@
           "code": "8",
           "partyName": "FUERZA POPULAR",
           "candidateName": "KEIKO SOFIA FUJIMORI HIGUCHI",
-          "votesValid": 84881,
-          "pctValid": 23.26,
-          "pctEmitted": 17.023
+          "votesValid": 85003,
+          "pctValid": 23.253,
+          "pctEmitted": 17.019
         },
         {
           "code": "10",
           "partyName": "JUNTOS POR EL PERÚ",
           "candidateName": "ROBERTO HELBERT SANCHEZ PALOMINO",
-          "votesValid": 86795,
-          "pctValid": 23.784,
-          "pctEmitted": 17.407
+          "votesValid": 86916,
+          "pctValid": 23.777,
+          "pctEmitted": 17.402
         },
         {
           "code": "35",
           "partyName": "RENOVACIÓN POPULAR",
           "candidateName": "RAFAEL BERNARDO LÓPEZ ALIAGA CAZORLA",
-          "votesValid": 21487,
-          "pctValid": 5.888,
-          "pctEmitted": 4.309
+          "votesValid": 21517,
+          "pctValid": 5.886,
+          "pctEmitted": 4.308
         },
         {
           "code": "16",
           "partyName": "PARTIDO DEL BUEN GOBIERNO",
           "candidateName": "JORGE NIETO MONTESINOS",
-          "votesValid": 16380,
-          "pctValid": 4.489,
-          "pctEmitted": 3.285
+          "votesValid": 16402,
+          "pctValid": 4.487,
+          "pctEmitted": 3.284
         },
         {
           "code": "14",
           "partyName": "PARTIDO CÍVICO OBRAS",
           "candidateName": "RICARDO PABLO BELMONT CASSINELLI",
-          "votesValid": 41525,
-          "pctValid": 11.379,
-          "pctEmitted": 8.328
+          "votesValid": 41614,
+          "pctValid": 11.384,
+          "pctEmitted": 8.332
         }
       ],
       "otros": {
         "code": "otros",
         "label": "Otros",
-        "votesValid": 113859,
-        "pctValid": 31.199,
-        "pctEmitted": 22.838
+        "votesValid": 114101,
+        "pctValid": 31.215,
+        "pctEmitted": 22.844
       },
       "projectedVotes": {
-        "8": 90831,
-        "10": 92880,
-        "14": 44436,
-        "16": 17528,
-        "35": 22993,
-        "otros": 121841
+        "8": 90808,
+        "10": 92852,
+        "14": 44456,
+        "16": 17522,
+        "35": 22987,
+        "otros": 121894
       }
     },
     {
@@ -8729,7 +8729,7 @@
       "pendientesJee": 0,
       "totalVotosEmitidos": 236582,
       "totalVotosValidos": 209943,
-      "sourceUpdatedAt": "2026-04-15T18:07:52.053Z",
+      "sourceUpdatedAt": "2026-04-15T18:57:18.059Z",
       "candidates": [
         {
           "code": "14",
@@ -9092,7 +9092,7 @@
       "pendientesJee": 0,
       "totalVotosEmitidos": 128393,
       "totalVotosValidos": 100640,
-      "sourceUpdatedAt": "2026-04-15T18:07:52.053Z",
+      "sourceUpdatedAt": "2026-04-15T18:57:18.059Z",
       "candidates": [
         {
           "code": "8",
@@ -9455,7 +9455,7 @@
       "pendientesJee": 5,
       "totalVotosEmitidos": 265303,
       "totalVotosValidos": 198876,
-      "sourceUpdatedAt": "2026-04-15T18:07:52.053Z",
+      "sourceUpdatedAt": "2026-04-15T18:47:38.542Z",
       "candidates": [
         {
           "code": "8",
@@ -9807,22 +9807,22 @@
   ],
   "projectedNational": {
     "totalElectores": 27325502,
-    "totalProjectedValidVotes": 16785426,
+    "totalProjectedValidVotes": 16784365,
     "projectedVotes": {
-      "8": 2875754,
-      "10": 2003787,
-      "14": 1696898,
-      "16": 1849597,
-      "35": 2015259,
-      "otros": 6344131
+      "8": 2875354,
+      "10": 2004194,
+      "14": 1696741,
+      "16": 1849522,
+      "35": 2014990,
+      "otros": 6343564
     },
     "projectedPercentages": {
-      "8": 17.132,
-      "10": 11.938,
+      "8": 17.131,
+      "10": 11.941,
       "14": 10.109,
       "16": 11.019,
-      "35": 12.006,
-      "otros": 37.795
+      "35": 12.005,
+      "otros": 37.794
     }
   },
   "featuredCandidateCodes": [

@@ -5,6 +5,7 @@ import {
   SNAPSHOT_KEY,
   STORAGE_NAME
 } from "./config";
+import { normalizeElectionSnapshot } from "../../../src/lib/normalizeSnapshot";
 import type { ElectionSnapshot, HealthStatus } from "../../../src/lib/types";
 
 function getStorageStore() {
@@ -13,7 +14,8 @@ function getStorageStore() {
 
 export async function readSnapshot() {
   const store = getStorageStore();
-  return (await store.get(SNAPSHOT_KEY, { type: "json" })) as ElectionSnapshot | null;
+  const snapshot = (await store.get(SNAPSHOT_KEY, { type: "json" })) as ElectionSnapshot | null;
+  return snapshot ? normalizeElectionSnapshot(snapshot) : null;
 }
 
 export async function writeSnapshot(snapshot: ElectionSnapshot) {

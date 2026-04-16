@@ -62,6 +62,7 @@ const snapshot: ElectionSnapshot = {
     scopeId: "2",
     kind: "foreign_total",
     label: "EXTRANJERO",
+    continents: [],
     totalVotosValidos: 200,
     featuredCandidates: [
       {

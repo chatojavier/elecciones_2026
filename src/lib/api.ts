@@ -1,4 +1,5 @@
 import { DEV_REFRESH_ENDPOINT, SNAPSHOT_ENDPOINT, SYNC_ENDPOINT } from "./constants";
+import { normalizeElectionSnapshot } from "./normalizeSnapshot";
 import type { ElectionSnapshot } from "./types";
 
 const DEV_SNAPSHOT_ENDPOINT = "/dev-snapshot.json";
@@ -22,7 +23,7 @@ async function parseSnapshotResponse(endpoint: string, response: Response) {
     throw new Error(`${endpoint} no respondió JSON.`);
   }
 
-  return (await response.json()) as ElectionSnapshot;
+  return normalizeElectionSnapshot((await response.json()) as ElectionSnapshot);
 }
 
 async function parseSyncResponse(response: Response) {

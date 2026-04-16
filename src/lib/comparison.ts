@@ -1,4 +1,9 @@
-import type { ElectionSnapshot, ProvinceResult, ScopeResult } from "./types";
+import type {
+  ElectionSnapshot,
+  ForeignCountryResult,
+  ProvinceResult,
+  ScopeResult
+} from "./types";
 
 export type ComparisonMode = "current" | "projected";
 
@@ -82,7 +87,7 @@ export function buildNationalComparisonItems(snapshot: ElectionSnapshot) {
 }
 
 export function buildScopeComparisonItem(
-  scope: ScopeResult | ProvinceResult,
+  scope: ScopeResult | ProvinceResult | ForeignCountryResult,
   selectedCode: string
 ): ComparisonItem {
   if (selectedCode === "otros") {

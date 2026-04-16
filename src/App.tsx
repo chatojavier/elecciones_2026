@@ -20,9 +20,17 @@ import {
   formatSignedNumber,
   formatTitleCase
 } from "./lib/format";
-import type { ElectionSnapshot, ProvinceResult, RegionResult, ScopeResult } from "./lib/types";
+import type {
+  ElectionSnapshot,
+  ForeignContinentResult,
+  ForeignCountryResult,
+  ProvinceResult,
+  RegionResult,
+  ScopeResult
+} from "./lib/types";
 
 type SortKey = "electores" | "actas" | "participacion" | "candidate" | "projection";
+type LeafScopeResult = ProvinceResult | ForeignCountryResult;
 
 function CandidatePill({
   code,
@@ -154,7 +162,7 @@ function CandidateStack({
   scope,
   showOthers
 }: {
-  scope: ScopeResult | ProvinceResult;
+  scope: ScopeResult | ProvinceResult | ForeignCountryResult;
   showOthers: boolean;
 }) {
   return (
@@ -214,12 +222,12 @@ function sortRegions(regions: RegionResult[], selectedCode: string, sortKey: Sor
   return sorted;
 }
 
-function sortProvinces(
-  provinces: ProvinceResult[],
+function sortLeafScopes(
+  scopes: LeafScopeResult[],
   selectedCode: string,
   comparisonMode: ComparisonMode
 ) {
-  const sorted = [...provinces];
+  const sorted = [...scopes];
 
   sorted.sort((left, right) => {
     const leftComparison = buildScopeComparisonItem(left, selectedCode);
@@ -235,36 +243,69 @@ function sortProvinces(
   return sorted;
 }
 
-function ProvinceDrilldown({
-  region,
+function sortForeignContinents(
+  continents: ForeignContinentResult[],
+  selectedCode: string,
+  comparisonMode: ComparisonMode
+) {
+  const sorted = [...continents];
+
+  sorted.sort((left, right) => {
+    const leftComparison = buildScopeComparisonItem(left, selectedCode);
+    const rightComparison = buildScopeComparisonItem(right, selectedCode);
+
+    if (comparisonMode === "projected") {
+      return rightComparison.projectedVotes - leftComparison.projectedVotes;
+    }
+
+    return rightComparison.actualVotes - leftComparison.actualVotes;
+  });
+
+  return sorted;
+}
+
+function LeafScopeDrilldown({
+  titleEyebrow,
+  scopeLabel,
+  itemSingularLabel,
+  itemPluralLabel,
+  recompositionLabel,
+  scopes,
   selectedCode,
   showOthers,
   comparisonMode
 }: {
-  region: RegionResult;
+  titleEyebrow: string;
+  scopeLabel: string;
+  itemSingularLabel: string;
+  itemPluralLabel: string;
+  recompositionLabel: string;
+  scopes: LeafScopeResult[];
   selectedCode: string;
   showOthers: boolean;
   comparisonMode: ComparisonMode;
 }) {
   const comparisonLabel =
     comparisonMode === "projected" ? "Proyección seleccionada" : "Actual seleccionado";
-  const sortedProvinces = sortProvinces(region.provinces, selectedCode, comparisonMode);
+  const sortedScopes = sortLeafScopes(scopes, selectedCode, comparisonMode);
 
   return (
     <section className="province-panel">
       <div className="province-panel__header">
         <div>
-          <p className="eyebrow">Detalle provincial</p>
-          <h3>{region.label}</h3>
+          <p className="eyebrow">{titleEyebrow}</p>
+          <h3>{scopeLabel}</h3>
         </div>
         <div className="province-panel__meta">
-          <strong>{region.provinces.length} provincias</strong>
-          <small>La proyección regional se recompone desde sus provincias</small>
+          <strong>
+            {scopes.length} {itemPluralLabel}
+          </strong>
+          <small>{recompositionLabel}</small>
         </div>
       </div>
 
       <div className="province-grid province-grid--header" aria-hidden="true">
-        <span>Provincia</span>
+        <span>{itemSingularLabel}</span>
         <span>Actas</span>
         <span>Participación</span>
         <span>{showOthers ? "Candidatos destacados + Otros" : "Candidatos destacados"}</span>
@@ -272,8 +313,8 @@ function ProvinceDrilldown({
       </div>
 
       <div className="province-list">
-        {sortedProvinces.map((province) => {
-          const selectedComparison = buildScopeComparisonItem(province, selectedCode);
+        {sortedScopes.map((scope) => {
+          const selectedComparison = buildScopeComparisonItem(scope, selectedCode);
           const comparisonVotes =
             comparisonMode === "projected"
               ? selectedComparison.projectedVotes
@@ -284,21 +325,21 @@ function ProvinceDrilldown({
               : selectedComparison.actualPercentage;
 
           return (
-            <article key={province.scopeId} className="province-grid province-card">
-              <div className="province-card__cell" data-label="Provincia">
-                <strong>{province.label}</strong>
+            <article key={scope.scopeId} className="province-grid province-card">
+              <div className="province-card__cell" data-label={itemSingularLabel}>
+                <strong>{scope.label}</strong>
               </div>
               <div className="province-card__cell" data-label="Actas">
-                <strong>{formatPercent(province.actasContabilizadasPct, 2)}</strong>
+                <strong>{formatPercent(scope.actasContabilizadasPct, 2)}</strong>
               </div>
               <div className="province-card__cell" data-label="Participación">
-                <strong>{formatPercent(province.participacionCiudadanaPct, 2)}</strong>
+                <strong>{formatPercent(scope.participacionCiudadanaPct, 2)}</strong>
               </div>
               <div
                 className="province-card__cell"
                 data-label={showOthers ? "Candidatos destacados + Otros" : "Candidatos destacados"}
               >
-                <CandidateStack scope={province} showOthers={showOthers} />
+                <CandidateStack scope={scope} showOthers={showOthers} />
               </div>
               <div className="province-card__cell" data-label={comparisonLabel}>
                 <div className="comparison-cell">
@@ -330,8 +371,10 @@ export default function App() {
   const [regionalComparisonMode, setRegionalComparisonMode] =
     useState<ComparisonMode>("projected");
   const [expandedRegionId, setExpandedRegionId] = useState<string | null>(null);
+  const [expandedContinentId, setExpandedContinentId] = useState<string | null>(null);
   const [clockNow, setClockNow] = useState(() => Date.now());
   const lastAutoRefreshKeyRef = useRef<string | null>(null);
+  const foreignContinents = snapshot?.foreign.continents ?? [];
 
   async function loadSnapshot(background = false) {
     if (background) {
@@ -406,6 +449,23 @@ export default function App() {
     });
   }, [snapshot]);
 
+  useEffect(() => {
+    if (!snapshot) {
+      return;
+    }
+
+    setExpandedContinentId((currentContinentId) => {
+      if (
+        currentContinentId &&
+        foreignContinents.some((continent) => continent.scopeId === currentContinentId)
+      ) {
+        return currentContinentId;
+      }
+
+      return null;
+    });
+  }, [foreignContinents, snapshot]);
+
   const sourceAgeMinutes = snapshot ? getElapsedMinutes(snapshot.sourceLastUpdatedAt, clockNow) : null;
 
   useEffect(() => {
@@ -445,6 +505,14 @@ export default function App() {
 
     return sortRegions(snapshot.regions, selectedCode, sortKey);
   }, [selectedCode, snapshot, sortKey]);
+
+  const sortedContinents = useMemo(() => {
+    if (!snapshot) {
+      return [];
+    }
+
+    return sortForeignContinents(foreignContinents, selectedCode, regionalComparisonMode);
+  }, [foreignContinents, regionalComparisonMode, selectedCode, snapshot]);
 
   const nationalComparisonItems = useMemo(() => {
     if (!snapshot) {
@@ -524,6 +592,19 @@ export default function App() {
     });
   }
 
+  function handleContinentToggle(continentId: string) {
+    setExpandedContinentId((currentContinentId) => {
+      const nextContinentId = currentContinentId === continentId ? null : continentId;
+
+      trackEvent("toggle_foreign_country_drilldown", {
+        continent_id: continentId,
+        expanded: nextContinentId === continentId
+      });
+
+      return nextContinentId;
+    });
+  }
+
   if (loading) {
     return (
       <main className="page-shell">
@@ -554,8 +635,9 @@ export default function App() {
           <p className="eyebrow">Resultados ONPE + proyección editorial</p>
           <h1>Perú 2026, una lectura pública del conteo y su proyección nacional.</h1>
           <p className="hero__lede">
-            Snapshot server-side desde ONPE, con extranjero separado y una proyección agregada
-            de votos válidos según avance de actas por ámbito.
+            Snapshot server-side desde ONPE, con Perú recompuesto por provincias y extranjero
+            recompuesto por países para una proyección agregada de votos válidos según avance de
+            actas.
           </p>
         </div>
 
@@ -611,8 +693,8 @@ export default function App() {
             proyectados
           </h2>
           <p>
-            Suma de proyección regional Perú más el agregado de extranjero, extrapolada por avance
-            de actas contabilizadas.
+            Suma de proyección regional Perú más extranjero recompuesto desde países, extrapolada
+            por avance de actas contabilizadas.
           </p>
           <div className="projection-card__comparison">
             <div>
@@ -801,8 +883,165 @@ export default function App() {
                       {isExpanded ? (
                         <tr className="region-detail-row" id={`region-provinces-${region.scopeId}`}>
                           <td colSpan={8}>
-                            <ProvinceDrilldown
-                              region={region}
+                            <LeafScopeDrilldown
+                              titleEyebrow="Detalle provincial"
+                              scopeLabel={region.label}
+                              itemSingularLabel="Provincia"
+                              itemPluralLabel="provincias"
+                              recompositionLabel="La proyección regional se recompone desde sus provincias"
+                              scopes={region.provinces}
+                              selectedCode={selectedCode}
+                              showOthers={showOthers}
+                              comparisonMode={regionalComparisonMode}
+                            />
+                          </td>
+                        </tr>
+                      ) : null}
+                    </Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="panel">
+          <div className="panel__header panel__header--stack">
+            <div>
+              <p className="eyebrow">Lectura exterior</p>
+              <h2>Tabla de continentes y países</h2>
+            </div>
+
+            <div className="controls">
+              <button
+                className={`toggle-button ${showOthers ? "is-active" : ""}`}
+                type="button"
+                onClick={handleShowOthersToggle}
+              >
+                {showOthers ? "Ocultar Otros" : "Mostrar Otros"}
+              </button>
+
+              <div className="control">
+                <span>Columna final</span>
+                <div className="toggle-group" role="tablist" aria-label="Comparación extranjero">
+                  <button
+                    className={`toggle-button ${regionalComparisonMode === "projected" ? "is-active" : ""
+                      }`}
+                    type="button"
+                    onClick={() => handleRegionalModeChange("projected")}
+                  >
+                    Proyectado
+                  </button>
+                  <button
+                    className={`toggle-button ${regionalComparisonMode === "current" ? "is-active" : ""
+                      }`}
+                    type="button"
+                    onClick={() => handleRegionalModeChange("current")}
+                  >
+                    Actual ONPE
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="candidate-pill-row">
+            {featuredLegend.map((candidate) => (
+              <CandidatePill
+                key={`foreign-${candidate.code}`}
+                code={candidate.code}
+                label={candidate.label}
+                active={candidate.code === selectedCode}
+                onClick={handleCandidateSelect}
+              />
+            ))}
+          </div>
+
+          <div className="table-shell">
+            <table className="results-table">
+              <thead>
+                <tr>
+                  <th>Continente</th>
+                  <th>Actas</th>
+                  <th>Participación</th>
+                  <th>{showOthers ? "Candidatos destacados + Otros" : "Candidatos destacados"}</th>
+                  <th>{selectedComparisonLabel}</th>
+                  <th>Países</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedContinents.map((continent) => {
+                  const selectedComparison = buildScopeComparisonItem(continent, selectedCode);
+                  const isExpanded = expandedContinentId === continent.scopeId;
+                  const isProjectedMode = regionalComparisonMode === "projected";
+                  const comparisonVotes = isProjectedMode
+                    ? selectedComparison.projectedVotes
+                    : selectedComparison.actualVotes;
+                  const comparisonPercentage = isProjectedMode
+                    ? selectedComparison.projectedPercentage
+                    : selectedComparison.actualPercentage;
+
+                  return (
+                    <Fragment key={continent.scopeId}>
+                      <tr className={isExpanded ? "results-table__row is-expanded" : "results-table__row"}>
+                        <td data-label="Continente">
+                          <strong>{continent.label}</strong>
+                        </td>
+                        <td data-label="Actas">
+                          {formatPercent(continent.actasContabilizadasPct, 2)}
+                        </td>
+                        <td data-label="Participación">
+                          {formatPercent(continent.participacionCiudadanaPct, 2)}
+                        </td>
+                        <td
+                          data-label={
+                            showOthers ? "Candidatos destacados + Otros" : "Candidatos destacados"
+                          }
+                        >
+                          <CandidateStack scope={continent} showOthers={showOthers} />
+                        </td>
+                        <td data-label={selectedComparisonLabel}>
+                          <div className="comparison-cell">
+                            <strong>{formatNumber(comparisonVotes)}</strong>
+                            <span>{formatPercent(comparisonPercentage, 2)}</span>
+                            <small>
+                              {formatTitleCase(selectedComparison.label)} ·{" "}
+                              {isProjectedMode ? "Proyectado" : "Actual ONPE"}
+                            </small>
+                          </div>
+                        </td>
+                        <td data-label="Países">
+                          <button
+                            className={`region-row-toggle ${isExpanded ? "is-active" : ""}`}
+                            type="button"
+                            aria-expanded={isExpanded}
+                            aria-controls={`continent-countries-${continent.scopeId}`}
+                            aria-label={isExpanded ? `Ocultar países de ${continent.label}` : `Ver países de ${continent.label}`}
+                            onClick={() => handleContinentToggle(continent.scopeId)}
+                          >
+                            <span className="region-row-toggle__icon" aria-hidden="true">
+                              {isExpanded ? "−" : "+"}
+                            </span>
+                            <span className="region-row-toggle__label">
+                              {isExpanded ? "Ocultar países" : "Ver países"}
+                            </span>
+                          </button>
+                        </td>
+                      </tr>
+
+                      {isExpanded ? (
+                        <tr
+                          className="region-detail-row"
+                          id={`continent-countries-${continent.scopeId}`}
+                        >
+                          <td colSpan={6}>
+                            <LeafScopeDrilldown
+                              titleEyebrow="Detalle por país"
+                              scopeLabel={continent.label}
+                              itemSingularLabel="País"
+                              itemPluralLabel="países"
+                              recompositionLabel="La proyección continental se recompone desde sus países"
+                              scopes={continent.countries ?? []}
                               selectedCode={selectedCode}
                               showOthers={showOthers}
                               comparisonMode={regionalComparisonMode}

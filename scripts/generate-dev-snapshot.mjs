@@ -14,6 +14,7 @@ const DEFAULT_USER_AGENT =
 const DEFAULT_ACCEPT_LANGUAGE = "en-GB,en-US;q=0.9,en;q=0.8";
 const DEFAULT_ELECTION_ID = "10";
 const DEFAULT_OUTPUT_PATH = resolve(process.cwd(), "public", "dev-snapshot.json");
+const PROVINCE_REQUEST_CONCURRENCY = 6;
 
 function round(value, digits = 3) {
   return Number(value.toFixed(digits));
@@ -288,20 +289,48 @@ function buildScopeResult({
   };
 }
 
-function buildProjectedNationalSummary(regions, foreign, totalElectores, featuredCodes) {
-  const projectedVotes = featuredCodes.reduce(
+function buildProvinceResult({
+  scopeId,
+  parentScopeId,
+  label,
+  totals,
+  participants,
+  candidateCatalog,
+  featuredCodes
+}) {
+  const scope = buildScopeResult({
+    scopeId,
+    kind: "department",
+    label,
+    electores: 0,
+    padronShare: 0,
+    totals,
+    participants,
+    candidateCatalog,
+    featuredCodes
+  });
+
+  return {
+    ...scope,
+    kind: "province",
+    parentScopeId
+  };
+}
+
+function sumProjectedVotes(scopes, featuredCodes) {
+  return featuredCodes.reduce(
     (acc, code) => {
-      acc[code] =
-        regions.reduce((sum, region) => sum + (region.projectedVotes[code] ?? 0), 0) +
-        (foreign.projectedVotes[code] ?? 0);
+      acc[code] = scopes.reduce((sum, scope) => sum + (scope.projectedVotes[code] ?? 0), 0);
       return acc;
     },
     {
-      otros:
-        regions.reduce((sum, region) => sum + (region.projectedVotes.otros ?? 0), 0) +
-        (foreign.projectedVotes.otros ?? 0)
+      otros: scopes.reduce((sum, scope) => sum + (scope.projectedVotes.otros ?? 0), 0)
     }
   );
+}
+
+function buildProjectedNationalSummary(regions, foreign, totalElectores, featuredCodes) {
+  const projectedVotes = sumProjectedVotes([...regions, foreign], featuredCodes);
   const totalProjectedValidVotes = Object.values(projectedVotes).reduce(
     (sum, votes) => sum + votes,
     0
@@ -324,6 +353,25 @@ function buildProjectedNationalSummary(regions, foreign, totalElectores, feature
 function computeIsStale(sourceLastUpdatedAt) {
   const minutes = (Date.now() - new Date(sourceLastUpdatedAt).getTime()) / 60_000;
   return minutes > STALE_AFTER_MINUTES;
+}
+
+async function mapWithConcurrency(items, concurrency, mapper) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+
+  async function worker() {
+    while (nextIndex < items.length) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+      results[currentIndex] = await mapper(items[currentIndex], currentIndex);
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, items.length) }, () => worker())
+  );
+
+  return results;
 }
 
 async function loadScopesMeta() {
@@ -401,7 +449,7 @@ async function buildElectionSnapshot(config) {
 
   const regionPayloads = await Promise.all(
     departmentMeta.map(async (scope) => {
-      const [totals, participants] = await Promise.all([
+      const [totals, participants, provinceCatalog] = await Promise.all([
         fetchOnpeJson(config, "resumen-general/totales", {
           idEleccion: config.electionId,
           tipoFiltro: "ubigeo_nivel_01",
@@ -413,42 +461,69 @@ async function buildElectionSnapshot(config) {
           tipoFiltro: "ubigeo_nivel_01",
           idAmbitoGeografico: 1,
           idUbigeoDepartamento: scope.scopeId
+        }),
+        fetchOnpeJson(config, "ubigeos/provincias", {
+          idEleccion: config.electionId,
+          idAmbitoGeografico: 1,
+          idUbigeoDepartamento: scope.scopeId
         })
       ]);
 
-      return {
-        meta: scope,
-        totals,
-        participants
+      const provinces = (
+        await mapWithConcurrency(provinceCatalog, PROVINCE_REQUEST_CONCURRENCY, async (province) => {
+          const [provinceTotals, provinceParticipants] = await Promise.all([
+            fetchOnpeJson(config, "resumen-general/totales", {
+              idEleccion: config.electionId,
+              tipoFiltro: "ubigeo_nivel_02",
+              idAmbitoGeografico: 1,
+              idUbigeoDepartamento: scope.scopeId,
+              idUbigeoProvincia: province.ubigeo
+            }),
+            fetchOnpeJson(config, "resumen-general/participantes", {
+              idEleccion: config.electionId,
+              tipoFiltro: "ubigeo_nivel_02",
+              idAmbitoGeografico: 1,
+              idUbigeoDepartamento: scope.scopeId,
+              idUbigeoProvincia: province.ubigeo
+            })
+          ]);
+
+          return buildProvinceResult({
+            scopeId: province.ubigeo,
+            parentScopeId: scope.scopeId,
+            label: province.nombre,
+            totals: provinceTotals,
+            participants: provinceParticipants,
+            candidateCatalog,
+            featuredCodes: featuredCandidateCodes
+          });
+        })
+      ).sort((left, right) => left.label.localeCompare(right.label, "es"));
+
+      const region = {
+        ...buildScopeResult({
+          scopeId: scope.scopeId,
+          kind: "department",
+          label: scope.label,
+          electores: scope.electores,
+          padronShare: scope.padronShare,
+          totals,
+          participants,
+          candidateCatalog,
+          featuredCodes: featuredCandidateCodes
+        }),
+        provinces
       };
+
+      region.projectedVotes = sumProjectedVotes(provinces, featuredCandidateCodes);
+
+      return region;
     })
   );
 
-  const regions = regionPayloads
-    .map(({ meta, totals, participants }) =>
-      buildScopeResult({
-        scopeId: meta.scopeId,
-        kind: "department",
-        label: meta.label,
-        electores: meta.electores,
-        padronShare: meta.padronShare,
-        totals,
-        participants,
-        candidateCatalog,
-        featuredCodes: featuredCandidateCodes
-      })
-    )
-    .sort((left, right) => left.label.localeCompare(right.label, "es"));
+  const regions = regionPayloads.sort((left, right) => left.label.localeCompare(right.label, "es"));
 
-  national.projectedVotes = featuredCandidateCodes.reduce(
-    (acc, code) => {
-      acc[code] = regions.reduce((sum, region) => sum + (region.projectedVotes[code] ?? 0), 0);
-      return acc;
-    },
-    {
-      otros: regions.reduce((sum, region) => sum + (region.projectedVotes.otros ?? 0), 0)
-    }
-  );
+  national.projectedVotes = sumProjectedVotes(regions, featuredCandidateCodes);
 
   const foreign = buildScopeResult({
     scopeId: foreignMeta.scopeId,
@@ -462,7 +537,7 @@ async function buildElectionSnapshot(config) {
     featuredCodes: featuredCandidateCodes
   });
 
-  const sourceLastUpdatedAt = [national, foreign, ...regions]
+  const sourceLastUpdatedAt = [national, foreign, ...regions, ...regions.flatMap((region) => region.provinces)]
     .map((scope) => scope.sourceUpdatedAt)
     .sort()
     .at(-1);

@@ -10,6 +10,7 @@ import type {
   OnpeDepartment,
   OnpeEnvelope,
   OnpeParticipant,
+  OnpeProvince,
   OnpeTotals
 } from "../../../src/lib/types";
 
@@ -133,5 +134,33 @@ export function fetchRegionParticipants(departmentUbigeo: string) {
     tipoFiltro: "ubigeo_nivel_01",
     idAmbitoGeografico: 1,
     idUbigeoDepartamento: departmentUbigeo
+  });
+}
+
+export function fetchProvinces(departmentUbigeo: string) {
+  return fetchOnpe<OnpeProvince[]>("/ubigeos/provincias", {
+    idEleccion: ONPE_ELECTION_ID,
+    idAmbitoGeografico: 1,
+    idUbigeoDepartamento: departmentUbigeo
+  });
+}
+
+export function fetchProvinceTotals(departmentUbigeo: string, provinceUbigeo: string) {
+  return fetchOnpe<OnpeTotals>("/resumen-general/totales", {
+    idEleccion: ONPE_ELECTION_ID,
+    tipoFiltro: "ubigeo_nivel_02",
+    idAmbitoGeografico: 1,
+    idUbigeoDepartamento: departmentUbigeo,
+    idUbigeoProvincia: provinceUbigeo
+  });
+}
+
+export function fetchProvinceParticipants(departmentUbigeo: string, provinceUbigeo: string) {
+  return fetchOnpe<OnpeParticipant[]>("/resumen-general/participantes", {
+    idEleccion: ONPE_ELECTION_ID,
+    tipoFiltro: "ubigeo_nivel_02",
+    idAmbitoGeografico: 1,
+    idUbigeoDepartamento: departmentUbigeo,
+    idUbigeoProvincia: provinceUbigeo
   });
 }

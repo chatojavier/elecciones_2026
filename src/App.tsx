@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 
 import { fetchSnapshot, refreshSnapshot } from "./lib/api";
 import { initializeAnalytics, trackEvent, trackInitialPageView } from "./lib/analytics";
@@ -20,7 +20,7 @@ import {
   formatSignedNumber,
   formatTitleCase
 } from "./lib/format";
-import type { ElectionSnapshot, ScopeResult } from "./lib/types";
+import type { ElectionSnapshot, ProvinceResult, RegionResult, ScopeResult } from "./lib/types";
 
 type SortKey = "electores" | "actas" | "participacion" | "candidate" | "projection";
 
@@ -150,7 +150,45 @@ function ScopeCard({
   );
 }
 
-function sortRegions(regions: ScopeResult[], selectedCode: string, sortKey: SortKey) {
+function CandidateStack({
+  scope,
+  showOthers
+}: {
+  scope: ScopeResult | ProvinceResult;
+  showOthers: boolean;
+}) {
+  return (
+    <div className="mini-stack">
+      {scope.featuredCandidates.map((candidate) => (
+        <div key={candidate.code} className="mini-stack__row">
+          <span
+            className="mini-stack__swatch"
+            style={{
+              background: getCandidateColor(candidate.code)
+            }}
+          />
+          <span>{formatTitleCase(candidate.candidateName)}</span>
+          <strong>{formatPercent(candidate.pctValid, 2)}</strong>
+        </div>
+      ))}
+
+      {showOthers ? (
+        <div className="mini-stack__row">
+          <span
+            className="mini-stack__swatch"
+            style={{
+              background: getCandidateColor("otros")
+            }}
+          />
+          <span>Otros</span>
+          <strong>{formatPercent(scope.otros.pctValid, 2)}</strong>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function sortRegions(regions: RegionResult[], selectedCode: string, sortKey: SortKey) {
   const sorted = [...regions];
 
   sorted.sort((left, right) => {
@@ -176,6 +214,110 @@ function sortRegions(regions: ScopeResult[], selectedCode: string, sortKey: Sort
   return sorted;
 }
 
+function sortProvinces(
+  provinces: ProvinceResult[],
+  selectedCode: string,
+  comparisonMode: ComparisonMode
+) {
+  const sorted = [...provinces];
+
+  sorted.sort((left, right) => {
+    const leftComparison = buildScopeComparisonItem(left, selectedCode);
+    const rightComparison = buildScopeComparisonItem(right, selectedCode);
+
+    if (comparisonMode === "projected") {
+      return rightComparison.projectedVotes - leftComparison.projectedVotes;
+    }
+
+    return rightComparison.actualVotes - leftComparison.actualVotes;
+  });
+
+  return sorted;
+}
+
+function ProvinceDrilldown({
+  region,
+  selectedCode,
+  showOthers,
+  comparisonMode
+}: {
+  region: RegionResult;
+  selectedCode: string;
+  showOthers: boolean;
+  comparisonMode: ComparisonMode;
+}) {
+  const comparisonLabel =
+    comparisonMode === "projected" ? "Proyección seleccionada" : "Actual seleccionado";
+  const sortedProvinces = sortProvinces(region.provinces, selectedCode, comparisonMode);
+
+  return (
+    <section className="province-panel">
+      <div className="province-panel__header">
+        <div>
+          <p className="eyebrow">Detalle provincial</p>
+          <h3>{region.label}</h3>
+        </div>
+        <div className="province-panel__meta">
+          <strong>{region.provinces.length} provincias</strong>
+          <small>La proyección regional se recompone desde sus provincias</small>
+        </div>
+      </div>
+
+      <div className="province-grid province-grid--header" aria-hidden="true">
+        <span>Provincia</span>
+        <span>Actas</span>
+        <span>Participación</span>
+        <span>{showOthers ? "Candidatos destacados + Otros" : "Candidatos destacados"}</span>
+        <span>{comparisonLabel}</span>
+      </div>
+
+      <div className="province-list">
+        {sortedProvinces.map((province) => {
+          const selectedComparison = buildScopeComparisonItem(province, selectedCode);
+          const comparisonVotes =
+            comparisonMode === "projected"
+              ? selectedComparison.projectedVotes
+              : selectedComparison.actualVotes;
+          const comparisonPercentage =
+            comparisonMode === "projected"
+              ? selectedComparison.projectedPercentage
+              : selectedComparison.actualPercentage;
+
+          return (
+            <article key={province.scopeId} className="province-grid province-card">
+              <div className="province-card__cell" data-label="Provincia">
+                <strong>{province.label}</strong>
+              </div>
+              <div className="province-card__cell" data-label="Actas">
+                <strong>{formatPercent(province.actasContabilizadasPct, 2)}</strong>
+              </div>
+              <div className="province-card__cell" data-label="Participación">
+                <strong>{formatPercent(province.participacionCiudadanaPct, 2)}</strong>
+              </div>
+              <div
+                className="province-card__cell"
+                data-label={showOthers ? "Candidatos destacados + Otros" : "Candidatos destacados"}
+              >
+                <CandidateStack scope={province} showOthers={showOthers} />
+              </div>
+              <div className="province-card__cell" data-label={comparisonLabel}>
+                <div className="comparison-cell">
+                  <strong>{formatNumber(comparisonVotes)}</strong>
+                  <span>{formatPercent(comparisonPercentage, 2)}</span>
+                  <small>
+                    {formatTitleCase(selectedComparison.label)} ·{" "}
+                    {comparisonMode === "projected" ? "Proyectado" : "Actual ONPE"}
+                  </small>
+                </div>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export default function App() {
   const [snapshot, setSnapshot] = useState<ElectionSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -187,6 +329,7 @@ export default function App() {
   const [showOthers, setShowOthers] = useState(true);
   const [regionalComparisonMode, setRegionalComparisonMode] =
     useState<ComparisonMode>("projected");
+  const [expandedRegionId, setExpandedRegionId] = useState<string | null>(null);
   const [clockNow, setClockNow] = useState(() => Date.now());
   const lastAutoRefreshKeyRef = useRef<string | null>(null);
 
@@ -246,6 +389,20 @@ export default function App() {
       }
 
       return snapshot.featuredCandidateCodes[0] ?? "otros";
+    });
+  }, [snapshot]);
+
+  useEffect(() => {
+    if (!snapshot) {
+      return;
+    }
+
+    setExpandedRegionId((currentRegionId) => {
+      if (currentRegionId && snapshot.regions.some((region) => region.scopeId === currentRegionId)) {
+        return currentRegionId;
+      }
+
+      return null;
     });
   }, [snapshot]);
 
@@ -310,6 +467,8 @@ export default function App() {
     ? snapshot.projectedNational.totalProjectedValidVotes -
     (snapshot.national.totalVotosValidos + snapshot.foreign.totalVotosValidos)
     : 0;
+  const selectedComparisonLabel =
+    regionalComparisonMode === "projected" ? "Proyección seleccionada" : "Actual seleccionado";
 
   function handleRefreshClick() {
     trackEvent("refresh_snapshot", {
@@ -349,6 +508,19 @@ export default function App() {
     setSelectedCode(code);
     trackEvent("select_candidate_focus", {
       candidate_code: code
+    });
+  }
+
+  function handleRegionToggle(regionId: string) {
+    setExpandedRegionId((currentRegionId) => {
+      const nextRegionId = currentRegionId === regionId ? null : regionId;
+
+      trackEvent("toggle_region_province_drilldown", {
+        region_id: regionId,
+        expanded: nextRegionId === regionId
+      });
+
+      return nextRegionId;
     });
   }
 
@@ -562,16 +734,14 @@ export default function App() {
                   <th>Actas</th>
                   <th>Participación</th>
                   <th>{showOthers ? "Candidatos destacados + Otros" : "Candidatos destacados"}</th>
-                  <th>
-                    {regionalComparisonMode === "projected"
-                      ? "Proyección seleccionada"
-                      : "Actual seleccionado"}
-                  </th>
+                  <th>{selectedComparisonLabel}</th>
+                  <th>Provincias</th>
                 </tr>
               </thead>
               <tbody>
                 {sortedRegions.map((region) => {
                   const selectedComparison = buildScopeComparisonItem(region, selectedCode);
+                  const isExpanded = expandedRegionId === region.scopeId;
                   const isProjectedMode = regionalComparisonMode === "projected";
                   const comparisonVotes = isProjectedMode
                     ? selectedComparison.projectedVotes
@@ -581,66 +751,66 @@ export default function App() {
                     : selectedComparison.actualPercentage;
 
                   return (
-                    <tr key={region.scopeId}>
-                      <td data-label="Región">
-                        <strong>{region.label}</strong>
-                      </td>
-                      <td data-label="Electores">{formatNumber(region.electores)}</td>
-                      <td data-label="% padrón">{formatPercent(region.padronShare, 2)}</td>
-                      <td data-label="Actas">{formatPercent(region.actasContabilizadasPct, 2)}</td>
-                      <td data-label="Participación">
-                        {formatPercent(region.participacionCiudadanaPct, 2)}
-                      </td>
-                      <td
-                        data-label={
-                          showOthers ? "Candidatos destacados + Otros" : "Candidatos destacados"
-                        }
-                      >
-                        <div className="mini-stack">
-                          {region.featuredCandidates.map((candidate) => (
-                            <div key={candidate.code} className="mini-stack__row">
-                              <span
-                                className="mini-stack__swatch"
-                                style={{
-                                  background: getCandidateColor(candidate.code)
-                                }}
-                              />
-                              <span>{formatTitleCase(candidate.candidateName)}</span>
-                              <strong>{formatPercent(candidate.pctValid, 2)}</strong>
-                            </div>
-                          ))}
+                    <Fragment key={region.scopeId}>
+                      <tr className={isExpanded ? "results-table__row is-expanded" : "results-table__row"}>
+                        <td data-label="Región">
+                          <strong>{region.label}</strong>
+                        </td>
+                        <td data-label="Electores">{formatNumber(region.electores)}</td>
+                        <td data-label="% padrón">{formatPercent(region.padronShare, 2)}</td>
+                        <td data-label="Actas">{formatPercent(region.actasContabilizadasPct, 2)}</td>
+                        <td data-label="Participación">
+                          {formatPercent(region.participacionCiudadanaPct, 2)}
+                        </td>
+                        <td
+                          data-label={
+                            showOthers ? "Candidatos destacados + Otros" : "Candidatos destacados"
+                          }
+                        >
+                          <CandidateStack scope={region} showOthers={showOthers} />
+                        </td>
+                        <td data-label={selectedComparisonLabel}>
+                          <div className="comparison-cell">
+                            <strong>{formatNumber(comparisonVotes)}</strong>
+                            <span>{formatPercent(comparisonPercentage, 2)}</span>
+                            <small>
+                              {formatTitleCase(selectedComparison.label)} ·{" "}
+                              {isProjectedMode ? "Proyectado" : "Actual ONPE"}
+                            </small>
+                          </div>
+                        </td>
+                        <td data-label="Provincias">
+                          <button
+                            className={`region-row-toggle ${isExpanded ? "is-active" : ""}`}
+                            type="button"
+                            aria-expanded={isExpanded}
+                            aria-controls={`region-provinces-${region.scopeId}`}
+                            aria-label={isExpanded ? `Ocultar provincias de ${region.label}` : `Ver provincias de ${region.label}`}
+                            onClick={() => handleRegionToggle(region.scopeId)}
+                          >
+                            <span className="region-row-toggle__icon" aria-hidden="true">
+                              {isExpanded ? "−" : "+"}
+                            </span>
+                            <span className="region-row-toggle__label">
+                              {isExpanded ? "Ocultar provincias" : "Ver provincias"}
+                            </span>
+                          </button>
+                        </td>
+                      </tr>
 
-                          {showOthers ? (
-                            <div className="mini-stack__row">
-                              <span
-                                className="mini-stack__swatch"
-                                style={{
-                                  background: getCandidateColor("otros")
-                                }}
-                              />
-                              <span>Otros</span>
-                              <strong>{formatPercent(region.otros.pctValid, 2)}</strong>
-                            </div>
-                          ) : null}
-                        </div>
-                      </td>
-                      <td
-                        data-label={
-                          regionalComparisonMode === "projected"
-                            ? "Proyección seleccionada"
-                            : "Actual seleccionado"
-                        }
-                      >
-                        <div className="comparison-cell">
-                          <strong>{formatNumber(comparisonVotes)}</strong>
-                          <span>{formatPercent(comparisonPercentage, 2)}</span>
-                          <small>
-                            {formatTitleCase(selectedComparison.label)} ·{" "}
-                            {isProjectedMode ? "Proyectado" : "Actual ONPE"}
-                          </small>
-                        </div>
-                      </td>
-                    </tr>
+                      {isExpanded ? (
+                        <tr className="region-detail-row" id={`region-provinces-${region.scopeId}`}>
+                          <td colSpan={8}>
+                            <ProvinceDrilldown
+                              region={region}
+                              selectedCode={selectedCode}
+                              showOthers={showOthers}
+                              comparisonMode={regionalComparisonMode}
+                            />
+                          </td>
+                        </tr>
+                      ) : null}
+                    </Fragment>
                   );
                 })}
               </tbody>

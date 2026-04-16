@@ -1,4 +1,4 @@
-export type ScopeKind = "national" | "department" | "foreign_total";
+export type ScopeKind = "national" | "department" | "province" | "foreign_total";
 export type HealthStatusKind = "healthy" | "degraded" | "unknown";
 
 export interface ScopeMeta {
@@ -17,6 +17,11 @@ export interface OnpeEnvelope<T> {
 }
 
 export interface OnpeDepartment {
+  ubigeo: string;
+  nombre: string;
+}
+
+export interface OnpeProvince {
   ubigeo: string;
   nombre: string;
 }
@@ -76,7 +81,7 @@ export interface AggregateResult {
 
 export interface ScopeResult {
   scopeId: string;
-  kind: ScopeKind;
+  kind: Exclude<ScopeKind, "province">;
   label: string;
   electores: number;
   padronShare: number;
@@ -95,6 +100,31 @@ export interface ScopeResult {
   projectedVotes: Record<string, number>;
 }
 
+export interface ProvinceResult {
+  scopeId: string;
+  parentScopeId: string;
+  kind: "province";
+  label: string;
+  actasContabilizadasPct: number;
+  contabilizadas: number;
+  totalActas: number;
+  participacionCiudadanaPct: number;
+  enviadasJee: number;
+  pendientesJee: number;
+  totalVotosEmitidos: number;
+  totalVotosValidos: number;
+  sourceUpdatedAt: string;
+  candidates: CandidateResult[];
+  featuredCandidates: CandidateResult[];
+  otros: AggregateResult;
+  projectedVotes: Record<string, number>;
+}
+
+export interface RegionResult extends ScopeResult {
+  kind: "department";
+  provinces: ProvinceResult[];
+}
+
 export interface ProjectedNationalSummary {
   totalElectores: number;
   totalProjectedValidVotes: number;
@@ -108,7 +138,7 @@ export interface ElectionSnapshot {
   sourceLastUpdatedAt: string;
   national: ScopeResult;
   foreign: ScopeResult;
-  regions: ScopeResult[];
+  regions: RegionResult[];
   projectedNational: ProjectedNationalSummary;
   featuredCandidateCodes: string[];
   isStale: boolean;

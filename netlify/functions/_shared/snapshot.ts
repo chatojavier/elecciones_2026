@@ -2,13 +2,16 @@ import scopesMetaJson from "../../../data/scopes.meta.json";
 import {
   buildCandidateCatalog,
   buildProjectedNationalSummary,
+  buildProvinceResult,
   buildScopeResult,
   computeIsStale,
-  getScopeMetaTotals
+  getScopeMetaTotals,
+  sumProjectedVotes
 } from "../../../src/lib/domain";
 import type {
   ElectionSnapshot,
   HealthStatus,
+  RegionResult,
   ScopeMeta,
   ScopeResult
 } from "../../../src/lib/types";
@@ -19,6 +22,9 @@ import {
   fetchForeignTotals,
   fetchNationalParticipants,
   fetchNationalTotals,
+  fetchProvinceParticipants,
+  fetchProvinceTotals,
+  fetchProvinces,
   fetchRegionParticipants,
   fetchRegionTotals
 } from "./onpe";
@@ -32,6 +38,7 @@ import {
 const scopesMeta = (scopesMetaJson.scopes as ScopeMeta[]).slice().sort((left, right) => {
   return left.displayOrder - right.displayOrder;
 });
+const PROVINCE_REQUEST_CONCURRENCY = 6;
 
 function getDepartmentMeta(scopeId: string) {
   const scope = scopesMeta.find(
@@ -55,16 +62,27 @@ function getForeignMeta() {
   return scope;
 }
 
-function buildPeruNationalProjectedVotes(regions: ScopeResult[], featuredCodes: string[]) {
-  return featuredCodes.reduce<Record<string, number>>(
-    (acc, code) => {
-      acc[code] = regions.reduce((sum, region) => sum + (region.projectedVotes[code] ?? 0), 0);
-      return acc;
-    },
-    {
-      otros: regions.reduce((sum, region) => sum + (region.projectedVotes.otros ?? 0), 0)
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  mapper: (item: T, index: number) => Promise<R>
+) {
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+
+  async function worker() {
+    while (nextIndex < items.length) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+      results[currentIndex] = await mapper(items[currentIndex], currentIndex);
     }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, items.length) }, () => worker())
   );
+
+  return results;
 }
 
 export async function buildElectionSnapshot() {
@@ -99,36 +117,57 @@ export async function buildElectionSnapshot() {
 
   const regionPayloads = await Promise.all(
     departmentList.map(async (department) => {
-      const [totals, participants] = await Promise.all([
+      const meta = getDepartmentMeta(department.ubigeo);
+      const [totals, participants, provinceCatalog] = await Promise.all([
         fetchRegionTotals(department.ubigeo),
-        fetchRegionParticipants(department.ubigeo)
+        fetchRegionParticipants(department.ubigeo),
+        fetchProvinces(department.ubigeo)
       ]);
 
-      return {
-        meta: getDepartmentMeta(department.ubigeo),
-        totals,
-        participants
+      const provinces = (
+        await mapWithConcurrency(provinceCatalog, PROVINCE_REQUEST_CONCURRENCY, async (province) => {
+          const [provinceTotals, provinceParticipants] = await Promise.all([
+            fetchProvinceTotals(department.ubigeo, province.ubigeo),
+            fetchProvinceParticipants(department.ubigeo, province.ubigeo)
+          ]);
+
+          return buildProvinceResult({
+            scopeId: province.ubigeo,
+            parentScopeId: meta.scopeId,
+            label: province.nombre,
+            totals: provinceTotals,
+            participants: provinceParticipants,
+            candidateCatalog,
+            featuredCodes: featuredCandidateCodes
+          });
+        })
+      ).sort((left, right) => left.label.localeCompare(right.label, "es"));
+
+      const region: RegionResult = {
+        ...buildScopeResult({
+          scopeId: meta.scopeId,
+          kind: "department",
+          label: meta.label,
+          electores: meta.electores,
+          padronShare: meta.padronShare,
+          totals,
+          participants,
+          candidateCatalog,
+          featuredCodes: featuredCandidateCodes
+        }),
+        kind: "department",
+        provinces
       };
+
+      region.projectedVotes = sumProjectedVotes(provinces, featuredCandidateCodes);
+
+      return region;
     })
   );
 
-  const regions = regionPayloads
-    .map(({ meta, totals, participants }) =>
-      buildScopeResult({
-        scopeId: meta.scopeId,
-        kind: "department",
-        label: meta.label,
-        electores: meta.electores,
-        padronShare: meta.padronShare,
-        totals,
-        participants,
-        candidateCatalog,
-        featuredCodes: featuredCandidateCodes
-      })
-    )
-    .sort((left, right) => left.label.localeCompare(right.label, "es"));
+  const regions = regionPayloads.sort((left, right) => left.label.localeCompare(right.label, "es"));
 
-  national.projectedVotes = buildPeruNationalProjectedVotes(regions, featuredCandidateCodes);
+  national.projectedVotes = sumProjectedVotes(regions, featuredCandidateCodes);
 
   const foreign = buildScopeResult({
     scopeId: foreignMeta.scopeId,
@@ -142,7 +181,7 @@ export async function buildElectionSnapshot() {
     featuredCodes: featuredCandidateCodes
   });
 
-  const sourceLastUpdatedAt = [national, foreign, ...regions]
+  const sourceLastUpdatedAt = [national, foreign, ...regions, ...regions.flatMap((region) => region.provinces)]
     .map((scope) => scope.sourceUpdatedAt)
     .sort()
     .at(-1);

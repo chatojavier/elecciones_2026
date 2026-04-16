@@ -1,8 +1,10 @@
 import {
   buildCandidateCatalog,
+  buildProvinceResult,
   buildProjectedNationalSummary,
   buildScopeResult,
-  computeIsStale
+  computeIsStale,
+  sumProjectedVotes
 } from "../src/lib/domain";
 import type { OnpeParticipant, OnpeTotals } from "../src/lib/types";
 
@@ -156,6 +158,62 @@ describe("buildProjectedNationalSummary", () => {
     expect(projected.projectedVotes["35"]).toBe(62112);
     expect(projected.projectedVotes.otros).toBe(37268);
     expect(projected.projectedPercentages["8"]).toBe(20);
+  });
+});
+
+describe("buildProvinceResult", () => {
+  it("usa los destacados nacionales y conserva placeholders faltantes", () => {
+    const catalog = buildCandidateCatalog(participants);
+    const province = buildProvinceResult({
+      scopeId: "040101",
+      parentScopeId: "040000",
+      label: "AREQUIPA",
+      totals,
+      participants: participants.filter((participant) => participant.codigoAgrupacionPolitica !== 10),
+      candidateCatalog: catalog,
+      featuredCodes: ["35", "8", "10"]
+    });
+
+    expect(province.parentScopeId).toBe("040000");
+    expect(province.kind).toBe("province");
+    expect(province.featuredCandidates.map((candidate) => candidate.code)).toEqual(["35", "8", "10"]);
+    expect(province.featuredCandidates[2]).toMatchObject({
+      candidateName: "ROBERTO HELBERT SANCHEZ PALOMINO",
+      votesValid: 0
+    });
+  });
+});
+
+describe("sumProjectedVotes", () => {
+  it("recompone una región sumando provincias", () => {
+    const catalog = buildCandidateCatalog(participants);
+    const provinceA = buildProvinceResult({
+      scopeId: "040101",
+      parentScopeId: "040000",
+      label: "AREQUIPA",
+      totals,
+      participants,
+      candidateCatalog: catalog,
+      featuredCodes: ["35", "8"]
+    });
+    const provinceB = buildProvinceResult({
+      scopeId: "040102",
+      parentScopeId: "040000",
+      label: "CAMANÁ",
+      totals: {
+        ...totals,
+        actasContabilizadas: 50
+      },
+      participants,
+      candidateCatalog: catalog,
+      featuredCodes: ["35", "8"]
+    });
+
+    expect(sumProjectedVotes([provinceA, provinceB], ["35", "8"])).toEqual({
+      "35": 81056,
+      "8": 64845,
+      otros: 178323
+    });
   });
 });
 

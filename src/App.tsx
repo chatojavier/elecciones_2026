@@ -1,16 +1,22 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 
 import { fetchSnapshot, refreshSnapshot } from "./lib/api";
-import { initializeAnalytics, trackEvent, trackInitialPageView } from "./lib/analytics";
 import {
+  initializeAnalytics,
+  trackEvent,
+  trackInitialPageView
+} from "./lib/analytics";
+import {
+  buildSecondRoundInsight,
   buildNationalComparisonItems,
   buildScopeComparisonItem,
+  getScopeSecondRoundGapVotes,
   type ComparisonItem,
-  type ComparisonMode
+  type ComparisonMode,
+  type SecondRoundStatusLevel
 } from "./lib/comparison";
 import { getCandidateColor } from "./lib/constants";
 import {
-  formatCompactNumber,
   formatDateTime,
   getElapsedMinutes,
   formatNumber,
@@ -29,7 +35,13 @@ import type {
   ScopeResult
 } from "./lib/types";
 
-type SortKey = "electores" | "actas" | "participacion" | "candidate" | "projection";
+type SortKey =
+  | "electores"
+  | "actas"
+  | "participacion"
+  | "candidate"
+  | "projection"
+  | "gap_2v3";
 type LeafScopeResult = ProvinceResult | ForeignCountryResult;
 
 function CandidatePill({
@@ -123,41 +135,6 @@ function FeaturedBar({
   );
 }
 
-function ScopeCard({
-  title,
-  subtitle,
-  scope
-}: {
-  title: string;
-  subtitle: string;
-  scope: ScopeResult;
-}) {
-  return (
-    <section className="scope-card">
-      <p className="eyebrow">{subtitle}</p>
-      <h2>{title}</h2>
-      <dl className="scope-card__metrics">
-        <div>
-          <dt>Actas contabilizadas</dt>
-          <dd>{formatPercent(scope.actasContabilizadasPct, 2)}</dd>
-        </div>
-        <div>
-          <dt>Participación</dt>
-          <dd>{formatPercent(scope.participacionCiudadanaPct, 2)}</dd>
-        </div>
-        <div>
-          <dt>Electores</dt>
-          <dd>{formatCompactNumber(scope.electores)}</dd>
-        </div>
-        <div>
-          <dt>Votos válidos</dt>
-          <dd>{formatCompactNumber(scope.totalVotosValidos)}</dd>
-        </div>
-      </dl>
-    </section>
-  );
-}
-
 function CandidateStack({
   scope,
   showOthers
@@ -196,7 +173,51 @@ function CandidateStack({
   );
 }
 
-function sortRegions(regions: RegionResult[], selectedCode: string, sortKey: SortKey) {
+function getStatusCopy(statusLevel: SecondRoundStatusLevel) {
+  switch (statusLevel) {
+    case "stable":
+      return { label: "Estable", className: "quick-insights__status-badge is-stable" };
+    case "tight":
+      return { label: "Ajustado", className: "quick-insights__status-badge is-tight" };
+    case "very_tight":
+      return { label: "Muy ajustado", className: "quick-insights__status-badge is-very-tight" };
+    default:
+      return { label: "Sin dato", className: "quick-insights__status-badge" };
+  }
+}
+
+function QuickInsightsSkeleton() {
+  return (
+    <section className="quick-insights quick-insights--loading" aria-label="Cargando resumen rápido">
+      <div className="quick-insights__header">
+        <div className="quick-insights__header-main">
+          <p className="eyebrow">Resumen clave: segunda vuelta</p>
+          <h2>Resumen clave: segunda vuelta</h2>
+        </div>
+        <div className="quick-insights__chips quick-insights__chips--header">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <span key={index} className="quick-insight-chip is-skeleton" />
+          ))}
+        </div>
+      </div>
+      <div className="quick-insights__kpis">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <article key={index} className="quick-insight-kpi is-skeleton">
+            <span className="quick-insight-kpi__skeleton quick-insight-kpi__skeleton--label" />
+            <span className="quick-insight-kpi__skeleton quick-insight-kpi__skeleton--value" />
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function sortRegions(
+  regions: RegionResult[],
+  selectedCode: string,
+  sortKey: SortKey,
+  secondRoundCodes: { rank2Code: string; rank3Code: string } | null
+) {
   const sorted = [...regions];
 
   sorted.sort((left, right) => {
@@ -211,6 +232,28 @@ function sortRegions(regions: RegionResult[], selectedCode: string, sortKey: Sor
         const leftCandidate = left.featuredCandidates.find((candidate) => candidate.code === selectedCode);
         const rightCandidate = right.featuredCandidates.find((candidate) => candidate.code === selectedCode);
         return (rightCandidate?.pctValid ?? 0) - (leftCandidate?.pctValid ?? 0);
+      }
+      case "gap_2v3": {
+        if (!secondRoundCodes) {
+          return (right.projectedVotes[selectedCode] ?? 0) - (left.projectedVotes[selectedCode] ?? 0);
+        }
+
+        const leftGap = getScopeSecondRoundGapVotes(
+          left,
+          secondRoundCodes.rank2Code,
+          secondRoundCodes.rank3Code
+        );
+        const rightGap = getScopeSecondRoundGapVotes(
+          right,
+          secondRoundCodes.rank2Code,
+          secondRoundCodes.rank3Code
+        );
+
+        if (leftGap === rightGap) {
+          return right.electores - left.electores;
+        }
+
+        return leftGap - rightGap;
       }
       case "projection":
         return (right.projectedVotes[selectedCode] ?? 0) - (left.projectedVotes[selectedCode] ?? 0);
@@ -374,6 +417,9 @@ export default function App() {
   const [expandedContinentId, setExpandedContinentId] = useState<string | null>(null);
   const [clockNow, setClockNow] = useState(() => Date.now());
   const lastAutoRefreshKeyRef = useRef<string | null>(null);
+  const quickInsightsImpressionRef = useRef<string | null>(null);
+  const quickInsightsStatusRef = useRef<string | null>(null);
+  const quickInsightsContextRef = useRef<string | null>(null);
   const foreignContinents = snapshot?.foreign.continents ?? [];
 
   async function loadSnapshot(background = false) {
@@ -498,13 +544,32 @@ export default function App() {
     }));
   }, [snapshot]);
 
+  const secondRoundInsight = useMemo(() => {
+    if (!snapshot) {
+      return null;
+    }
+
+    return buildSecondRoundInsight(snapshot);
+  }, [snapshot]);
+
+  const secondRoundCodes = useMemo(() => {
+    if (!secondRoundInsight?.rank2 || !secondRoundInsight.rank3) {
+      return null;
+    }
+
+    return {
+      rank2Code: secondRoundInsight.rank2.code,
+      rank3Code: secondRoundInsight.rank3.code
+    };
+  }, [secondRoundInsight]);
+
   const sortedRegions = useMemo(() => {
     if (!snapshot) {
       return [];
     }
 
-    return sortRegions(snapshot.regions, selectedCode, sortKey);
-  }, [selectedCode, snapshot, sortKey]);
+    return sortRegions(snapshot.regions, selectedCode, sortKey, secondRoundCodes);
+  }, [secondRoundCodes, selectedCode, snapshot, sortKey]);
 
   const sortedContinents = useMemo(() => {
     if (!snapshot) {
@@ -530,13 +595,63 @@ export default function App() {
   const othersBar = snapshot
     ? nationalComparisonItems.find((item) => item.code === "otros") ?? null
     : null;
-
-  const projectedNationalDeltaVotes = snapshot
-    ? snapshot.projectedNational.totalProjectedValidVotes -
-    (snapshot.national.totalVotosValidos + snapshot.foreign.totalVotosValidos)
-    : 0;
   const selectedComparisonLabel =
     regionalComparisonMode === "projected" ? "Proyección seleccionada" : "Actual seleccionado";
+  const quickInsightsTrackingBase = {
+    gap_pp_2v3: secondRoundInsight?.gapPp2v3 ?? undefined,
+    gap_votes_2v3: secondRoundInsight?.gapVotes2v3 ?? undefined,
+    rank2_candidate: secondRoundInsight?.rank2?.label ?? undefined,
+    rank3_candidate: secondRoundInsight?.rank3?.label ?? undefined,
+    snapshot_generated_at: snapshot?.generatedAt ?? undefined
+  };
+
+  useEffect(() => {
+    if (!snapshot || !secondRoundInsight) {
+      return;
+    }
+
+    if (quickInsightsImpressionRef.current === snapshot.generatedAt) {
+      return;
+    }
+
+    trackEvent("quick_insights_impression", quickInsightsTrackingBase);
+    quickInsightsImpressionRef.current = snapshot.generatedAt;
+  }, [quickInsightsTrackingBase, secondRoundInsight, snapshot]);
+
+  useEffect(() => {
+    if (!snapshot || !secondRoundInsight) {
+      return;
+    }
+
+    if (quickInsightsStatusRef.current === snapshot.generatedAt) {
+      return;
+    }
+
+    trackEvent("second_round_status_shown", {
+      status_level: secondRoundInsight.statusLevel,
+      gap_pp_2v3: secondRoundInsight.gapPp2v3 ?? undefined,
+      snapshot_generated_at: snapshot.generatedAt
+    });
+    quickInsightsStatusRef.current = snapshot.generatedAt;
+  }, [secondRoundInsight, snapshot]);
+
+  useEffect(() => {
+    if (!snapshot || !secondRoundInsight) {
+      return;
+    }
+
+    if (quickInsightsContextRef.current === snapshot.generatedAt) {
+      return;
+    }
+
+    trackEvent("second_round_context_shown", {
+      actas_peru: secondRoundInsight.actasPeruPct,
+      actas_exterior: secondRoundInsight.actasExteriorPct,
+      delta_proyeccion: secondRoundInsight.deltaProyeccionVotes,
+      snapshot_generated_at: snapshot.generatedAt
+    });
+    quickInsightsContextRef.current = snapshot.generatedAt;
+  }, [secondRoundInsight, snapshot]);
 
   function handleRefreshClick() {
     trackEvent("refresh_snapshot", {
@@ -621,6 +736,25 @@ export default function App() {
     });
   }
 
+  const hasSecondRoundInsight =
+    Boolean(secondRoundInsight?.rank2) &&
+    Boolean(secondRoundInsight?.rank3) &&
+    secondRoundInsight?.gapPp2v3 != null &&
+    secondRoundInsight?.gapVotes2v3 != null;
+  const statusCopy = getStatusCopy(secondRoundInsight?.statusLevel ?? "unknown");
+  const rank2Value = secondRoundInsight?.rank2 ? formatTitleCase(secondRoundInsight.rank2.label) : null;
+  const gapVotesValue =
+    secondRoundInsight?.gapVotes2v3 != null
+      ? `${formatSignedNumber(secondRoundInsight.gapVotes2v3)} votos`
+      : null;
+  const gapPpValue =
+    secondRoundInsight?.gapPp2v3 != null
+      ? `${secondRoundInsight.gapPp2v3.toFixed(2)} pp`
+      : null;
+  const actasPeruValue = formatPercent(secondRoundInsight?.actasPeruPct ?? 0, 2);
+  const actasExteriorValue = formatPercent(secondRoundInsight?.actasExteriorPct ?? 0, 2);
+  const deltaProyeccionValue = formatSignedNumber(secondRoundInsight?.deltaProyeccionVotes ?? 0);
+
   if (loading) {
     return (
       <main className="page-shell">
@@ -628,6 +762,7 @@ export default function App() {
           <p className="eyebrow">Cargando snapshot</p>
           <h1>Preparando resultados y proyección nacional…</h1>
         </section>
+        <QuickInsightsSkeleton />
       </main>
     );
   }
@@ -649,9 +784,9 @@ export default function App() {
       <section className="hero">
         <div className="hero__copy">
           <p className="eyebrow">Resultados presidenciales 2026</p>
-          <h1>Entiende rápido cómo va el conteo y la proyección nacional</h1>
+          <h1>Conteo de votos y proyección nacional</h1>
           <p className="hero__lede">
-            Consulta resultados ONPE, compara candidatos y explora regiones y países con datos
+            Consulta resultados ONPE, compara candidatos y explora regiones y votos extranjeros con datos
             actualizados.
           </p>
           <div className="hero__actions">
@@ -688,7 +823,7 @@ export default function App() {
             <span>Fuente ONPE</span>
             <strong>{formatRelativeMinutes(snapshot.sourceLastUpdatedAt, clockNow)}</strong>
           </div>
-          <div>
+          <div id="estado-actualizacion">
             <div className="status-card__top">
               <div>
                 <span>Estado</span>
@@ -713,46 +848,50 @@ export default function App() {
         </div>
       </section>
 
-      <section className="summary-grid">
-        <ScopeCard title="Resumen nacional Perú" subtitle="Ámbito nacional" scope={snapshot.national} />
-        <ScopeCard
-          title="Peruanos en el extranjero"
-          subtitle="Ámbito agregado"
-          scope={snapshot.foreign}
-        />
-        <section className="projection-card">
-          <p className="eyebrow">Proyección nacional</p>
-          <h2>
-            {formatNumber(snapshot.projectedNational.totalProjectedValidVotes)} votos válidos
-            proyectados
-          </h2>
-          <p>
-            Suma de proyección regional Perú más extranjero recompuesto desde países, extrapolada
-            por avance de actas contabilizadas.
-          </p>
-          <div className="projection-card__comparison">
-            <div>
-              <span>Actual total ONPE</span>
-              <strong>
-                {formatNumber(
-                  snapshot.national.totalVotosValidos + snapshot.foreign.totalVotosValidos
-                )}
-              </strong>
-            </div>
-            <div>
-              <span>Proyectado</span>
-              <strong>{formatNumber(snapshot.projectedNational.totalProjectedValidVotes)}</strong>
-            </div>
-            <div>
-              <span>Delta</span>
-              <strong>{formatSignedNumber(projectedNationalDeltaVotes)}</strong>
-            </div>
+      <section className="quick-insights" aria-labelledby="quick-insights-title">
+        <div className="quick-insights__header">
+          <div className="quick-insights__header-main">
+            <p className="eyebrow">Resumen rápido</p>
+            <h2 id="quick-insights-title">Resumen clave: segunda vuelta</h2>
+            <p>
+              Quién está entrando hoy a segunda vuelta y qué tan ajustada es la pelea por el 2do cupo.
+            </p>
           </div>
-        </section>
+          <div
+            className="quick-insights__chips quick-insights__chips--header"
+            aria-label="Contexto mínimo de conteo y proyección"
+          >
+            <span className="quick-insight-chip">Actas Perú: {actasPeruValue}</span>
+            <span className="quick-insight-chip">Actas exterior: {actasExteriorValue}</span>
+            <span className="quick-insight-chip">Delta proyección: {deltaProyeccionValue} votos</span>
+          </div>
+        </div>
+
+        <div className="quick-insights__kpis">
+          <article className="quick-insight-kpi">
+            <p>Hoy clasifica a segunda vuelta</p>
+            <strong>{rank2Value ?? "Insight no disponible"}</strong>
+          </article>
+          <article className="quick-insight-kpi">
+            <div className="quick-insight-kpi__heading">
+              <p>Brecha porcentual (2do - 3ro)</p>
+              {hasSecondRoundInsight ? (
+                <span className={statusCopy.className}>
+                  {statusCopy.label}
+                </span>
+              ) : null}
+            </div>
+            <strong>{gapPpValue ?? "Insight no disponible"}</strong>
+          </article>
+          <article className="quick-insight-kpi">
+            <p>Diferencia en votos (2do - 3ro)</p>
+            <strong>{gapVotesValue ?? "Insight no disponible"}</strong>
+          </article>
+        </div>
       </section>
 
       <section className="content-grid">
-        <section className="panel">
+        <section className="panel" id="comparativa-central">
           <div className="panel__header">
             <div>
               <p className="eyebrow">Comparativa central</p>
@@ -788,6 +927,7 @@ export default function App() {
                   value={sortKey}
                   onChange={(event) => handleSortChange(event.target.value as SortKey)}
                 >
+                  <option value="gap_2v3">Brecha 2do vs 3ro</option>
                   <option value="projection">Proyección</option>
                   <option value="candidate">Candidato</option>
                   <option value="electores">Electores</option>
@@ -1095,17 +1235,23 @@ export default function App() {
           <div className="panel__header">
             <div>
               <p className="eyebrow">Metodología</p>
-              <h2>Cómo leer esta vista</h2>
+              <h2>Cómo se calcula la proyección</h2>
             </div>
           </div>
           <p>
-            Mostramos resultados oficiales de ONPE y una proyección nacional agregada en función del
-            avance de actas contabilizadas.
+            Mostramos resultados oficiales de ONPE y una estimación nacional de votos de acuerdo al avance del escrutinio. La aplicación emplea un modelo de <strong>extrapolación lineal por actas contabilizadas</strong> (no actas procesadas):
           </p>
-          <p>
-            Actualizamos el snapshot cuando ONPE publica nuevos cortes y refrescamos la lectura
-            regional y exterior con la misma base de datos.
-          </p>
+          <ul>
+            <li>
+              <strong>Extrapolación local:</strong> Al estimar las actas faltantes en una circunscripción, se asume matemáticamente que mantendrán la composición de los votos ya escrutados (<code>Votos Proyectados = Votos Actuales / % avance de actas contabilizadas</code>). En caso se tengan 0 actas contabilizadas, la proyección es cero.
+            </li>
+            <li>
+              <strong>Agregación bottom-up:</strong> Para mitigar inconsistencias de velocidades agregadas, la proyección total se calcula de forma descentralizada sumando de forma independiente la proyección de cada bloque geográfico mayor (las 25 regiones y el total consolidado de los peruanos en el extranjero).
+            </li>
+            <li>
+              <strong>Consideraciones clave:</strong> El modelo puede presentar variaciones con el avance del tiempo y no debe considerarse como dato definitivo. Esto ocurre porque el método no corrige por sesgo geográfico intrínseco: los votos remanentes (por ejemplo, actas rurales que tardan más en ser trasladadas a centros de cómputo) pueden exhibir un patrón estadísticamemte diferente frente al voto predominantemente urbano contado al inicio de la jornada.
+            </li>
+          </ul>
         </section>
       </section>
     </main>

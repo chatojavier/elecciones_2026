@@ -2,7 +2,8 @@ import type {
   ElectionSnapshot,
   ForeignCountryResult,
   ProvinceResult,
-  ScopeResult
+  ScopeResult,
+  RegionResult
 } from "./types";
 
 export type ComparisonMode = "current" | "projected";
@@ -16,6 +17,26 @@ export interface ComparisonItem {
   projectedPercentage: number;
   deltaVotes: number;
   deltaPercentage: number;
+}
+
+export type SecondRoundStatusLevel = "stable" | "tight" | "very_tight" | "unknown";
+
+export interface SecondRoundCandidate {
+  code: string;
+  label: string;
+  projectedVotes: number;
+  projectedPercentage: number;
+}
+
+export interface SecondRoundInsight {
+  rank2: SecondRoundCandidate | null;
+  rank3: SecondRoundCandidate | null;
+  gapVotes2v3: number | null;
+  gapPp2v3: number | null;
+  actasPeruPct: number;
+  actasExteriorPct: number;
+  deltaProyeccionVotes: number;
+  statusLevel: SecondRoundStatusLevel;
 }
 
 function round(value: number, digits = 3) {
@@ -48,6 +69,120 @@ function createComparisonItem(input: {
     ...input,
     deltaVotes: input.projectedVotes - input.actualVotes,
     deltaPercentage: round(input.projectedPercentage - input.actualPercentage)
+  };
+}
+
+function buildSecondRoundCandidateLabelMap(snapshot: ElectionSnapshot) {
+  const labels = new Map<string, string>();
+  const candidates = [
+    ...snapshot.national.candidates,
+    ...snapshot.foreign.candidates,
+    ...snapshot.national.featuredCandidates,
+    ...snapshot.foreign.featuredCandidates
+  ];
+
+  for (const candidate of candidates) {
+    if (!labels.has(candidate.code)) {
+      labels.set(candidate.code, candidate.candidateName);
+    }
+  }
+
+  return labels;
+}
+
+function resolveSecondRoundStatusLevel(gapPp2v3: number | null): SecondRoundStatusLevel {
+  if (gapPp2v3 === null) {
+    return "unknown";
+  }
+
+  if (gapPp2v3 < 0.5) {
+    return "very_tight";
+  }
+
+  if (gapPp2v3 < 1.5) {
+    return "tight";
+  }
+
+  return "stable";
+}
+
+export function getScopeSecondRoundGapVotes(
+  scope: Pick<ScopeResult, "projectedVotes"> | Pick<RegionResult, "projectedVotes">,
+  rank2Code: string,
+  rank3Code: string
+) {
+  return (scope.projectedVotes[rank2Code] ?? 0) - (scope.projectedVotes[rank3Code] ?? 0);
+}
+
+export function buildSecondRoundInsight(snapshot: ElectionSnapshot): SecondRoundInsight {
+  const labelByCode = buildSecondRoundCandidateLabelMap(snapshot);
+  const candidateCodes = new Set([
+    ...Object.keys(snapshot.projectedNational.projectedVotes),
+    ...Object.keys(snapshot.projectedNational.projectedPercentages)
+  ]);
+  candidateCodes.delete("otros");
+
+  const voteEntries = Array.from(candidateCodes)
+    .map((code) => {
+      const projectedVotes = snapshot.projectedNational.projectedVotes[code] ?? 0;
+      const projectedPercentageFromSnapshot = snapshot.projectedNational.projectedPercentages[code];
+      const projectedPercentage =
+        typeof projectedPercentageFromSnapshot === "number"
+          ? projectedPercentageFromSnapshot
+          : calculatePercentage(
+            projectedVotes,
+            snapshot.projectedNational.totalProjectedValidVotes
+          );
+
+      return {
+        code,
+        projectedVotes,
+        projectedPercentage
+      };
+    })
+    .sort((left, right) => {
+      if (right.projectedVotes !== left.projectedVotes) {
+        return right.projectedVotes - left.projectedVotes;
+      }
+
+      return right.projectedPercentage - left.projectedPercentage;
+    });
+
+  const rank2Entry = voteEntries[1];
+  const rank3Entry = voteEntries[2];
+
+  const rank2 = rank2Entry
+    ? {
+      code: rank2Entry.code,
+      label: labelByCode.get(rank2Entry.code) ?? "Sin dato",
+      projectedVotes: rank2Entry.projectedVotes,
+      projectedPercentage: rank2Entry.projectedPercentage
+    }
+    : null;
+  const rank3 = rank3Entry
+    ? {
+      code: rank3Entry.code,
+      label: labelByCode.get(rank3Entry.code) ?? "Sin dato",
+      projectedVotes: rank3Entry.projectedVotes,
+      projectedPercentage: rank3Entry.projectedPercentage
+    }
+    : null;
+
+  const gapVotes2v3 = rank2 && rank3 ? rank2.projectedVotes - rank3.projectedVotes : null;
+  const gapPp2v3 = rank2 && rank3 ? round(rank2.projectedPercentage - rank3.projectedPercentage) : null;
+  const deltaProyeccionVotes =
+    snapshot.projectedNational.totalProjectedValidVotes -
+    (snapshot.national.totalVotosValidos + snapshot.foreign.totalVotosValidos);
+
+  return {
+    rank2,
+    rank3,
+    gapVotes2v3,
+    gapPp2v3,
+    actasPeruPct: snapshot.national.actasContabilizadasPct,
+    actasExteriorPct: snapshot.foreign.actasContabilizadasPct,
+    deltaProyeccionVotes,
+    statusLevel: resolveSecondRoundStatusLevel(gapPp2v3)
   };
 }
 

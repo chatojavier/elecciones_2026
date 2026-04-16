@@ -1,6 +1,8 @@
 import {
+  buildSecondRoundInsight,
   buildNationalComparisonItems,
-  buildScopeComparisonItem
+  buildScopeComparisonItem,
+  getScopeSecondRoundGapVotes
 } from "../src/lib/comparison";
 import type { ElectionSnapshot, ScopeResult } from "../src/lib/types";
 
@@ -109,6 +111,55 @@ const snapshot: ElectionSnapshot = {
   isStale: false
 };
 
+const secondRoundSnapshot: ElectionSnapshot = {
+  ...snapshot,
+  national: {
+    ...scope,
+    featuredCandidates: [
+      ...scope.featuredCandidates,
+      {
+        code: "12",
+        partyName: "PARTIDO C",
+        candidateName: "CANDIDATA C",
+        votesValid: 250,
+        pctValid: 25,
+        pctEmitted: 22
+      }
+    ]
+  },
+  foreign: {
+    ...snapshot.foreign,
+    featuredCandidates: [
+      ...snapshot.foreign.featuredCandidates,
+      {
+        code: "12",
+        partyName: "PARTIDO C",
+        candidateName: "CANDIDATA C",
+        votesValid: 30,
+        pctValid: 15,
+        pctEmitted: 12
+      }
+    ]
+  },
+  projectedNational: {
+    totalElectores: 1200,
+    totalProjectedValidVotes: 3000,
+    projectedVotes: {
+      "8": 1200,
+      "10": 780,
+      "12": 760,
+      otros: 260
+    },
+    projectedPercentages: {
+      "8": 40,
+      "10": 26,
+      "12": 25.333,
+      otros: 8.667
+    }
+  },
+  featuredCandidateCodes: ["8", "10", "12"]
+};
+
 describe("buildNationalComparisonItems", () => {
   it("construye actual total, proyectado y delta para destacados y Otros", () => {
     const items = buildNationalComparisonItems(snapshot);
@@ -184,5 +235,62 @@ describe("buildScopeComparisonItem", () => {
       deltaVotes: 0,
       deltaPercentage: 0
     });
+  });
+});
+
+describe("buildSecondRoundInsight", () => {
+  it("ordena por proyectado y calcula brecha 2do vs 3ro excluyendo Otros", () => {
+    const insight = buildSecondRoundInsight(secondRoundSnapshot);
+
+    expect(insight.rank2).toMatchObject({
+      code: "10",
+      label: "CANDIDATO B",
+      projectedVotes: 780
+    });
+    expect(insight.rank3).toMatchObject({
+      code: "12",
+      label: "CANDIDATA C",
+      projectedVotes: 760
+    });
+    expect(insight.gapVotes2v3).toBe(20);
+    expect(insight.gapPp2v3).toBe(0.667);
+    expect(insight.statusLevel).toBe("tight");
+    expect(insight.actasPeruPct).toBe(80);
+    expect(insight.actasExteriorPct).toBe(80);
+    expect(insight.deltaProyeccionVotes).toBe(2000);
+  });
+
+  it("marca estado muy ajustado cuando la brecha es menor a 0.50 pp", () => {
+    const criticalInsight = buildSecondRoundInsight({
+      ...secondRoundSnapshot,
+      projectedNational: {
+        ...secondRoundSnapshot.projectedNational,
+        projectedPercentages: {
+          ...secondRoundSnapshot.projectedNational.projectedPercentages,
+          "10": 25.1,
+          "12": 24.8
+        }
+      }
+    });
+
+    expect(criticalInsight.gapPp2v3).toBe(0.3);
+    expect(criticalInsight.statusLevel).toBe("very_tight");
+  });
+});
+
+describe("getScopeSecondRoundGapVotes", () => {
+  it("calcula la brecha proyectada entre rank2 y rank3 para un scope", () => {
+    const gap = getScopeSecondRoundGapVotes(
+      {
+        projectedVotes: {
+          "10": 350,
+          "12": 310
+        }
+      },
+      "10",
+      "12"
+    );
+
+    expect(gap).toBe(40);
   });
 });

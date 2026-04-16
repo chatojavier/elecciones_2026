@@ -63,6 +63,14 @@ function createScope(overrides: Partial<ScopeResult> = {}): ScopeResult {
         votesValid: 300,
         pctValid: 30,
         pctEmitted: 26
+      },
+      {
+        code: "12",
+        partyName: "PARTIDO C",
+        candidateName: "CANDIDATA C",
+        votesValid: 200,
+        pctValid: 20,
+        pctEmitted: 18
       }
     ],
     otros: {
@@ -75,6 +83,7 @@ function createScope(overrides: Partial<ScopeResult> = {}): ScopeResult {
     projectedVotes: {
       "8": 500,
       "10": 300,
+      "12": 250,
       otros: 200
     },
     ...overrides
@@ -92,6 +101,7 @@ function createRegion(overrides: Partial<RegionResult>): RegionResult {
       projectedVotes: {
         "8": 600,
         "10": 350,
+        "12": 310,
         otros: 250
       }
     }),
@@ -140,6 +150,7 @@ function createRegion(overrides: Partial<RegionResult>): RegionResult {
         projectedVotes: {
           "8": 247,
           "10": 185,
+          "12": 140,
           otros: 123
         }
       },
@@ -186,6 +197,7 @@ function createRegion(overrides: Partial<RegionResult>): RegionResult {
         projectedVotes: {
           "8": 200,
           "10": 100,
+          "12": 80,
           otros: 150
         }
       }
@@ -206,6 +218,7 @@ function createForeign(overrides: Partial<ForeignResult> = {}): ForeignResult {
       projectedVotes: {
         "8": 120,
         "10": 70,
+        "12": 58,
         otros: 35
       }
     }),
@@ -222,6 +235,7 @@ function createForeign(overrides: Partial<ForeignResult> = {}): ForeignResult {
           projectedVotes: {
             "8": 80,
             "10": 45,
+            "12": 38,
             otros: 20
           }
         }),
@@ -270,6 +284,7 @@ function createForeign(overrides: Partial<ForeignResult> = {}): ForeignResult {
             projectedVotes: {
               "8": 60,
               "10": 33,
+              "12": 28,
               otros: 40
             }
           }
@@ -286,6 +301,7 @@ function createForeign(overrides: Partial<ForeignResult> = {}): ForeignResult {
           projectedVotes: {
             "8": 40,
             "10": 25,
+            "12": 22,
             otros: 15
           }
         }),
@@ -334,6 +350,7 @@ function createForeign(overrides: Partial<ForeignResult> = {}): ForeignResult {
             projectedVotes: {
               "8": 40,
               "10": 25,
+              "12": 22,
               otros: 15
             }
           }
@@ -354,6 +371,7 @@ function createSnapshot(): ElectionSnapshot {
     projectedVotes: {
       "8": 450,
       "10": 280,
+      "12": 270,
       otros: 120
     },
     provinces: [
@@ -400,6 +418,7 @@ function createSnapshot(): ElectionSnapshot {
         projectedVotes: {
           "8": 139,
           "10": 111,
+          "12": 102,
           otros: 97
         }
       }
@@ -415,19 +434,21 @@ function createSnapshot(): ElectionSnapshot {
     regions: [regionA, regionB],
     projectedNational: {
       totalElectores: 2200,
-      totalProjectedValidVotes: 1800,
+      totalProjectedValidVotes: 3000,
       projectedVotes: {
-        "8": 1100,
-        "10": 700,
-        otros: 500
+        "8": 1200,
+        "10": 780,
+        "12": 760,
+        otros: 260
       },
       projectedPercentages: {
-        "8": 47.826,
-        "10": 30.435,
-        otros: 21.739
+        "8": 40,
+        "10": 26,
+        "12": 25.333,
+        otros: 8.667
       }
     },
-    featuredCandidateCodes: ["8", "10"],
+    featuredCandidateCodes: ["8", "10", "12"],
     isStale: false
   };
 }
@@ -493,6 +514,14 @@ describe("App hero clarity and first action", () => {
       "Consulta resultados ONPE, compara candidatos y explora regiones y países con datos actualizados."
     );
     expect(container.textContent).toContain("Actualizamos esta vista con nuevos cortes oficiales de ONPE.");
+    expect(container.textContent).toContain("Resumen clave: segunda vuelta");
+    expect(container.textContent).toContain("Hoy clasifica a segunda vuelta");
+    expect(container.textContent).toContain("Diferencia en votos (2do - 3ro)");
+    expect(container.textContent).toContain("Actas Perú:");
+    expect(container.textContent).toContain("Actas exterior:");
+    expect(container.textContent).toContain("Delta proyección:");
+    expect(container.textContent).not.toContain("Disputa por el 2do cupo:");
+    expect(container.textContent).not.toContain("Ver detalle 2do vs 3ro");
 
     const primaryCta = container.querySelector('a[href="#lectura-regional"]');
     const secondaryCta = container.querySelector('a[href="#metodologia"]');
@@ -536,6 +565,89 @@ describe("App hero clarity and first action", () => {
       label: "ver_metodologia",
       section_target: "metodologia"
     });
+  });
+
+  it("registra impresión, estado y contexto del módulo quick insights", async () => {
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(trackEventMock).toHaveBeenCalledWith(
+      "quick_insights_impression",
+      expect.objectContaining({
+        gap_pp_2v3: 0.667,
+        gap_votes_2v3: 20,
+        rank2_candidate: "CANDIDATO B",
+        rank3_candidate: "CANDIDATA C"
+      })
+    );
+    expect(trackEventMock).toHaveBeenCalledWith(
+      "second_round_status_shown",
+      expect.objectContaining({
+        status_level: "tight",
+        gap_pp_2v3: 0.667
+      })
+    );
+    expect(trackEventMock).toHaveBeenCalledWith(
+      "second_round_context_shown",
+      expect.objectContaining({
+        actas_peru: 80,
+        actas_exterior: 80,
+        delta_proyeccion: 2050
+      })
+    );
+  });
+
+  it("muestra la aproximación dentro del KPI de brecha porcentual", async () => {
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(container.textContent).toContain("Brecha porcentual (2do - 3ro)");
+    expect(container.textContent).toContain("Ajustado");
+  });
+
+  it("muestra estado no disponible cuando no hay 3 candidatos para el corte", async () => {
+    const snapshotWithoutRank3 = createSnapshot();
+    snapshotWithoutRank3.national.featuredCandidates =
+      snapshotWithoutRank3.national.featuredCandidates.slice(0, 2);
+    snapshotWithoutRank3.foreign.featuredCandidates =
+      snapshotWithoutRank3.foreign.featuredCandidates.slice(0, 2);
+    snapshotWithoutRank3.projectedNational = {
+      ...snapshotWithoutRank3.projectedNational,
+      projectedVotes: {
+        "8": 1200,
+        "10": 900,
+        otros: 400
+      },
+      projectedPercentages: {
+        "8": 48,
+        "10": 36,
+        otros: 16
+      }
+    };
+    snapshotWithoutRank3.featuredCandidateCodes = ["8", "10"];
+
+    fetchSnapshotMock.mockResolvedValue(snapshotWithoutRank3);
+    refreshSnapshotMock.mockResolvedValue(snapshotWithoutRank3);
+
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(container.textContent).toContain("Insight no disponible");
   });
 });
 
@@ -659,7 +771,7 @@ describe("App province drilldown", () => {
       await Promise.resolve();
     });
 
-    expect(container.textContent).toContain("Peruanos en el extranjero");
+    expect(container.textContent).toContain("Resumen clave: segunda vuelta");
     expect(container.textContent).toContain("Tabla de continentes y países");
     expect(container.textContent).not.toContain("Detalle por país");
   });

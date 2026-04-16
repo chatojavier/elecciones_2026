@@ -22,6 +22,10 @@ body,
   min-height: 100%;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   font-family: "IBM Plex Sans", sans-serif;
@@ -82,10 +86,71 @@ select {
   max-width: 12ch;
 }
 
+.hero__copy {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
 .hero__lede {
   max-width: 60ch;
   color: var(--muted);
   font-size: 1.05rem;
+  margin: 0;
+}
+
+.hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 11px;
+  margin-top: 16px;
+}
+
+.hero__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0.7rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  text-decoration: none;
+  font-weight: 600;
+  transition:
+    background 140ms ease,
+    color 140ms ease,
+    border-color 140ms ease,
+    transform 140ms ease;
+}
+
+.hero__cta:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.hero__cta--primary {
+  background: #b45309;
+  color: #ffffff;
+}
+
+.hero__cta--primary:hover {
+  background: #9f4a08;
+}
+
+.hero__cta--secondary {
+  color: var(--ink);
+  border-color: rgba(19, 36, 58, 0.18);
+  background: transparent;
+}
+
+.hero__cta--secondary:hover {
+  text-decoration: underline;
+}
+
+.hero__microcopy {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
 }
 
 .hero__status {
@@ -250,6 +315,16 @@ small {
 .panel {
   padding: 24px;
   animation: rise-in 0.7s ease both;
+  min-width: 0;
+}
+
+.methodology-panel p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.methodology-panel p + p {
+  margin-top: 12px;
 }
 
 .panel__header {
@@ -685,6 +760,14 @@ small {
   .projection-card {
     padding: 20px;
     border-radius: 20px;
+  }
+
+  .hero__actions {
+    flex-direction: column;
+  }
+
+  .hero__cta {
+    width: 100%;
   }
 
   .scope-card__metrics {

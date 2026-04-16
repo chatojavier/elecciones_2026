@@ -11,9 +11,12 @@ import type {
   ScopeResult
 } from "../src/lib/types";
 
-const { fetchSnapshotMock, refreshSnapshotMock } = vi.hoisted(() => ({
+const { fetchSnapshotMock, refreshSnapshotMock, initializeAnalyticsMock, trackEventMock, trackInitialPageViewMock } = vi.hoisted(() => ({
   fetchSnapshotMock: vi.fn<() => Promise<ElectionSnapshot>>(),
-  refreshSnapshotMock: vi.fn<() => Promise<ElectionSnapshot>>()
+  refreshSnapshotMock: vi.fn<() => Promise<ElectionSnapshot>>(),
+  initializeAnalyticsMock: vi.fn(),
+  trackEventMock: vi.fn(),
+  trackInitialPageViewMock: vi.fn()
 }));
 
 vi.mock("../src/lib/api", () => ({
@@ -22,9 +25,9 @@ vi.mock("../src/lib/api", () => ({
 }));
 
 vi.mock("../src/lib/analytics", () => ({
-  initializeAnalytics: vi.fn(),
-  trackEvent: vi.fn(),
-  trackInitialPageView: vi.fn()
+  initializeAnalytics: initializeAnalyticsMock,
+  trackEvent: trackEventMock,
+  trackInitialPageView: trackInitialPageViewMock
 }));
 
 function createScope(overrides: Partial<ScopeResult> = {}): ScopeResult {
@@ -443,7 +446,7 @@ function createLegacySnapshot(): ElectionSnapshot {
   };
 }
 
-describe("App province drilldown", () => {
+describe("App hero clarity and first action", () => {
   let container: HTMLDivElement;
   let root: Root;
 
@@ -455,6 +458,9 @@ describe("App province drilldown", () => {
     ).IS_REACT_ACT_ENVIRONMENT = true;
     fetchSnapshotMock.mockResolvedValue(createSnapshot());
     refreshSnapshotMock.mockResolvedValue(createSnapshot());
+    initializeAnalyticsMock.mockReset();
+    trackEventMock.mockReset();
+    trackInitialPageViewMock.mockReset();
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
@@ -467,6 +473,102 @@ describe("App province drilldown", () => {
     container.remove();
     fetchSnapshotMock.mockReset();
     refreshSnapshotMock.mockReset();
+    initializeAnalyticsMock.mockReset();
+    trackEventMock.mockReset();
+    trackInitialPageViewMock.mockReset();
+  });
+
+  it("renderiza copy de hero y enlaces de primera acción", async () => {
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(container.textContent).toContain("Resultados presidenciales 2026");
+    expect(container.textContent).toContain("Entiende rápido cómo va el conteo y la proyección nacional");
+    expect(container.textContent).toContain(
+      "Consulta resultados ONPE, compara candidatos y explora regiones y países con datos actualizados."
+    );
+    expect(container.textContent).toContain("Actualizamos esta vista con nuevos cortes oficiales de ONPE.");
+
+    const primaryCta = container.querySelector('a[href="#lectura-regional"]');
+    const secondaryCta = container.querySelector('a[href="#metodologia"]');
+    expect(primaryCta?.textContent).toContain("Explorar regiones");
+    expect(secondaryCta?.textContent).toContain("Ver metodología");
+    expect(container.querySelector("#lectura-regional")).not.toBeNull();
+    expect(container.querySelector("#metodologia")).not.toBeNull();
+  });
+
+  it("dispara tracking al hacer click en ambos CTAs del hero", async () => {
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const primaryCta = container.querySelector('a[href="#lectura-regional"]') as HTMLAnchorElement;
+    const secondaryCta = container.querySelector('a[href="#metodologia"]') as HTMLAnchorElement;
+    expect(primaryCta).not.toBeNull();
+    expect(secondaryCta).not.toBeNull();
+
+    trackEventMock.mockClear();
+
+    await act(async () => {
+      primaryCta.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    await act(async () => {
+      secondaryCta.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(trackEventMock).toHaveBeenCalledWith("hero_primary_cta_click", {
+      location: "hero",
+      label: "explorar_regiones",
+      section_target: "lectura-regional"
+    });
+    expect(trackEventMock).toHaveBeenCalledWith("hero_secondary_cta_click", {
+      location: "hero",
+      label: "ver_metodologia",
+      section_target: "metodologia"
+    });
+  });
+});
+
+describe("App province drilldown", () => {
+  let container: HTMLDivElement;
+  let root: Root;
+
+  beforeEach(() => {
+    (
+      globalThis as typeof globalThis & {
+        IS_REACT_ACT_ENVIRONMENT?: boolean;
+      }
+    ).IS_REACT_ACT_ENVIRONMENT = true;
+    fetchSnapshotMock.mockResolvedValue(createSnapshot());
+    refreshSnapshotMock.mockResolvedValue(createSnapshot());
+    initializeAnalyticsMock.mockReset();
+    trackEventMock.mockReset();
+    trackInitialPageViewMock.mockReset();
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+  });
+
+  afterEach(() => {
+    act(() => {
+      root.unmount();
+    });
+    container.remove();
+    fetchSnapshotMock.mockReset();
+    refreshSnapshotMock.mockReset();
+    initializeAnalyticsMock.mockReset();
+    trackEventMock.mockReset();
+    trackInitialPageViewMock.mockReset();
   });
 
   it("mantiene provincias colapsadas al inicio y permite abrir una sola región a la vez", async () => {

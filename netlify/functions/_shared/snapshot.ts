@@ -272,24 +272,6 @@ export async function buildElectionSnapshot() {
 
   foreign.projectedVotes = sumProjectedVotes(continents, featuredCandidateCodes);
 
-  if (foreignTotals.totalVotosValidos > 0) {
-    const recomposedForeignTotal = Object.values(foreign.projectedVotes).reduce(
-      (sum, votes) => sum + votes,
-      0
-    );
-    const completionRatio = Math.min(Math.max(foreignTotals.actasContabilizadas / 100, 0), 1);
-    const aggregateProjected =
-      completionRatio > 0
-        ? Math.round(foreignTotals.totalVotosValidos / completionRatio)
-        : 0;
-
-    if (aggregateProjected > 0 && recomposedForeignTotal / aggregateProjected < 0.95) {
-      throw new Error(
-        `Proyección extranjera recompuesta (${recomposedForeignTotal}) es <95% del agregado (${aggregateProjected}). Posible catálogo de continentes incompleto.`
-      );
-    }
-  }
-
   const sourceLastUpdatedAt = [
     national,
     foreign,

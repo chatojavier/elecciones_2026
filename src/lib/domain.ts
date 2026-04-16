@@ -7,6 +7,7 @@ import type {
   CandidateCatalogItem,
   CandidateResult,
   ElectionSnapshot,
+  ForeignCountryResult,
   OnpeParticipant,
   OnpeTotals,
   ProvinceResult,
@@ -37,9 +38,24 @@ type ProvinceInput = {
   featuredCodes: string[];
 };
 
+type ForeignCountryInput = {
+  scopeId: string;
+  parentScopeId: string;
+  label: string;
+  totals: OnpeTotals;
+  participants: OnpeParticipant[];
+  candidateCatalog: Map<string, CandidateCatalogItem>;
+  featuredCodes: string[];
+};
+
 type ScopeResultBase = Omit<
   ScopeResult,
   "scopeId" | "kind" | "label" | "electores" | "padronShare"
+>;
+
+type ChildScopeResultBase = Omit<
+  ProvinceResult,
+  "scopeId" | "parentScopeId" | "kind" | "label"
 >;
 
 function round(value: number, digits = 3) {
@@ -136,7 +152,7 @@ function buildScopeResultBase(input: {
   participants: OnpeParticipant[];
   candidateCatalog: Map<string, CandidateCatalogItem>;
   featuredCodes?: string[];
-}): ScopeResultBase {
+}): ScopeResultBase | ChildScopeResultBase {
   const candidates = input.participants
     .map((participant) => normalizeCandidate(participant, input.candidateCatalog))
     .sort(compareCandidatesByVotes);
@@ -206,8 +222,24 @@ export function buildProvinceResult(input: ProvinceInput): ProvinceResult {
   };
 }
 
+export function buildForeignCountryResult(
+  input: ForeignCountryInput
+): ForeignCountryResult {
+  return {
+    scopeId: input.scopeId,
+    parentScopeId: input.parentScopeId,
+    kind: "foreign_country",
+    label: input.label,
+    ...buildScopeResultBase(input)
+  };
+}
+
 export function sumProjectedVotes(
-  scopes: Array<Pick<ScopeResult, "projectedVotes"> | Pick<ProvinceResult, "projectedVotes">>,
+  scopes: Array<
+    | Pick<ScopeResult, "projectedVotes">
+    | Pick<ProvinceResult, "projectedVotes">
+    | Pick<ForeignCountryResult, "projectedVotes">
+  >,
   featuredCodes: string[]
 ) {
   return featuredCodes.reduce<Record<string, number>>(

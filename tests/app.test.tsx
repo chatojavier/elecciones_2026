@@ -4,7 +4,12 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 
 import App from "../src/App";
-import type { ElectionSnapshot, RegionResult, ScopeResult } from "../src/lib/types";
+import type {
+  ElectionSnapshot,
+  ForeignResult,
+  RegionResult,
+  ScopeResult
+} from "../src/lib/types";
 
 const { fetchSnapshotMock, refreshSnapshotMock } = vi.hoisted(() => ({
   fetchSnapshotMock: vi.fn<() => Promise<ElectionSnapshot>>(),
@@ -186,6 +191,156 @@ function createRegion(overrides: Partial<RegionResult>): RegionResult {
   };
 }
 
+function createForeign(overrides: Partial<ForeignResult> = {}): ForeignResult {
+  return {
+    ...createScope({
+      scopeId: "2",
+      kind: "foreign_total",
+      label: "EXTRANJERO",
+      electores: 200,
+      padronShare: 5,
+      totalVotosValidos: 150,
+      projectedVotes: {
+        "8": 120,
+        "10": 70,
+        otros: 35
+      }
+    }),
+    kind: "foreign_total",
+    continents: [
+      {
+        ...createScope({
+          scopeId: "920000",
+          kind: "foreign_continent",
+          label: "EUROPA",
+          electores: 0,
+          padronShare: 0,
+          totalVotosValidos: 90,
+          projectedVotes: {
+            "8": 80,
+            "10": 45,
+            otros: 20
+          }
+        }),
+        kind: "foreign_continent",
+        countries: [
+          {
+            scopeId: "921000",
+            parentScopeId: "920000",
+            kind: "foreign_country",
+            label: "ESPAÑA",
+            actasContabilizadasPct: 75,
+            contabilizadas: 75,
+            totalActas: 100,
+            participacionCiudadanaPct: 69,
+            enviadasJee: 0,
+            pendientesJee: 0,
+            totalVotosEmitidos: 120,
+            totalVotosValidos: 100,
+            sourceUpdatedAt: new Date("2026-04-15T12:00:00.000Z").toISOString(),
+            candidates: [],
+            featuredCandidates: [
+              {
+                code: "8",
+                partyName: "PARTIDO A",
+                candidateName: "CANDIDATA A",
+                votesValid: 45,
+                pctValid: 45,
+                pctEmitted: 37
+              },
+              {
+                code: "10",
+                partyName: "PARTIDO B",
+                candidateName: "CANDIDATO B",
+                votesValid: 25,
+                pctValid: 25,
+                pctEmitted: 20
+              }
+            ],
+            otros: {
+              code: "otros",
+              label: "Otros",
+              votesValid: 30,
+              pctValid: 30,
+              pctEmitted: 25
+            },
+            projectedVotes: {
+              "8": 60,
+              "10": 33,
+              otros: 40
+            }
+          }
+        ]
+      },
+      {
+        ...createScope({
+          scopeId: "930000",
+          kind: "foreign_continent",
+          label: "AMÉRICA",
+          electores: 0,
+          padronShare: 0,
+          totalVotosValidos: 60,
+          projectedVotes: {
+            "8": 40,
+            "10": 25,
+            otros: 15
+          }
+        }),
+        kind: "foreign_continent",
+        countries: [
+          {
+            scopeId: "931000",
+            parentScopeId: "930000",
+            kind: "foreign_country",
+            label: "ARGENTINA",
+            actasContabilizadasPct: 68,
+            contabilizadas: 68,
+            totalActas: 100,
+            participacionCiudadanaPct: 65,
+            enviadasJee: 0,
+            pendientesJee: 0,
+            totalVotosEmitidos: 90,
+            totalVotosValidos: 75,
+            sourceUpdatedAt: new Date("2026-04-15T12:00:00.000Z").toISOString(),
+            candidates: [],
+            featuredCandidates: [
+              {
+                code: "8",
+                partyName: "PARTIDO A",
+                candidateName: "CANDIDATA A",
+                votesValid: 30,
+                pctValid: 40,
+                pctEmitted: 33
+              },
+              {
+                code: "10",
+                partyName: "PARTIDO B",
+                candidateName: "CANDIDATO B",
+                votesValid: 22,
+                pctValid: 29.3,
+                pctEmitted: 24
+              }
+            ],
+            otros: {
+              code: "otros",
+              label: "Otros",
+              votesValid: 23,
+              pctValid: 30.7,
+              pctEmitted: 26
+            },
+            projectedVotes: {
+              "8": 40,
+              "10": 25,
+              otros: 15
+            }
+          }
+        ]
+      }
+    ],
+    ...overrides
+  };
+}
+
 function createSnapshot(): ElectionSnapshot {
   const regionA = createRegion({});
   const regionB = createRegion({
@@ -253,14 +408,7 @@ function createSnapshot(): ElectionSnapshot {
     sourceElectionId: 10,
     sourceLastUpdatedAt: new Date("2026-04-15T12:00:00.000Z").toISOString(),
     national: createScope(),
-    foreign: createScope({
-      scopeId: "2",
-      kind: "foreign_total",
-      label: "EXTRANJERO",
-      electores: 200,
-      padronShare: 5,
-      totalVotosValidos: 150
-    }),
+    foreign: createForeign(),
     regions: [regionA, regionB],
     projectedNational: {
       totalElectores: 2200,
@@ -343,5 +491,43 @@ describe("App province drilldown", () => {
 
     expect(container.textContent).toContain("BARRANCA");
     expect(container.textContent).not.toContain("CAMANÁ");
+  });
+
+  it("mantiene países colapsados al inicio y permite abrir un solo continente a la vez", async () => {
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(container.textContent).toContain("Tabla de continentes y países");
+    expect(container.textContent).not.toContain("Detalle por país");
+    expect(container.textContent).not.toContain("ESPAÑA");
+    expect(container.textContent).not.toContain("ARGENTINA");
+
+    const firstContinentButton = Array.from(container.querySelectorAll("button.region-row-toggle")).find(
+      (button) => button.closest("tr")?.textContent?.includes("EUROPA")
+    ) as HTMLButtonElement;
+
+    await act(async () => {
+      firstContinentButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(container.textContent).toContain("Detalle por país");
+    expect(container.textContent).toContain("ESPAÑA");
+    expect(container.textContent).not.toContain("ARGENTINA");
+
+    const secondContinentButton = Array.from(container.querySelectorAll("button.region-row-toggle")).find(
+      (button) => button.closest("tr")?.textContent?.includes("AMÉRICA")
+    ) as HTMLButtonElement;
+
+    await act(async () => {
+      secondContinentButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(container.textContent).toContain("ARGENTINA");
+    expect(container.textContent).not.toContain("ESPAÑA");
   });
 });

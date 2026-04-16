@@ -137,11 +137,37 @@ export function fetchRegionParticipants(departmentUbigeo: string) {
   });
 }
 
+export function fetchForeignContinentTotals(continentUbigeo: string) {
+  return fetchOnpe<OnpeTotals>("/resumen-general/totales", {
+    idEleccion: ONPE_ELECTION_ID,
+    tipoFiltro: "ubigeo_nivel_01",
+    idAmbitoGeografico: 2,
+    idUbigeoDepartamento: continentUbigeo
+  });
+}
+
+export function fetchForeignContinentParticipants(continentUbigeo: string) {
+  return fetchOnpe<OnpeParticipant[]>("/resumen-general/participantes", {
+    idEleccion: ONPE_ELECTION_ID,
+    tipoFiltro: "ubigeo_nivel_01",
+    idAmbitoGeografico: 2,
+    idUbigeoDepartamento: continentUbigeo
+  });
+}
+
 export function fetchProvinces(departmentUbigeo: string) {
   return fetchOnpe<OnpeProvince[]>("/ubigeos/provincias", {
     idEleccion: ONPE_ELECTION_ID,
     idAmbitoGeografico: 1,
     idUbigeoDepartamento: departmentUbigeo
+  });
+}
+
+export function fetchForeignCountries(continentUbigeo: string) {
+  return fetchOnpe<OnpeProvince[]>("/ubigeos/provincias", {
+    idEleccion: ONPE_ELECTION_ID,
+    idAmbitoGeografico: 2,
+    idUbigeoDepartamento: continentUbigeo
   });
 }
 
@@ -162,5 +188,25 @@ export function fetchProvinceParticipants(departmentUbigeo: string, provinceUbig
     idAmbitoGeografico: 1,
     idUbigeoDepartamento: departmentUbigeo,
     idUbigeoProvincia: provinceUbigeo
+  });
+}
+
+export function fetchForeignCountryTotals(continentUbigeo: string, countryUbigeo: string) {
+  return fetchOnpe<OnpeTotals>("/resumen-general/totales", {
+    idEleccion: ONPE_ELECTION_ID,
+    tipoFiltro: "ubigeo_nivel_02",
+    idAmbitoGeografico: 2,
+    idUbigeoDepartamento: continentUbigeo,
+    idUbigeoProvincia: countryUbigeo
+  });
+}
+
+export function fetchForeignCountryParticipants(continentUbigeo: string, countryUbigeo: string) {
+  return fetchOnpe<OnpeParticipant[]>("/resumen-general/participantes", {
+    idEleccion: ONPE_ELECTION_ID,
+    tipoFiltro: "ubigeo_nivel_02",
+    idAmbitoGeografico: 2,
+    idUbigeoDepartamento: continentUbigeo,
+    idUbigeoProvincia: countryUbigeo
   });
 }

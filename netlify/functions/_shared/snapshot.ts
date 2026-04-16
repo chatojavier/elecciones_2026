@@ -1,6 +1,7 @@
 import scopesMetaJson from "../../../data/scopes.meta.json";
 import {
   buildCandidateCatalog,
+  buildForeignCountryResult,
   buildProjectedNationalSummary,
   buildProvinceResult,
   buildScopeResult,
@@ -10,6 +11,8 @@ import {
 } from "../../../src/lib/domain";
 import type {
   ElectionSnapshot,
+  ForeignContinentResult,
+  ForeignResult,
   HealthStatus,
   RegionResult,
   ScopeMeta,
@@ -18,6 +21,12 @@ import type {
 import { ONPE_ELECTION_ID } from "./config";
 import {
   fetchDepartments,
+  fetchForeignContinents,
+  fetchForeignContinentParticipants,
+  fetchForeignContinentTotals,
+  fetchForeignCountries,
+  fetchForeignCountryParticipants,
+  fetchForeignCountryTotals,
   fetchForeignParticipants,
   fetchForeignTotals,
   fetchNationalParticipants,
@@ -86,7 +95,10 @@ async function mapWithConcurrency<T, R>(
 }
 
 export async function buildElectionSnapshot() {
-  const departmentList = await fetchDepartments();
+  const [departmentList, foreignContinentList] = await Promise.all([
+    fetchDepartments(),
+    fetchForeignContinents()
+  ]);
 
   if (departmentList.length !== 25) {
     throw new Error(`Se esperaban 25 departamentos y ONPE devolvió ${departmentList.length}`);
@@ -115,73 +127,147 @@ export async function buildElectionSnapshot() {
   });
   const featuredCandidateCodes = national.featuredCandidates.map((candidate) => candidate.code);
 
-  const regionPayloads = await Promise.all(
-    departmentList.map(async (department) => {
-      const meta = getDepartmentMeta(department.ubigeo);
-      const [totals, participants, provinceCatalog] = await Promise.all([
-        fetchRegionTotals(department.ubigeo),
-        fetchRegionParticipants(department.ubigeo),
-        fetchProvinces(department.ubigeo)
-      ]);
+  const [regionPayloads, foreignContinentPayloads] = await Promise.all([
+    Promise.all(
+      departmentList.map(async (department) => {
+        const meta = getDepartmentMeta(department.ubigeo);
+        const [totals, participants, provinceCatalog] = await Promise.all([
+          fetchRegionTotals(department.ubigeo),
+          fetchRegionParticipants(department.ubigeo),
+          fetchProvinces(department.ubigeo)
+        ]);
 
-      const provinces = (
-        await mapWithConcurrency(provinceCatalog, PROVINCE_REQUEST_CONCURRENCY, async (province) => {
-          const [provinceTotals, provinceParticipants] = await Promise.all([
-            fetchProvinceTotals(department.ubigeo, province.ubigeo),
-            fetchProvinceParticipants(department.ubigeo, province.ubigeo)
-          ]);
+        const provinces = (
+          await mapWithConcurrency(
+            provinceCatalog,
+            PROVINCE_REQUEST_CONCURRENCY,
+            async (province) => {
+              const [provinceTotals, provinceParticipants] = await Promise.all([
+                fetchProvinceTotals(department.ubigeo, province.ubigeo),
+                fetchProvinceParticipants(department.ubigeo, province.ubigeo)
+              ]);
 
-          return buildProvinceResult({
-            scopeId: province.ubigeo,
-            parentScopeId: meta.scopeId,
-            label: province.nombre,
-            totals: provinceTotals,
-            participants: provinceParticipants,
+              return buildProvinceResult({
+                scopeId: province.ubigeo,
+                parentScopeId: meta.scopeId,
+                label: province.nombre,
+                totals: provinceTotals,
+                participants: provinceParticipants,
+                candidateCatalog,
+                featuredCodes: featuredCandidateCodes
+              });
+            }
+          )
+        ).sort((left, right) => left.label.localeCompare(right.label, "es"));
+
+        const region: RegionResult = {
+          ...buildScopeResult({
+            scopeId: meta.scopeId,
+            kind: "department",
+            label: meta.label,
+            electores: meta.electores,
+            padronShare: meta.padronShare,
+            totals,
+            participants,
             candidateCatalog,
             featuredCodes: featuredCandidateCodes
-          });
-        })
-      ).sort((left, right) => left.label.localeCompare(right.label, "es"));
-
-      const region: RegionResult = {
-        ...buildScopeResult({
-          scopeId: meta.scopeId,
+          }),
           kind: "department",
-          label: meta.label,
-          electores: meta.electores,
-          padronShare: meta.padronShare,
-          totals,
-          participants,
-          candidateCatalog,
-          featuredCodes: featuredCandidateCodes
-        }),
-        kind: "department",
-        provinces
-      };
+          provinces
+        };
 
-      region.projectedVotes = sumProjectedVotes(provinces, featuredCandidateCodes);
+        region.projectedVotes = sumProjectedVotes(provinces, featuredCandidateCodes);
 
-      return region;
-    })
-  );
+        return region;
+      })
+    ),
+    Promise.all(
+      foreignContinentList.map(async (continent) => {
+        const [totals, participants, countryCatalog] = await Promise.all([
+          fetchForeignContinentTotals(continent.ubigeo),
+          fetchForeignContinentParticipants(continent.ubigeo),
+          fetchForeignCountries(continent.ubigeo)
+        ]);
+
+        const countries = (
+          await mapWithConcurrency(
+            countryCatalog,
+            PROVINCE_REQUEST_CONCURRENCY,
+            async (country) => {
+              const [countryTotals, countryParticipants] = await Promise.all([
+                fetchForeignCountryTotals(continent.ubigeo, country.ubigeo),
+                fetchForeignCountryParticipants(continent.ubigeo, country.ubigeo)
+              ]);
+
+              return buildForeignCountryResult({
+                scopeId: country.ubigeo,
+                parentScopeId: continent.ubigeo,
+                label: country.nombre,
+                totals: countryTotals,
+                participants: countryParticipants,
+                candidateCatalog,
+                featuredCodes: featuredCandidateCodes
+              });
+            }
+          )
+        ).sort((left, right) => left.label.localeCompare(right.label, "es"));
+
+        const foreignContinent: ForeignContinentResult = {
+          ...buildScopeResult({
+            scopeId: continent.ubigeo,
+            kind: "foreign_continent",
+            label: continent.nombre,
+            electores: 0,
+            padronShare: 0,
+            totals,
+            participants,
+            candidateCatalog,
+            featuredCodes: featuredCandidateCodes
+          }),
+          kind: "foreign_continent",
+          countries
+        };
+
+        foreignContinent.projectedVotes = sumProjectedVotes(countries, featuredCandidateCodes);
+
+        return foreignContinent;
+      })
+    )
+  ]);
 
   const regions = regionPayloads.sort((left, right) => left.label.localeCompare(right.label, "es"));
+  const continents = foreignContinentPayloads.sort((left, right) =>
+    left.label.localeCompare(right.label, "es")
+  );
 
   national.projectedVotes = sumProjectedVotes(regions, featuredCandidateCodes);
 
-  const foreign = buildScopeResult({
-    scopeId: foreignMeta.scopeId,
+  const foreign: ForeignResult = {
+    ...buildScopeResult({
+      scopeId: foreignMeta.scopeId,
+      kind: "foreign_total",
+      label: foreignMeta.label,
+      electores: foreignMeta.electores,
+      padronShare: foreignMeta.padronShare,
+      totals: foreignTotals,
+      participants: foreignParticipants,
+      candidateCatalog,
+      featuredCodes: featuredCandidateCodes
+    }),
     kind: "foreign_total",
-    label: foreignMeta.label,
-    electores: foreignMeta.electores,
-    padronShare: foreignMeta.padronShare,
-    totals: foreignTotals,
-    participants: foreignParticipants,
-    candidateCatalog,
-    featuredCodes: featuredCandidateCodes
-  });
+    continents
+  };
 
-  const sourceLastUpdatedAt = [national, foreign, ...regions, ...regions.flatMap((region) => region.provinces)]
+  foreign.projectedVotes = sumProjectedVotes(continents, featuredCandidateCodes);
+
+  const sourceLastUpdatedAt = [
+    national,
+    foreign,
+    ...regions,
+    ...regions.flatMap((region) => region.provinces),
+    ...continents,
+    ...continents.flatMap((continent) => continent.countries)
+  ]
     .map((scope) => scope.sourceUpdatedAt)
     .sort()
     .at(-1);

@@ -317,6 +317,34 @@ function buildProvinceResult({
   };
 }
 
+function buildForeignCountryResult({
+  scopeId,
+  parentScopeId,
+  label,
+  totals,
+  participants,
+  candidateCatalog,
+  featuredCodes
+}) {
+  const scope = buildScopeResult({
+    scopeId,
+    kind: "foreign_continent",
+    label,
+    electores: 0,
+    padronShare: 0,
+    totals,
+    participants,
+    candidateCatalog,
+    featuredCodes
+  });
+
+  return {
+    ...scope,
+    kind: "foreign_country",
+    parentScopeId
+  };
+}
+
 function sumProjectedVotes(scopes, featuredCodes) {
   return featuredCodes.reduce(
     (acc, code) => {
@@ -395,10 +423,16 @@ async function buildElectionSnapshot(config) {
   const peruElectores = departmentMeta.reduce((sum, scope) => sum + scope.electores, 0);
   const totalElectores = scopesMeta.reduce((sum, scope) => sum + scope.electores, 0);
 
-  const departmentCatalog = await fetchOnpeJson(config, "ubigeos/departamentos", {
-    idEleccion: config.electionId,
-    idAmbitoGeografico: 1
-  });
+  const [departmentCatalog, foreignContinentCatalog] = await Promise.all([
+    fetchOnpeJson(config, "ubigeos/departamentos", {
+      idEleccion: config.electionId,
+      idAmbitoGeografico: 1
+    }),
+    fetchOnpeJson(config, "ubigeos/departamentos", {
+      idEleccion: config.electionId,
+      idAmbitoGeografico: 2
+    })
+  ]);
 
   if (!Array.isArray(departmentCatalog) || departmentCatalog.length !== 25) {
     throw new Error(`Se esperaban 25 departamentos y ONPE devolvió ${departmentCatalog.length ?? 0}`);
@@ -447,97 +481,195 @@ async function buildElectionSnapshot(config) {
   });
   const featuredCandidateCodes = national.featuredCandidates.map((candidate) => candidate.code);
 
-  const regionPayloads = await Promise.all(
-    departmentMeta.map(async (scope) => {
-      const [totals, participants, provinceCatalog] = await Promise.all([
-        fetchOnpeJson(config, "resumen-general/totales", {
-          idEleccion: config.electionId,
-          tipoFiltro: "ubigeo_nivel_01",
-          idAmbitoGeografico: 1,
-          idUbigeoDepartamento: scope.scopeId
-        }),
-        fetchOnpeJson(config, "resumen-general/participantes", {
-          idEleccion: config.electionId,
-          tipoFiltro: "ubigeo_nivel_01",
-          idAmbitoGeografico: 1,
-          idUbigeoDepartamento: scope.scopeId
-        }),
-        fetchOnpeJson(config, "ubigeos/provincias", {
-          idEleccion: config.electionId,
-          idAmbitoGeografico: 1,
-          idUbigeoDepartamento: scope.scopeId
-        })
-      ]);
+  const [regionPayloads, foreignContinentPayloads] = await Promise.all([
+    Promise.all(
+      departmentMeta.map(async (scope) => {
+        const [totals, participants, provinceCatalog] = await Promise.all([
+          fetchOnpeJson(config, "resumen-general/totales", {
+            idEleccion: config.electionId,
+            tipoFiltro: "ubigeo_nivel_01",
+            idAmbitoGeografico: 1,
+            idUbigeoDepartamento: scope.scopeId
+          }),
+          fetchOnpeJson(config, "resumen-general/participantes", {
+            idEleccion: config.electionId,
+            tipoFiltro: "ubigeo_nivel_01",
+            idAmbitoGeografico: 1,
+            idUbigeoDepartamento: scope.scopeId
+          }),
+          fetchOnpeJson(config, "ubigeos/provincias", {
+            idEleccion: config.electionId,
+            idAmbitoGeografico: 1,
+            idUbigeoDepartamento: scope.scopeId
+          })
+        ]);
 
-      const provinces = (
-        await mapWithConcurrency(provinceCatalog, PROVINCE_REQUEST_CONCURRENCY, async (province) => {
-          const [provinceTotals, provinceParticipants] = await Promise.all([
-            fetchOnpeJson(config, "resumen-general/totales", {
-              idEleccion: config.electionId,
-              tipoFiltro: "ubigeo_nivel_02",
-              idAmbitoGeografico: 1,
-              idUbigeoDepartamento: scope.scopeId,
-              idUbigeoProvincia: province.ubigeo
-            }),
-            fetchOnpeJson(config, "resumen-general/participantes", {
-              idEleccion: config.electionId,
-              tipoFiltro: "ubigeo_nivel_02",
-              idAmbitoGeografico: 1,
-              idUbigeoDepartamento: scope.scopeId,
-              idUbigeoProvincia: province.ubigeo
-            })
-          ]);
+        const provinces = (
+          await mapWithConcurrency(
+            provinceCatalog,
+            PROVINCE_REQUEST_CONCURRENCY,
+            async (province) => {
+              const [provinceTotals, provinceParticipants] = await Promise.all([
+                fetchOnpeJson(config, "resumen-general/totales", {
+                  idEleccion: config.electionId,
+                  tipoFiltro: "ubigeo_nivel_02",
+                  idAmbitoGeografico: 1,
+                  idUbigeoDepartamento: scope.scopeId,
+                  idUbigeoProvincia: province.ubigeo
+                }),
+                fetchOnpeJson(config, "resumen-general/participantes", {
+                  idEleccion: config.electionId,
+                  tipoFiltro: "ubigeo_nivel_02",
+                  idAmbitoGeografico: 1,
+                  idUbigeoDepartamento: scope.scopeId,
+                  idUbigeoProvincia: province.ubigeo
+                })
+              ]);
 
-          return buildProvinceResult({
-            scopeId: province.ubigeo,
-            parentScopeId: scope.scopeId,
-            label: province.nombre,
-            totals: provinceTotals,
-            participants: provinceParticipants,
+              return buildProvinceResult({
+                scopeId: province.ubigeo,
+                parentScopeId: scope.scopeId,
+                label: province.nombre,
+                totals: provinceTotals,
+                participants: provinceParticipants,
+                candidateCatalog,
+                featuredCodes: featuredCandidateCodes
+              });
+            }
+          )
+        ).sort((left, right) => left.label.localeCompare(right.label, "es"));
+
+        const region = {
+          ...buildScopeResult({
+            scopeId: scope.scopeId,
+            kind: "department",
+            label: scope.label,
+            electores: scope.electores,
+            padronShare: scope.padronShare,
+            totals,
+            participants,
             candidateCatalog,
             featuredCodes: featuredCandidateCodes
-          });
-        })
-      ).sort((left, right) => left.label.localeCompare(right.label, "es"));
+          }),
+          provinces
+        };
 
-      const region = {
-        ...buildScopeResult({
-          scopeId: scope.scopeId,
-          kind: "department",
-          label: scope.label,
-          electores: scope.electores,
-          padronShare: scope.padronShare,
-          totals,
-          participants,
-          candidateCatalog,
-          featuredCodes: featuredCandidateCodes
-        }),
-        provinces
-      };
+        region.projectedVotes = sumProjectedVotes(provinces, featuredCandidateCodes);
 
-      region.projectedVotes = sumProjectedVotes(provinces, featuredCandidateCodes);
+        return region;
+      })
+    ),
+    Promise.all(
+      foreignContinentCatalog.map(async (continent) => {
+        const [totals, participants, countryCatalog] = await Promise.all([
+          fetchOnpeJson(config, "resumen-general/totales", {
+            idEleccion: config.electionId,
+            tipoFiltro: "ubigeo_nivel_01",
+            idAmbitoGeografico: 2,
+            idUbigeoDepartamento: continent.ubigeo
+          }),
+          fetchOnpeJson(config, "resumen-general/participantes", {
+            idEleccion: config.electionId,
+            tipoFiltro: "ubigeo_nivel_01",
+            idAmbitoGeografico: 2,
+            idUbigeoDepartamento: continent.ubigeo
+          }),
+          fetchOnpeJson(config, "ubigeos/provincias", {
+            idEleccion: config.electionId,
+            idAmbitoGeografico: 2,
+            idUbigeoDepartamento: continent.ubigeo
+          })
+        ]);
 
-      return region;
-    })
-  );
+        const countries = (
+          await mapWithConcurrency(
+            countryCatalog,
+            PROVINCE_REQUEST_CONCURRENCY,
+            async (country) => {
+              const [countryTotals, countryParticipants] = await Promise.all([
+                fetchOnpeJson(config, "resumen-general/totales", {
+                  idEleccion: config.electionId,
+                  tipoFiltro: "ubigeo_nivel_02",
+                  idAmbitoGeografico: 2,
+                  idUbigeoDepartamento: continent.ubigeo,
+                  idUbigeoProvincia: country.ubigeo
+                }),
+                fetchOnpeJson(config, "resumen-general/participantes", {
+                  idEleccion: config.electionId,
+                  tipoFiltro: "ubigeo_nivel_02",
+                  idAmbitoGeografico: 2,
+                  idUbigeoDepartamento: continent.ubigeo,
+                  idUbigeoProvincia: country.ubigeo
+                })
+              ]);
+
+              return buildForeignCountryResult({
+                scopeId: country.ubigeo,
+                parentScopeId: continent.ubigeo,
+                label: country.nombre,
+                totals: countryTotals,
+                participants: countryParticipants,
+                candidateCatalog,
+                featuredCodes: featuredCandidateCodes
+              });
+            }
+          )
+        ).sort((left, right) => left.label.localeCompare(right.label, "es"));
+
+        const foreignContinent = {
+          ...buildScopeResult({
+            scopeId: continent.ubigeo,
+            kind: "foreign_continent",
+            label: continent.nombre,
+            electores: 0,
+            padronShare: 0,
+            totals,
+            participants,
+            candidateCatalog,
+            featuredCodes: featuredCandidateCodes
+          }),
+          countries
+        };
+
+        foreignContinent.projectedVotes = sumProjectedVotes(countries, featuredCandidateCodes);
+
+        return foreignContinent;
+      })
+    )
+  ]);
 
   const regions = regionPayloads.sort((left, right) => left.label.localeCompare(right.label, "es"));
+  const continents = foreignContinentPayloads.sort((left, right) =>
+    left.label.localeCompare(right.label, "es")
+  );
 
   national.projectedVotes = sumProjectedVotes(regions, featuredCandidateCodes);
 
-  const foreign = buildScopeResult({
-    scopeId: foreignMeta.scopeId,
-    kind: "foreign_total",
-    label: foreignMeta.label,
-    electores: foreignMeta.electores,
-    padronShare: foreignMeta.padronShare,
-    totals: foreignTotals,
-    participants: foreignParticipants,
-    candidateCatalog,
-    featuredCodes: featuredCandidateCodes
-  });
+  const foreign = {
+    ...buildScopeResult({
+      scopeId: foreignMeta.scopeId,
+      kind: "foreign_total",
+      label: foreignMeta.label,
+      electores: foreignMeta.electores,
+      padronShare: foreignMeta.padronShare,
+      totals: foreignTotals,
+      participants: foreignParticipants,
+      candidateCatalog,
+      featuredCodes: featuredCandidateCodes
+    }),
+    continents
+  };
 
-  const sourceLastUpdatedAt = [national, foreign, ...regions, ...regions.flatMap((region) => region.provinces)]
+  foreign.projectedVotes = sumProjectedVotes(continents, featuredCandidateCodes);
+
+  const sourceLastUpdatedAt = [
+    national,
+    foreign,
+    ...regions,
+    ...regions.flatMap((region) => region.provinces),
+    ...continents,
+    ...continents.flatMap((continent) => continent.countries)
+  ]
     .map((scope) => scope.sourceUpdatedAt)
     .sort()
     .at(-1);

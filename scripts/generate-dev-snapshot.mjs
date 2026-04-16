@@ -616,6 +616,12 @@ async function buildElectionSnapshot(config) {
           )
         ).sort((left, right) => left.label.localeCompare(right.label, "es"));
 
+        if (countries.length === 0 && totals.contabilizadas > 0) {
+          throw new Error(
+            `Continente ${continent.nombre} tiene ${totals.contabilizadas} actas contabilizadas pero ONPE devolvió 0 países`
+          );
+        }
+
         const foreignContinent = {
           ...buildScopeResult({
             scopeId: continent.ubigeo,

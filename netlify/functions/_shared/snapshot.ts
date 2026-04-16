@@ -112,6 +112,12 @@ export async function buildElectionSnapshot() {
       fetchForeignParticipants()
     ]);
 
+  if (foreignContinentList.length === 0 && foreignTotals.contabilizadas > 0) {
+    throw new Error(
+      `ONPE devolvió 0 continentes pero el total extranjero tiene ${foreignTotals.contabilizadas} actas contabilizadas`
+    );
+  }
+
   const candidateCatalog = buildCandidateCatalog(nationalParticipants);
   const { peruElectores, totalElectores } = getScopeMetaTotals(scopesMeta);
   const foreignMeta = getForeignMeta();
@@ -259,6 +265,24 @@ export async function buildElectionSnapshot() {
   };
 
   foreign.projectedVotes = sumProjectedVotes(continents, featuredCandidateCodes);
+
+  if (foreignTotals.totalVotosValidos > 0) {
+    const recomposedForeignTotal = Object.values(foreign.projectedVotes).reduce(
+      (sum, votes) => sum + votes,
+      0
+    );
+    const completionRatio = Math.min(Math.max(foreignTotals.actasContabilizadas / 100, 0), 1);
+    const aggregateProjected =
+      completionRatio > 0
+        ? Math.round(foreignTotals.totalVotosValidos / completionRatio)
+        : 0;
+
+    if (aggregateProjected > 0 && recomposedForeignTotal / aggregateProjected < 0.95) {
+      throw new Error(
+        `Proyección extranjera recompuesta (${recomposedForeignTotal}) es <95% del agregado (${aggregateProjected}). Posible catálogo de continentes incompleto.`
+      );
+    }
+  }
 
   const sourceLastUpdatedAt = [
     national,

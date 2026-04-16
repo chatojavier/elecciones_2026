@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { fetchSnapshot, refreshSnapshot } from "./lib/api";
+import { initializeAnalytics, trackEvent, trackInitialPageView } from "./lib/analytics";
 import {
   buildNationalComparisonItems,
   buildScopeComparisonItem,
@@ -220,6 +221,9 @@ export default function App() {
   }
 
   useEffect(() => {
+    initializeAnalytics();
+    trackInitialPageView();
+
     void loadSnapshot();
   }, []);
 
@@ -277,6 +281,47 @@ export default function App() {
     ? snapshot.projectedNational.totalProjectedValidVotes -
       (snapshot.national.totalVotosValidos + snapshot.foreign.totalVotosValidos)
     : 0;
+
+  function handleRefreshClick() {
+    trackEvent("refresh_snapshot", {
+      source: "hero_status"
+    });
+
+    void loadSnapshot(true);
+  }
+
+  function handleSortChange(nextSortKey: SortKey) {
+    setSortKey(nextSortKey);
+    trackEvent("change_region_sort", {
+      sort_key: nextSortKey
+    });
+  }
+
+  function handleShowOthersToggle() {
+    setShowOthers((currentValue) => {
+      const nextValue = !currentValue;
+
+      trackEvent("toggle_others_series", {
+        visible: nextValue
+      });
+
+      return nextValue;
+    });
+  }
+
+  function handleRegionalModeChange(nextMode: ComparisonMode) {
+    setRegionalComparisonMode(nextMode);
+    trackEvent("change_regional_comparison_mode", {
+      mode: nextMode
+    });
+  }
+
+  function handleCandidateSelect(code: string) {
+    setSelectedCode(code);
+    trackEvent("select_candidate_focus", {
+      candidate_code: code
+    });
+  }
 
   if (loading) {
     return (
@@ -337,7 +382,7 @@ export default function App() {
               <button
                 className={`refresh-button ${refreshing ? "is-loading" : ""}`}
                 type="button"
-                onClick={() => void loadSnapshot(true)}
+                onClick={handleRefreshClick}
                 disabled={refreshing}
               >
                 {refreshing ? <span className="refresh-button__spinner" aria-hidden="true" /> : null}
@@ -426,7 +471,10 @@ export default function App() {
             <div className="controls">
               <label className="control">
                 <span>Ordenar por</span>
-                <select value={sortKey} onChange={(event) => setSortKey(event.target.value as SortKey)}>
+                <select
+                  value={sortKey}
+                  onChange={(event) => handleSortChange(event.target.value as SortKey)}
+                >
                   <option value="projection">Proyección</option>
                   <option value="candidate">Candidato</option>
                   <option value="electores">Electores</option>
@@ -438,7 +486,7 @@ export default function App() {
               <button
                 className={`toggle-button ${showOthers ? "is-active" : ""}`}
                 type="button"
-                onClick={() => setShowOthers((value) => !value)}
+                onClick={handleShowOthersToggle}
               >
                 {showOthers ? "Ocultar Otros" : "Mostrar Otros"}
               </button>
@@ -451,7 +499,7 @@ export default function App() {
                       regionalComparisonMode === "projected" ? "is-active" : ""
                     }`}
                     type="button"
-                    onClick={() => setRegionalComparisonMode("projected")}
+                    onClick={() => handleRegionalModeChange("projected")}
                   >
                     Proyectado
                   </button>
@@ -460,7 +508,7 @@ export default function App() {
                       regionalComparisonMode === "current" ? "is-active" : ""
                     }`}
                     type="button"
-                    onClick={() => setRegionalComparisonMode("current")}
+                    onClick={() => handleRegionalModeChange("current")}
                   >
                     Actual ONPE
                   </button>
@@ -477,7 +525,7 @@ export default function App() {
                 label={candidate.label}
                 active={candidate.code === selectedCode}
                 featuredCodes={snapshot.featuredCandidateCodes}
-                onClick={setSelectedCode}
+                onClick={handleCandidateSelect}
               />
             ))}
           </div>

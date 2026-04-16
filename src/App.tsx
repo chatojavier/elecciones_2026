@@ -605,6 +605,22 @@ export default function App() {
     });
   }
 
+  function handleHeroPrimaryCtaClick() {
+    trackEvent("hero_primary_cta_click", {
+      location: "hero",
+      label: "explorar_regiones",
+      section_target: "lectura_regional"
+    });
+  }
+
+  function handleHeroSecondaryCtaClick() {
+    trackEvent("hero_secondary_cta_click", {
+      location: "hero",
+      label: "ver_metodologia",
+      section_target: "metodologia"
+    });
+  }
+
   if (loading) {
     return (
       <main className="page-shell">
@@ -632,12 +648,30 @@ export default function App() {
     <main className="page-shell">
       <section className="hero">
         <div className="hero__copy">
-          <p className="eyebrow">Resultados ONPE + proyección editorial</p>
-          <h1>Perú 2026, una lectura pública del conteo y su proyección nacional.</h1>
+          <p className="eyebrow">Resultados presidenciales 2026</p>
+          <h1>Entiende rápido cómo va el conteo y la proyección nacional</h1>
           <p className="hero__lede">
-            Snapshot server-side desde ONPE, con Perú recompuesto por provincias y extranjero
-            recompuesto por países para una proyección agregada de votos válidos según avance de
-            actas.
+            Consulta resultados ONPE, compara candidatos y explora regiones y países con datos
+            actualizados.
+          </p>
+          <div className="hero__actions">
+            <a
+              className="hero__cta hero__cta--primary"
+              href="#lectura-regional"
+              onClick={handleHeroPrimaryCtaClick}
+            >
+              Explorar regiones
+            </a>
+            <a
+              className="hero__cta hero__cta--secondary"
+              href="#metodologia"
+              onClick={handleHeroSecondaryCtaClick}
+            >
+              Ver metodología
+            </a>
+          </div>
+          <p className="hero__microcopy">
+            Actualizamos esta vista con nuevos cortes oficiales de ONPE.
           </p>
         </div>
 
@@ -740,7 +774,7 @@ export default function App() {
           </div>
         </section>
 
-        <section className="panel">
+        <section className="panel" id="lectura-regional">
           <div className="panel__header panel__header--stack">
             <div>
               <p className="eyebrow">Lectura regional</p>
@@ -1055,6 +1089,23 @@ export default function App() {
               </tbody>
             </table>
           </div>
+        </section>
+
+        <section className="panel methodology-panel" id="metodologia">
+          <div className="panel__header">
+            <div>
+              <p className="eyebrow">Metodología</p>
+              <h2>Cómo leer esta vista</h2>
+            </div>
+          </div>
+          <p>
+            Mostramos resultados oficiales de ONPE y una proyección nacional agregada en función del
+            avance de actas contabilizadas.
+          </p>
+          <p>
+            Actualizamos el snapshot cuando ONPE publica nuevos cortes y refrescamos la lectura
+            regional y exterior con la misma base de datos.
+          </p>
         </section>
       </section>
     </main>

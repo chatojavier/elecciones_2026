@@ -260,6 +260,117 @@ describe("buildSecondRoundInsight", () => {
     expect(insight.deltaProyeccionVotes).toBe(2000);
   });
 
+  it("incluye candidatos no destacados para definir 2do y 3ro", () => {
+    const insight = buildSecondRoundInsight({
+      ...secondRoundSnapshot,
+      national: {
+        ...secondRoundSnapshot.national,
+        actasContabilizadasPct: 80,
+        candidates: [
+          {
+            code: "8",
+            partyName: "PARTIDO A",
+            candidateName: "CANDIDATA A",
+            votesValid: 400,
+            pctValid: 40,
+            pctEmitted: 35
+          },
+          {
+            code: "10",
+            partyName: "PARTIDO B",
+            candidateName: "CANDIDATO B",
+            votesValid: 260,
+            pctValid: 26,
+            pctEmitted: 22
+          },
+          {
+            code: "12",
+            partyName: "PARTIDO C",
+            candidateName: "CANDIDATA C",
+            votesValid: 220,
+            pctValid: 22,
+            pctEmitted: 19
+          },
+          {
+            code: "21",
+            partyName: "PARTIDO D",
+            candidateName: "CANDIDATO D",
+            votesValid: 250,
+            pctValid: 25,
+            pctEmitted: 21
+          }
+        ]
+      },
+      foreign: {
+        ...secondRoundSnapshot.foreign,
+        actasContabilizadasPct: 80,
+        candidates: [
+          {
+            code: "8",
+            partyName: "PARTIDO A",
+            candidateName: "CANDIDATA A",
+            votesValid: 100,
+            pctValid: 50,
+            pctEmitted: 40
+          },
+          {
+            code: "10",
+            partyName: "PARTIDO B",
+            candidateName: "CANDIDATO B",
+            votesValid: 30,
+            pctValid: 15,
+            pctEmitted: 12
+          },
+          {
+            code: "12",
+            partyName: "PARTIDO C",
+            candidateName: "CANDIDATA C",
+            votesValid: 20,
+            pctValid: 10,
+            pctEmitted: 8
+          },
+          {
+            code: "21",
+            partyName: "PARTIDO D",
+            candidateName: "CANDIDATO D",
+            votesValid: 80,
+            pctValid: 25,
+            pctEmitted: 20
+          }
+        ]
+      },
+      projectedNational: {
+        totalElectores: 1200,
+        totalProjectedValidVotes: 1701,
+        projectedVotes: {
+          "8": 625,
+          "10": 363,
+          "12": 300,
+          otros: 413
+        },
+        projectedPercentages: {
+          "8": 36.743,
+          "10": 21.34,
+          "12": 17.637,
+          otros: 24.28
+        }
+      }
+    });
+
+    expect(insight.rank2).toMatchObject({
+      code: "21",
+      label: "CANDIDATO D",
+      projectedVotes: 413
+    });
+    expect(insight.rank3).toMatchObject({
+      code: "10",
+      label: "CANDIDATO B",
+      projectedVotes: 363
+    });
+    expect(insight.gapVotes2v3).toBe(50);
+    expect(insight.gapPp2v3).toBe(2.94);
+  });
+
   it("marca estado muy ajustado cuando la brecha es menor a 0.50 pp", () => {
     const criticalInsight = buildSecondRoundInsight({
       ...secondRoundSnapshot,

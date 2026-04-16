@@ -509,9 +509,9 @@ describe("App hero clarity and first action", () => {
     });
 
     expect(container.textContent).toContain("Resultados presidenciales 2026");
-    expect(container.textContent).toContain("Entiende rápido cómo va el conteo y la proyección nacional");
+    expect(container.textContent).toContain("Conteo de votos y proyección nacional");
     expect(container.textContent).toContain(
-      "Consulta resultados ONPE, compara candidatos y explora regiones y países con datos actualizados."
+      "Consulta resultados ONPE, compara candidatos y explora regiones y votos extranjeros con datos actualizados."
     );
     expect(container.textContent).toContain("Actualizamos esta vista con nuevos cortes oficiales de ONPE.");
     expect(container.textContent).toContain("Resumen clave: segunda vuelta");

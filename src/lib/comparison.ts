@@ -43,6 +43,16 @@ function round(value: number, digits = 3) {
   return Number(value.toFixed(digits));
 }
 
+function projectVotesByCountedActas(votesValid: number, actasContabilizadasPct: number) {
+  const completionRatio = Math.min(Math.max(actasContabilizadasPct / 100, 0), 1);
+
+  if (completionRatio === 0) {
+    return 0;
+  }
+
+  return Math.round(votesValid / completionRatio);
+}
+
 function calculatePercentage(votes: number, totalVotes: number) {
   if (totalVotes === 0) {
     return 0;
@@ -116,28 +126,63 @@ export function getScopeSecondRoundGapVotes(
 
 export function buildSecondRoundInsight(snapshot: ElectionSnapshot): SecondRoundInsight {
   const labelByCode = buildSecondRoundCandidateLabelMap(snapshot);
-  const candidateCodes = new Set([
-    ...Object.keys(snapshot.projectedNational.projectedVotes),
-    ...Object.keys(snapshot.projectedNational.projectedPercentages)
-  ]);
-  candidateCodes.delete("otros");
+  const projectedVotesByCode = new Map<string, number>();
 
-  const voteEntries = Array.from(candidateCodes)
-    .map((code) => {
-      const projectedVotes = snapshot.projectedNational.projectedVotes[code] ?? 0;
+  for (const candidate of snapshot.national.candidates) {
+    if (candidate.code === "otros") {
+      continue;
+    }
+
+    projectedVotesByCode.set(
+      candidate.code,
+      (projectedVotesByCode.get(candidate.code) ?? 0) +
+      projectVotesByCountedActas(candidate.votesValid, snapshot.national.actasContabilizadasPct)
+    );
+  }
+
+  for (const candidate of snapshot.foreign.candidates) {
+    if (candidate.code === "otros") {
+      continue;
+    }
+
+    projectedVotesByCode.set(
+      candidate.code,
+      (projectedVotesByCode.get(candidate.code) ?? 0) +
+      projectVotesByCountedActas(candidate.votesValid, snapshot.foreign.actasContabilizadasPct)
+    );
+  }
+
+  // Backward-compat fallback for snapshots that don't include full candidate lists.
+  if (projectedVotesByCode.size < 3) {
+    for (const [code, projectedVotes] of Object.entries(snapshot.projectedNational.projectedVotes)) {
+      if (code === "otros" || projectedVotesByCode.has(code)) {
+        continue;
+      }
+
+      projectedVotesByCode.set(code, projectedVotes);
+    }
+  }
+
+  const totalProjectedVotes = Array.from(projectedVotesByCode.values()).reduce(
+    (sum, votes) => sum + votes,
+    0
+  );
+  const percentageDenominator =
+    snapshot.projectedNational.totalProjectedValidVotes > 0
+      ? snapshot.projectedNational.totalProjectedValidVotes
+      : totalProjectedVotes;
+
+  const voteEntries = Array.from(projectedVotesByCode.entries())
+    .map(([code, projectedVotes]) => {
       const projectedPercentageFromSnapshot = snapshot.projectedNational.projectedPercentages[code];
-      const projectedPercentage =
-        typeof projectedPercentageFromSnapshot === "number"
-          ? projectedPercentageFromSnapshot
-          : calculatePercentage(
-            projectedVotes,
-            snapshot.projectedNational.totalProjectedValidVotes
-          );
 
       return {
         code,
         projectedVotes,
-        projectedPercentage
+        projectedPercentage:
+          typeof projectedPercentageFromSnapshot === "number"
+            ? projectedPercentageFromSnapshot
+            : calculatePercentage(projectedVotes, percentageDenominator)
       };
     })
     .sort((left, right) => {

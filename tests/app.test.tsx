@@ -529,7 +529,7 @@ describe("App hero clarity and first action", () => {
     expect(trackEventMock).toHaveBeenCalledWith("hero_primary_cta_click", {
       location: "hero",
       label: "explorar_regiones",
-      section_target: "lectura_regional"
+      section_target: "lectura-regional"
     });
     expect(trackEventMock).toHaveBeenCalledWith("hero_secondary_cta_click", {
       location: "hero",

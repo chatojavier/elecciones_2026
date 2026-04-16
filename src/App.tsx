@@ -609,7 +609,7 @@ export default function App() {
     trackEvent("hero_primary_cta_click", {
       location: "hero",
       label: "explorar_regiones",
-      section_target: "lectura_regional"
+      section_target: "lectura-regional"
     });
   }
 

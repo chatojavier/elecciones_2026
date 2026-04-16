@@ -374,6 +374,7 @@ export default function App() {
   const [expandedContinentId, setExpandedContinentId] = useState<string | null>(null);
   const [clockNow, setClockNow] = useState(() => Date.now());
   const lastAutoRefreshKeyRef = useRef<string | null>(null);
+  const foreignContinents = snapshot?.foreign.continents ?? [];
 
   async function loadSnapshot(background = false) {
     if (background) {
@@ -456,14 +457,14 @@ export default function App() {
     setExpandedContinentId((currentContinentId) => {
       if (
         currentContinentId &&
-        snapshot.foreign.continents.some((continent) => continent.scopeId === currentContinentId)
+        foreignContinents.some((continent) => continent.scopeId === currentContinentId)
       ) {
         return currentContinentId;
       }
 
       return null;
     });
-  }, [snapshot]);
+  }, [foreignContinents, snapshot]);
 
   const sourceAgeMinutes = snapshot ? getElapsedMinutes(snapshot.sourceLastUpdatedAt, clockNow) : null;
 
@@ -510,12 +511,8 @@ export default function App() {
       return [];
     }
 
-    return sortForeignContinents(
-      snapshot.foreign.continents,
-      selectedCode,
-      regionalComparisonMode
-    );
-  }, [regionalComparisonMode, selectedCode, snapshot]);
+    return sortForeignContinents(foreignContinents, selectedCode, regionalComparisonMode);
+  }, [foreignContinents, regionalComparisonMode, selectedCode, snapshot]);
 
   const nationalComparisonItems = useMemo(() => {
     if (!snapshot) {
@@ -1044,7 +1041,7 @@ export default function App() {
                               itemSingularLabel="País"
                               itemPluralLabel="países"
                               recompositionLabel="La proyección continental se recompone desde sus países"
-                              scopes={continent.countries}
+                              scopes={continent.countries ?? []}
                               selectedCode={selectedCode}
                               showOthers={showOthers}
                               comparisonMode={regionalComparisonMode}

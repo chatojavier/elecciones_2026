@@ -429,6 +429,20 @@ function createSnapshot(): ElectionSnapshot {
   };
 }
 
+function createLegacySnapshot(): ElectionSnapshot {
+  return {
+    ...createSnapshot(),
+    foreign: createScope({
+      scopeId: "2",
+      kind: "foreign_total",
+      label: "EXTRANJERO",
+      electores: 200,
+      padronShare: 5,
+      totalVotosValidos: 150
+    }) as unknown as ElectionSnapshot["foreign"]
+  };
+}
+
 describe("App province drilldown", () => {
   let container: HTMLDivElement;
   let root: Root;
@@ -529,5 +543,22 @@ describe("App province drilldown", () => {
 
     expect(container.textContent).toContain("ARGENTINA");
     expect(container.textContent).not.toContain("ESPAÑA");
+  });
+
+  it("tolera snapshots legacy sin continentes en extranjero", async () => {
+    fetchSnapshotMock.mockResolvedValue(createLegacySnapshot());
+    refreshSnapshotMock.mockResolvedValue(createLegacySnapshot());
+
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(container.textContent).toContain("Peruanos en el extranjero");
+    expect(container.textContent).toContain("Tabla de continentes y países");
+    expect(container.textContent).not.toContain("Detalle por país");
   });
 });

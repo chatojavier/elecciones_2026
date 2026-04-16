@@ -94,14 +94,14 @@ select {
   align-content: start;
 }
 
-.hero__status > div,
+.hero__status>div,
 .scope-card,
 .projection-card,
 .panel {
   border-radius: 24px;
 }
 
-.hero__status > div {
+.hero__status>div {
   padding: 18px 20px;
   background: rgba(255, 255, 255, 0.62);
   border: 1px solid rgba(19, 36, 58, 0.08);
@@ -230,7 +230,7 @@ small {
   gap: 12px;
 }
 
-.projection-card__comparison > div {
+.projection-card__comparison>div {
   padding: 14px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.65);
@@ -446,10 +446,20 @@ small {
   border-bottom: 1px solid var(--line);
 }
 
+.results-table th:last-child {
+  text-align: center;
+}
+
 .results-table td {
   padding: 18px 12px 18px 0;
   border-bottom: 1px solid rgba(19, 36, 58, 0.08);
   vertical-align: top;
+}
+
+.results-table td:last-child {
+  padding-right: 0;
+  text-align: center;
+  vertical-align: middle;
 }
 
 .results-table__row.is-expanded td {
@@ -459,27 +469,46 @@ small {
 .region-row-toggle {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
-  border: 1px solid var(--line);
+  margin: 0 auto;
+  border: 1px solid rgba(217, 119, 6, 0.28);
   border-radius: 999px;
-  padding: 0.7rem 0.95rem;
-  background: rgba(255, 255, 255, 0.78);
-  color: var(--ink);
-  white-space: nowrap;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  background: rgba(217, 119, 6, 0.08);
+  color: var(--accent);
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    transform 140ms ease;
+}
+
+.region-row-toggle:hover {
+  transform: translateY(-1px);
 }
 
 .region-row-toggle.is-active {
-  background: var(--accent-soft);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
 }
 
 .region-row-toggle__icon {
   display: inline-grid;
   place-items: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 999px;
-  background: rgba(19, 36, 58, 0.08);
+  width: auto;
+  height: auto;
   font-weight: 700;
+  font-size: 1.15rem;
+  line-height: 1;
+  margin-bottom: 0.1rem;
+}
+
+.region-row-toggle__label {
+  display: none;
 }
 
 .region-detail-row td {
@@ -514,7 +543,7 @@ small {
 }
 
 .province-panel__meta strong,
-.province-card__cell > strong {
+.province-card__cell>strong {
   display: block;
 }
 
@@ -527,11 +556,7 @@ small {
 .province-grid {
   display: grid;
   grid-template-columns:
-    minmax(180px, 1.1fr)
-    minmax(90px, 0.5fr)
-    minmax(110px, 0.6fr)
-    minmax(300px, 1.8fr)
-    minmax(180px, 0.9fr);
+    minmax(180px, 1.1fr) minmax(90px, 0.5fr) minmax(110px, 0.6fr) minmax(300px, 1.8fr) minmax(180px, 0.9fr);
   gap: 12px;
   align-items: start;
 }
@@ -614,6 +639,7 @@ small {
     opacity: 0;
     transform: translateY(18px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -624,12 +650,14 @@ small {
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
 }
 
 @media (max-width: 1024px) {
+
   .hero,
   .summary-grid {
     grid-template-columns: 1fr;
@@ -666,7 +694,7 @@ small {
   .controls,
   .control,
   .control select,
-  .controls > .toggle-button,
+  .controls>.toggle-button,
   .toggle-group,
   .toggle-group .toggle-button {
     width: 100%;
@@ -717,7 +745,7 @@ small {
     border-bottom: 0;
   }
 
-  .results-table td + td {
+  .results-table td+td {
     margin-top: 12px;
     padding-top: 12px;
     border-top: 1px solid rgba(19, 36, 58, 0.08);
@@ -741,7 +769,13 @@ small {
 
   .region-row-toggle {
     width: 100%;
+    height: auto;
     justify-content: center;
+    padding: 0.7rem 0.95rem;
+  }
+
+  .region-row-toggle__label {
+    display: inline;
   }
 
   .region-detail-row td {
@@ -769,7 +803,7 @@ small {
     gap: 0;
   }
 
-  .province-card__cell + .province-card__cell {
+  .province-card__cell+.province-card__cell {
     margin-top: 12px;
     padding-top: 12px;
     border-top: 1px solid rgba(19, 36, 58, 0.08);

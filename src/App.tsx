@@ -728,7 +728,6 @@ export default function App() {
             <table className="results-table">
               <thead>
                 <tr>
-                  <th>Detalle</th>
                   <th>Región</th>
                   <th>Electores</th>
                   <th>% padrón</th>
@@ -736,6 +735,7 @@ export default function App() {
                   <th>Participación</th>
                   <th>{showOthers ? "Candidatos destacados + Otros" : "Candidatos destacados"}</th>
                   <th>{selectedComparisonLabel}</th>
+                  <th>Provincias</th>
                 </tr>
               </thead>
               <tbody>
@@ -753,20 +753,6 @@ export default function App() {
                   return (
                     <Fragment key={region.scopeId}>
                       <tr className={isExpanded ? "results-table__row is-expanded" : "results-table__row"}>
-                        <td data-label="Detalle">
-                          <button
-                            className={`region-row-toggle ${isExpanded ? "is-active" : ""}`}
-                            type="button"
-                            aria-expanded={isExpanded}
-                            aria-controls={`region-provinces-${region.scopeId}`}
-                            onClick={() => handleRegionToggle(region.scopeId)}
-                          >
-                            <span className="region-row-toggle__icon" aria-hidden="true">
-                              {isExpanded ? "−" : "+"}
-                            </span>
-                            {isExpanded ? "Ocultar provincias" : "Ver provincias"}
-                          </button>
-                        </td>
                         <td data-label="Región">
                           <strong>{region.label}</strong>
                         </td>
@@ -792,6 +778,23 @@ export default function App() {
                               {isProjectedMode ? "Proyectado" : "Actual ONPE"}
                             </small>
                           </div>
+                        </td>
+                        <td data-label="Provincias">
+                          <button
+                            className={`region-row-toggle ${isExpanded ? "is-active" : ""}`}
+                            type="button"
+                            aria-expanded={isExpanded}
+                            aria-controls={`region-provinces-${region.scopeId}`}
+                            aria-label={isExpanded ? `Ocultar provincias de ${region.label}` : `Ver provincias de ${region.label}`}
+                            onClick={() => handleRegionToggle(region.scopeId)}
+                          >
+                            <span className="region-row-toggle__icon" aria-hidden="true">
+                              {isExpanded ? "−" : "+"}
+                            </span>
+                            <span className="region-row-toggle__label">
+                              {isExpanded ? "Ocultar provincias" : "Ver provincias"}
+                            </span>
+                          </button>
                         </td>
                       </tr>
 

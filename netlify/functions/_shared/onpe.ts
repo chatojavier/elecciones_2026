@@ -1,4 +1,5 @@
 import {
+  ONPE_ACCEPT_LANGUAGE,
   ONPE_BASE_URL,
   ONPE_COOKIE,
   ONPE_ELECTION_ID,
@@ -19,15 +20,24 @@ function buildUrl(path: string, params: Record<string, string | number>) {
   return `${ONPE_BASE_URL}${path}?${search.toString()}`;
 }
 
+function buildOnpeHeaders() {
+  return {
+    Accept: "*/*",
+    "Accept-Language": ONPE_ACCEPT_LANGUAGE,
+    "Content-Type": "application/json",
+    Referer: ONPE_REFERER,
+    "User-Agent": ONPE_USER_AGENT,
+    Cookie: ONPE_COOKIE,
+    "Sec-Fetch-Site": "same-origin",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Dest": "empty",
+    Priority: "u=3, i"
+  };
+}
+
 async function fetchOnpe<T>(path: string, params: Record<string, string | number>) {
   const response = await fetch(buildUrl(path, params), {
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      Referer: ONPE_REFERER,
-      "User-Agent": ONPE_USER_AGENT,
-      Cookie: ONPE_COOKIE
-    }
+    headers: buildOnpeHeaders()
   });
 
   if (!response.ok) {

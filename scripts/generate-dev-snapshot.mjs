@@ -468,6 +468,13 @@ async function buildElectionSnapshot(config) {
       idAmbitoGeografico: 2
     })
   ]);
+
+  if (foreignContinentCatalog.length === 0 && foreignTotals.contabilizadas > 0) {
+    throw new Error(
+      `ONPE devolvió 0 continentes pero el total extranjero tiene ${foreignTotals.contabilizadas} actas contabilizadas`
+    );
+  }
+
   const candidateCatalog = buildCandidateCatalog(nationalParticipants);
   const national = buildScopeResult({
     scopeId: "1",

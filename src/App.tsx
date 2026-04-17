@@ -232,10 +232,7 @@ function buildCurrentSecondRoundInsight(snapshot: ElectionSnapshot) {
       code,
       label: entry.label,
       votes: entry.votes,
-      percentage:
-        totalCurrentValidVotes > 0
-          ? Number(((entry.votes / totalCurrentValidVotes) * 100).toFixed(3))
-          : 0
+      percentage: totalCurrentValidVotes > 0 ? (entry.votes / totalCurrentValidVotes) * 100 : 0
     }))
     .sort((left, right) => {
       if (right.votes !== left.votes) {
@@ -248,8 +245,7 @@ function buildCurrentSecondRoundInsight(snapshot: ElectionSnapshot) {
   const rank2 = rankedEntries[1] ?? null;
   const rank3 = rankedEntries[2] ?? null;
   const gapVotes2v3 = rank2 && rank3 ? rank2.votes - rank3.votes : null;
-  const gapPp2v3 =
-    rank2 && rank3 ? Number((rank2.percentage - rank3.percentage).toFixed(3)) : null;
+  const gapPp2v3 = rank2 && rank3 ? rank2.percentage - rank3.percentage : null;
 
   return {
     rank2,

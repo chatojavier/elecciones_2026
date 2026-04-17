@@ -204,14 +204,16 @@ function resolveSecondRoundStatusLevel(gapPp2v3: number | null): SecondRoundStat
 
 function buildCurrentSecondRoundInsight(snapshot: ElectionSnapshot) {
   const currentVotesByCode = new Map<string, { votes: number; label: string }>();
-  const nationalCandidates =
-    snapshot.national.candidates.length > 0
-      ? snapshot.national.candidates
-      : snapshot.national.featuredCandidates;
-  const foreignCandidates =
-    snapshot.foreign.candidates.length > 0
-      ? snapshot.foreign.candidates
-      : snapshot.foreign.featuredCandidates;
+  const hasFullNationalCandidates = snapshot.national.candidates.length > 0;
+  const hasFullForeignCandidates = snapshot.foreign.candidates.length > 0;
+  // Keep a single source strategy across scopes to avoid mixing full and featured data.
+  const useFullCandidates = hasFullNationalCandidates && hasFullForeignCandidates;
+  const nationalCandidates = useFullCandidates
+    ? snapshot.national.candidates
+    : snapshot.national.featuredCandidates;
+  const foreignCandidates = useFullCandidates
+    ? snapshot.foreign.candidates
+    : snapshot.foreign.featuredCandidates;
 
   for (const candidate of [...nationalCandidates, ...foreignCandidates]) {
     if (candidate.code === "otros") {
@@ -232,10 +234,7 @@ function buildCurrentSecondRoundInsight(snapshot: ElectionSnapshot) {
       code,
       label: entry.label,
       votes: entry.votes,
-      percentage:
-        totalCurrentValidVotes > 0
-          ? Number(((entry.votes / totalCurrentValidVotes) * 100).toFixed(3))
-          : 0
+      percentage: totalCurrentValidVotes > 0 ? (entry.votes / totalCurrentValidVotes) * 100 : 0
     }))
     .sort((left, right) => {
       if (right.votes !== left.votes) {
@@ -248,8 +247,8 @@ function buildCurrentSecondRoundInsight(snapshot: ElectionSnapshot) {
   const rank2 = rankedEntries[1] ?? null;
   const rank3 = rankedEntries[2] ?? null;
   const gapVotes2v3 = rank2 && rank3 ? rank2.votes - rank3.votes : null;
-  const gapPp2v3 =
-    rank2 && rank3 ? Number((rank2.percentage - rank3.percentage).toFixed(3)) : null;
+  const rawGapPp2v3 = rank2 && rank3 ? rank2.percentage - rank3.percentage : null;
+  const gapPp2v3 = rawGapPp2v3 != null ? Number(rawGapPp2v3.toFixed(6)) : null;
 
   return {
     rank2,

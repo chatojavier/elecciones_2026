@@ -618,6 +618,59 @@ describe("App hero clarity and first action", () => {
     expect(container.textContent).toContain("Ajustado");
   });
 
+  it("evita mezclar fuentes full+featured en el resumen actual cuando snapshot es mixto", async () => {
+    const mixedSnapshot = createSnapshot();
+    mixedSnapshot.national.candidates = [
+      {
+        code: "8",
+        partyName: "PARTIDO A",
+        candidateName: "CANDIDATA A",
+        votesValid: 400,
+        pctValid: 40,
+        pctEmitted: 35
+      },
+      {
+        code: "99",
+        partyName: "PARTIDO Z",
+        candidateName: "CANDIDATO FANTASMA",
+        votesValid: 390,
+        pctValid: 39,
+        pctEmitted: 34
+      },
+      {
+        code: "10",
+        partyName: "PARTIDO B",
+        candidateName: "CANDIDATO B",
+        votesValid: 300,
+        pctValid: 30,
+        pctEmitted: 26
+      },
+      {
+        code: "12",
+        partyName: "PARTIDO C",
+        candidateName: "CANDIDATA C",
+        votesValid: 200,
+        pctValid: 20,
+        pctEmitted: 18
+      }
+    ];
+    mixedSnapshot.foreign.candidates = [];
+
+    fetchSnapshotMock.mockResolvedValue(mixedSnapshot);
+    refreshSnapshotMock.mockResolvedValue(mixedSnapshot);
+
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(container.textContent).not.toContain("Candidato Fantasma");
+    expect(container.textContent).toContain("Candidato B");
+  });
+
   it("muestra estado no disponible cuando no hay 3 candidatos para el corte", async () => {
     const snapshotWithoutRank3 = createSnapshot();
     snapshotWithoutRank3.national.featuredCandidates =

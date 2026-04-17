@@ -204,14 +204,16 @@ function resolveSecondRoundStatusLevel(gapPp2v3: number | null): SecondRoundStat
 
 function buildCurrentSecondRoundInsight(snapshot: ElectionSnapshot) {
   const currentVotesByCode = new Map<string, { votes: number; label: string }>();
-  const nationalCandidates =
-    snapshot.national.candidates.length > 0
-      ? snapshot.national.candidates
-      : snapshot.national.featuredCandidates;
-  const foreignCandidates =
-    snapshot.foreign.candidates.length > 0
-      ? snapshot.foreign.candidates
-      : snapshot.foreign.featuredCandidates;
+  const hasFullNationalCandidates = snapshot.national.candidates.length > 0;
+  const hasFullForeignCandidates = snapshot.foreign.candidates.length > 0;
+  // Keep a single source strategy across scopes to avoid mixing full and featured data.
+  const useFullCandidates = hasFullNationalCandidates && hasFullForeignCandidates;
+  const nationalCandidates = useFullCandidates
+    ? snapshot.national.candidates
+    : snapshot.national.featuredCandidates;
+  const foreignCandidates = useFullCandidates
+    ? snapshot.foreign.candidates
+    : snapshot.foreign.featuredCandidates;
 
   for (const candidate of [...nationalCandidates, ...foreignCandidates]) {
     if (candidate.code === "otros") {

@@ -3,8 +3,7 @@ import type {
   ElectionSnapshot,
   ForeignCountryResult,
   ProvinceResult,
-  ScopeResult,
-  RegionResult
+  ScopeResult
 } from "./types";
 
 export type ComparisonMode = "current" | "projected";
@@ -147,35 +146,52 @@ export function getScopeSecondRoundGapVotes(
   return resolveProjectedVotes(rank2Code) - resolveProjectedVotes(rank3Code);
 }
 
+function addProjectedVotesFromScope(
+  projectedVotesByCode: Map<string, number>,
+  scope: { candidates: CandidateResult[]; actasContabilizadasPct: number },
+  fillMissingOnly = false
+) {
+  for (const candidate of scope.candidates) {
+    if (candidate.code === "otros") {
+      continue;
+    }
+
+    if (fillMissingOnly && projectedVotesByCode.has(candidate.code)) {
+      continue;
+    }
+
+    const projectedVotes = projectVotesByCountedActas(candidate.votesValid, scope.actasContabilizadasPct);
+
+    if (fillMissingOnly) {
+      projectedVotesByCode.set(candidate.code, projectedVotes);
+      continue;
+    }
+
+    projectedVotesByCode.set(
+      candidate.code,
+      (projectedVotesByCode.get(candidate.code) ?? 0) + projectedVotes
+    );
+  }
+}
+
 export function buildSecondRoundInsight(snapshot: ElectionSnapshot): SecondRoundInsight {
   const labelByCode = buildSecondRoundCandidateLabelMap(snapshot);
   const projectedVotesByCode = new Map<string, number>();
+  const hasRegionalCandidateData = snapshot.regions.some((region) => region.candidates.length > 0);
 
-  for (const candidate of snapshot.national.candidates) {
-    if (candidate.code === "otros") {
-      continue;
+  if (hasRegionalCandidateData) {
+    for (const region of snapshot.regions) {
+      addProjectedVotesFromScope(projectedVotesByCode, region);
     }
 
-    projectedVotesByCode.set(
-      candidate.code,
-      (projectedVotesByCode.get(candidate.code) ?? 0) +
-      projectVotesByCountedActas(candidate.votesValid, snapshot.national.actasContabilizadasPct)
-    );
+    addProjectedVotesFromScope(projectedVotesByCode, snapshot.foreign);
+  } else {
+    // Backward-compat fallback when canonical regional detail is unavailable.
+    addProjectedVotesFromScope(projectedVotesByCode, snapshot.national);
+    addProjectedVotesFromScope(projectedVotesByCode, snapshot.foreign);
   }
 
-  for (const candidate of snapshot.foreign.candidates) {
-    if (candidate.code === "otros") {
-      continue;
-    }
-
-    projectedVotesByCode.set(
-      candidate.code,
-      (projectedVotesByCode.get(candidate.code) ?? 0) +
-      projectVotesByCountedActas(candidate.votesValid, snapshot.foreign.actasContabilizadasPct)
-    );
-  }
-
-  // Backward-compat fallback for snapshots that don't include full candidate lists.
+  // Legacy fallback for snapshots without candidates detail at all.
   if (projectedVotesByCode.size < 3) {
     for (const [code, projectedVotes] of Object.entries(snapshot.projectedNational.projectedVotes)) {
       if (code === "otros" || projectedVotesByCode.has(code)) {

@@ -4,7 +4,7 @@ import {
   buildScopeComparisonItem,
   getScopeSecondRoundGapVotes
 } from "../src/lib/comparison";
-import type { ElectionSnapshot, ScopeResult } from "../src/lib/types";
+import type { ElectionSnapshot, RegionResult, ScopeResult } from "../src/lib/types";
 
 const scope: ScopeResult = {
   scopeId: "1",
@@ -369,6 +369,156 @@ describe("buildSecondRoundInsight", () => {
     });
     expect(insight.gapVotes2v3).toBe(50);
     expect(insight.gapPp2v3).toBe(2.94);
+  });
+
+  it("prioriza la proyección canónica bottom-up para el ranking 2do vs 3ro", () => {
+    const regionNorth: RegionResult = {
+      ...scope,
+      scopeId: "010000",
+      kind: "department",
+      label: "NORTE",
+      actasContabilizadasPct: 100,
+      candidates: [
+        {
+          code: "8",
+          partyName: "PARTIDO A",
+          candidateName: "CANDIDATA A",
+          votesValid: 120,
+          pctValid: 54.545,
+          pctEmitted: 48
+        },
+        {
+          code: "10",
+          partyName: "PARTIDO B",
+          candidateName: "CANDIDATO B",
+          votesValid: 80,
+          pctValid: 36.364,
+          pctEmitted: 32
+        },
+        {
+          code: "12",
+          partyName: "PARTIDO C",
+          candidateName: "CANDIDATA C",
+          votesValid: 20,
+          pctValid: 9.091,
+          pctEmitted: 8
+        }
+      ],
+      projectedVotes: {
+        "8": 120,
+        "10": 80,
+        "12": 20,
+        otros: 0
+      },
+      provinces: []
+    };
+    const regionSouth: RegionResult = {
+      ...scope,
+      scopeId: "020000",
+      kind: "department",
+      label: "SUR",
+      actasContabilizadasPct: 10,
+      candidates: [
+        {
+          code: "8",
+          partyName: "PARTIDO A",
+          candidateName: "CANDIDATA A",
+          votesValid: 5,
+          pctValid: 33.333,
+          pctEmitted: 30
+        },
+        {
+          code: "10",
+          partyName: "PARTIDO B",
+          candidateName: "CANDIDATO B",
+          votesValid: 1,
+          pctValid: 6.667,
+          pctEmitted: 6
+        },
+        {
+          code: "12",
+          partyName: "PARTIDO C",
+          candidateName: "CANDIDATA C",
+          votesValid: 9,
+          pctValid: 60,
+          pctEmitted: 54
+        }
+      ],
+      projectedVotes: {
+        "8": 50,
+        "10": 10,
+        "12": 90,
+        otros: 0
+      },
+      provinces: []
+    };
+
+    const insight = buildSecondRoundInsight({
+      ...secondRoundSnapshot,
+      national: {
+        ...secondRoundSnapshot.national,
+        actasContabilizadasPct: 55,
+        candidates: [
+          {
+            code: "8",
+            partyName: "PARTIDO A",
+            candidateName: "CANDIDATA A",
+            votesValid: 125,
+            pctValid: 53.191,
+            pctEmitted: 47
+          },
+          {
+            code: "10",
+            partyName: "PARTIDO B",
+            candidateName: "CANDIDATO B",
+            votesValid: 81,
+            pctValid: 34.468,
+            pctEmitted: 30
+          },
+          {
+            code: "12",
+            partyName: "PARTIDO C",
+            candidateName: "CANDIDATA C",
+            votesValid: 29,
+            pctValid: 12.34,
+            pctEmitted: 11
+          }
+        ]
+      },
+      foreign: {
+        ...secondRoundSnapshot.foreign,
+        candidates: []
+      },
+      regions: [regionNorth, regionSouth],
+      projectedNational: {
+        totalElectores: 1200,
+        totalProjectedValidVotes: 370,
+        projectedVotes: {
+          "8": 170,
+          "10": 90,
+          "12": 110,
+          otros: 0
+        },
+        projectedPercentages: {
+          "8": 45.946,
+          "10": 24.324,
+          "12": 29.73,
+          otros: 0
+        }
+      },
+      featuredCandidateCodes: ["8", "10", "12"]
+    });
+
+    expect(insight.rank2).toMatchObject({
+      code: "12",
+      projectedVotes: 110
+    });
+    expect(insight.rank3).toMatchObject({
+      code: "10",
+      projectedVotes: 90
+    });
+    expect(insight.gapVotes2v3).toBe(20);
+    expect(insight.gapPp2v3).toBe(5.406);
   });
 
   it("marca estado muy ajustado cuando la brecha es menor a 0.50 pp", () => {

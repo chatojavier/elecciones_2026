@@ -521,6 +521,105 @@ describe("buildSecondRoundInsight", () => {
     expect(insight.gapPp2v3).toBe(5.406);
   });
 
+  it("usa projectedNational para votos cuando el código está disponible", () => {
+    const insight = buildSecondRoundInsight({
+      ...secondRoundSnapshot,
+      regions: [
+        {
+          ...scope,
+          scopeId: "010000",
+          kind: "department",
+          label: "NORTE",
+          actasContabilizadasPct: 50,
+          candidates: [
+            {
+              code: "8",
+              partyName: "PARTIDO A",
+              candidateName: "CANDIDATA A",
+              votesValid: 100,
+              pctValid: 40,
+              pctEmitted: 35
+            },
+            {
+              code: "10",
+              partyName: "PARTIDO B",
+              candidateName: "CANDIDATO B",
+              votesValid: 90,
+              pctValid: 36,
+              pctEmitted: 31
+            },
+            {
+              code: "12",
+              partyName: "PARTIDO C",
+              candidateName: "CANDIDATA C",
+              votesValid: 40,
+              pctValid: 16,
+              pctEmitted: 14
+            }
+          ],
+          provinces: []
+        }
+      ],
+      foreign: {
+        ...secondRoundSnapshot.foreign,
+        actasContabilizadasPct: 50,
+        candidates: [
+          {
+            code: "8",
+            partyName: "PARTIDO A",
+            candidateName: "CANDIDATA A",
+            votesValid: 60,
+            pctValid: 40,
+            pctEmitted: 34
+          },
+          {
+            code: "10",
+            partyName: "PARTIDO B",
+            candidateName: "CANDIDATO B",
+            votesValid: 35,
+            pctValid: 23.333,
+            pctEmitted: 20
+          },
+          {
+            code: "12",
+            partyName: "PARTIDO C",
+            candidateName: "CANDIDATA C",
+            votesValid: 55,
+            pctValid: 36.667,
+            pctEmitted: 31
+          }
+        ]
+      },
+      projectedNational: {
+        totalElectores: 1200,
+        totalProjectedValidVotes: 750,
+        projectedVotes: {
+          "8": 320,
+          "10": 210,
+          "12": 200,
+          otros: 20
+        },
+        projectedPercentages: {
+          "8": 42.667,
+          "10": 28,
+          "12": 26.667,
+          otros: 2.667
+        }
+      }
+    });
+
+    expect(insight.rank2).toMatchObject({
+      code: "10",
+      projectedVotes: 210
+    });
+    expect(insight.rank3).toMatchObject({
+      code: "12",
+      projectedVotes: 200
+    });
+    expect(insight.gapVotes2v3).toBe(10);
+    expect(insight.gapPp2v3).toBe(1.333);
+  });
+
   it("marca estado muy ajustado cuando la brecha es menor a 0.50 pp", () => {
     const criticalInsight = buildSecondRoundInsight({
       ...secondRoundSnapshot,

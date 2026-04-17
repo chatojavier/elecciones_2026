@@ -202,6 +202,15 @@ export function buildSecondRoundInsight(snapshot: ElectionSnapshot): SecondRound
     }
   }
 
+  // Prefer canonical projectedNational values when available for a candidate code.
+  for (const [code, projectedVotes] of Object.entries(snapshot.projectedNational.projectedVotes)) {
+    if (code === "otros" || projectedVotesByCode.has(code)) {
+      continue;
+    }
+
+    projectedVotesByCode.set(code, projectedVotes);
+  }
+
   const totalProjectedVotes = Array.from(projectedVotesByCode.values()).reduce(
     (sum, votes) => sum + votes,
     0
@@ -213,15 +222,20 @@ export function buildSecondRoundInsight(snapshot: ElectionSnapshot): SecondRound
 
   const voteEntries = Array.from(projectedVotesByCode.entries())
     .map(([code, projectedVotes]) => {
+      const projectedVotesFromSnapshot = snapshot.projectedNational.projectedVotes[code];
       const projectedPercentageFromSnapshot = snapshot.projectedNational.projectedPercentages[code];
+      const resolvedProjectedVotes =
+        typeof projectedVotesFromSnapshot === "number"
+          ? projectedVotesFromSnapshot
+          : projectedVotes;
 
       return {
         code,
-        projectedVotes,
+        projectedVotes: resolvedProjectedVotes,
         projectedPercentage:
           typeof projectedPercentageFromSnapshot === "number"
             ? projectedPercentageFromSnapshot
-            : calculatePercentage(projectedVotes, percentageDenominator)
+            : calculatePercentage(resolvedProjectedVotes, percentageDenominator)
       };
     })
     .sort((left, right) => {

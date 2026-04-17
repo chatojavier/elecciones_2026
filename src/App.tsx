@@ -186,6 +186,80 @@ function getStatusCopy(statusLevel: SecondRoundStatusLevel) {
   }
 }
 
+function resolveSecondRoundStatusLevel(gapPp2v3: number | null): SecondRoundStatusLevel {
+  if (gapPp2v3 === null) {
+    return "unknown";
+  }
+
+  if (gapPp2v3 < 0.5) {
+    return "very_tight";
+  }
+
+  if (gapPp2v3 < 1.5) {
+    return "tight";
+  }
+
+  return "stable";
+}
+
+function buildCurrentSecondRoundInsight(snapshot: ElectionSnapshot) {
+  const currentVotesByCode = new Map<string, { votes: number; label: string }>();
+  const nationalCandidates =
+    snapshot.national.candidates.length > 0
+      ? snapshot.national.candidates
+      : snapshot.national.featuredCandidates;
+  const foreignCandidates =
+    snapshot.foreign.candidates.length > 0
+      ? snapshot.foreign.candidates
+      : snapshot.foreign.featuredCandidates;
+
+  for (const candidate of [...nationalCandidates, ...foreignCandidates]) {
+    if (candidate.code === "otros") {
+      continue;
+    }
+
+    const currentEntry = currentVotesByCode.get(candidate.code);
+    currentVotesByCode.set(candidate.code, {
+      votes: (currentEntry?.votes ?? 0) + candidate.votesValid,
+      label: currentEntry?.label ?? candidate.candidateName
+    });
+  }
+
+  const totalCurrentValidVotes =
+    snapshot.national.totalVotosValidos + snapshot.foreign.totalVotosValidos;
+  const rankedEntries = Array.from(currentVotesByCode.entries())
+    .map(([code, entry]) => ({
+      code,
+      label: entry.label,
+      votes: entry.votes,
+      percentage:
+        totalCurrentValidVotes > 0
+          ? Number(((entry.votes / totalCurrentValidVotes) * 100).toFixed(3))
+          : 0
+    }))
+    .sort((left, right) => {
+      if (right.votes !== left.votes) {
+        return right.votes - left.votes;
+      }
+
+      return right.percentage - left.percentage;
+    });
+
+  const rank2 = rankedEntries[1] ?? null;
+  const rank3 = rankedEntries[2] ?? null;
+  const gapVotes2v3 = rank2 && rank3 ? rank2.votes - rank3.votes : null;
+  const gapPp2v3 =
+    rank2 && rank3 ? Number((rank2.percentage - rank3.percentage).toFixed(3)) : null;
+
+  return {
+    rank2,
+    rank3,
+    gapVotes2v3,
+    gapPp2v3,
+    statusLevel: resolveSecondRoundStatusLevel(gapPp2v3)
+  };
+}
+
 function QuickInsightsSkeleton() {
   return (
     <section className="quick-insights quick-insights--loading" aria-label="Cargando resumen rápido">
@@ -200,12 +274,23 @@ function QuickInsightsSkeleton() {
           ))}
         </div>
       </div>
-      <div className="quick-insights__kpis">
-        {Array.from({ length: 3 }).map((_, index) => (
-          <article key={index} className="quick-insight-kpi is-skeleton">
-            <span className="quick-insight-kpi__skeleton quick-insight-kpi__skeleton--label" />
-            <span className="quick-insight-kpi__skeleton quick-insight-kpi__skeleton--value" />
-          </article>
+      <div className="quick-insights__matrix">
+        <div className="quick-insights__matrix-head">
+          <span className="quick-insight-kpi__skeleton quick-insight-kpi__skeleton--label" />
+          {Array.from({ length: 3 }).map((_, index) => (
+            <span key={index} className="quick-insight-kpi__skeleton quick-insight-kpi__skeleton--label" />
+          ))}
+        </div>
+        {Array.from({ length: 2 }).map((_, groupIndex) => (
+          <div key={groupIndex} className="quick-insights__matrix-row">
+            <p className="quick-insights__row-label is-skeleton">Resumen</p>
+            {Array.from({ length: 3 }).map((__, index) => (
+              <article key={`${groupIndex}-${index}`} className="quick-insight-kpi is-skeleton">
+                <span className="quick-insight-kpi__skeleton quick-insight-kpi__skeleton--label" />
+                <span className="quick-insight-kpi__skeleton quick-insight-kpi__skeleton--value" />
+              </article>
+            ))}
+          </div>
         ))}
       </div>
     </section>
@@ -551,6 +636,13 @@ export default function App() {
 
     return buildSecondRoundInsight(snapshot);
   }, [snapshot]);
+  const currentSecondRoundInsight = useMemo(() => {
+    if (!snapshot) {
+      return null;
+    }
+
+    return buildCurrentSecondRoundInsight(snapshot);
+  }, [snapshot]);
 
   const secondRoundCodes = useMemo(() => {
     if (!secondRoundInsight?.rank2 || !secondRoundInsight.rank3) {
@@ -741,15 +833,32 @@ export default function App() {
     Boolean(secondRoundInsight?.rank3) &&
     secondRoundInsight?.gapPp2v3 != null &&
     secondRoundInsight?.gapVotes2v3 != null;
+  const hasCurrentSecondRoundInsight =
+    Boolean(currentSecondRoundInsight?.rank2) &&
+    Boolean(currentSecondRoundInsight?.rank3) &&
+    currentSecondRoundInsight?.gapPp2v3 != null &&
+    currentSecondRoundInsight?.gapVotes2v3 != null;
   const statusCopy = getStatusCopy(secondRoundInsight?.statusLevel ?? "unknown");
+  const currentStatusCopy = getStatusCopy(currentSecondRoundInsight?.statusLevel ?? "unknown");
   const rank2Value = secondRoundInsight?.rank2 ? formatTitleCase(secondRoundInsight.rank2.label) : null;
+  const currentRank2Value = currentSecondRoundInsight?.rank2
+    ? formatTitleCase(currentSecondRoundInsight.rank2.label)
+    : null;
   const gapVotesValue =
     secondRoundInsight?.gapVotes2v3 != null
       ? `${formatSignedNumber(secondRoundInsight.gapVotes2v3)} votos`
       : null;
+  const currentGapVotesValue =
+    currentSecondRoundInsight?.gapVotes2v3 != null
+      ? `${formatSignedNumber(currentSecondRoundInsight.gapVotes2v3)} votos`
+      : null;
   const gapPpValue =
     secondRoundInsight?.gapPp2v3 != null
       ? `${secondRoundInsight.gapPp2v3.toFixed(2)} pp`
+      : null;
+  const currentGapPpValue =
+    currentSecondRoundInsight?.gapPp2v3 != null
+      ? `${currentSecondRoundInsight.gapPp2v3.toFixed(2)} pp`
       : null;
   const actasPeruValue = formatPercent(secondRoundInsight?.actasPeruPct ?? 0, 2);
   const actasExteriorValue = formatPercent(secondRoundInsight?.actasExteriorPct ?? 0, 2);
@@ -867,26 +976,59 @@ export default function App() {
           </div>
         </div>
 
-        <div className="quick-insights__kpis">
-          <article className="quick-insight-kpi">
+        <div className="quick-insights__matrix" aria-label="Comparativa actual y proyectada del corte a segunda vuelta">
+          <div className="quick-insights__matrix-head" aria-hidden="true">
+            <span />
             <p>Hoy clasifica a segunda vuelta</p>
-            <strong>{rank2Value ?? "Insight no disponible"}</strong>
-          </article>
-          <article className="quick-insight-kpi">
-            <div className="quick-insight-kpi__heading">
-              <p>Brecha porcentual (2do - 3ro)</p>
-              {hasSecondRoundInsight ? (
-                <span className={statusCopy.className}>
-                  {statusCopy.label}
-                </span>
-              ) : null}
-            </div>
-            <strong>{gapPpValue ?? "Insight no disponible"}</strong>
-          </article>
-          <article className="quick-insight-kpi">
+            <p>Brecha porcentual (2do - 3ro)</p>
             <p>Diferencia en votos (2do - 3ro)</p>
-            <strong>{gapVotesValue ?? "Insight no disponible"}</strong>
-          </article>
+          </div>
+
+          <div className="quick-insights__matrix-row">
+            <p className="quick-insights__row-label">Actual ONPE</p>
+            <article className="quick-insight-kpi">
+              <p className="quick-insight-kpi__mobile-label">Hoy clasifica a segunda vuelta</p>
+              <strong>{currentRank2Value ?? "Insight no disponible"}</strong>
+            </article>
+            <article className="quick-insight-kpi">
+              <div className="quick-insight-kpi__heading">
+                <p className="quick-insight-kpi__mobile-label">Brecha porcentual (2do - 3ro)</p>
+                {hasCurrentSecondRoundInsight ? (
+                  <span className={currentStatusCopy.className}>
+                    {currentStatusCopy.label}
+                  </span>
+                ) : null}
+              </div>
+              <strong>{currentGapPpValue ?? "Insight no disponible"}</strong>
+            </article>
+            <article className="quick-insight-kpi">
+              <p className="quick-insight-kpi__mobile-label">Diferencia en votos (2do - 3ro)</p>
+              <strong>{currentGapVotesValue ?? "Insight no disponible"}</strong>
+            </article>
+          </div>
+
+          <div className="quick-insights__matrix-row">
+            <p className="quick-insights__row-label">Proyección total</p>
+            <article className="quick-insight-kpi">
+              <p className="quick-insight-kpi__mobile-label">Hoy clasifica a segunda vuelta</p>
+              <strong>{rank2Value ?? "Insight no disponible"}</strong>
+            </article>
+            <article className="quick-insight-kpi">
+              <div className="quick-insight-kpi__heading">
+                <p className="quick-insight-kpi__mobile-label">Brecha porcentual (2do - 3ro)</p>
+                {hasSecondRoundInsight ? (
+                  <span className={statusCopy.className}>
+                    {statusCopy.label}
+                  </span>
+                ) : null}
+              </div>
+              <strong>{gapPpValue ?? "Insight no disponible"}</strong>
+            </article>
+            <article className="quick-insight-kpi">
+              <p className="quick-insight-kpi__mobile-label">Diferencia en votos (2do - 3ro)</p>
+              <strong>{gapVotesValue ?? "Insight no disponible"}</strong>
+            </article>
+          </div>
         </div>
       </section>
 

@@ -515,6 +515,9 @@ describe("App hero clarity and first action", () => {
     );
     expect(container.textContent).toContain("Actualizamos esta vista con nuevos cortes oficiales de ONPE.");
     expect(container.textContent).toContain("Resumen clave: segunda vuelta");
+    expect(container.textContent).toContain("Actual ONPE");
+    expect(container.textContent).toContain("Proyección total");
+    expect(container.textContent).toContain("Brecha porcentual (2do - 3ro)");
     expect(container.textContent).toContain("Hoy clasifica a segunda vuelta");
     expect(container.textContent).toContain("Diferencia en votos (2do - 3ro)");
     expect(container.textContent).toContain("Actas Perú:");

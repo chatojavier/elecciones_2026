@@ -247,7 +247,8 @@ function buildCurrentSecondRoundInsight(snapshot: ElectionSnapshot) {
   const rank2 = rankedEntries[1] ?? null;
   const rank3 = rankedEntries[2] ?? null;
   const gapVotes2v3 = rank2 && rank3 ? rank2.votes - rank3.votes : null;
-  const gapPp2v3 = rank2 && rank3 ? rank2.percentage - rank3.percentage : null;
+  const rawGapPp2v3 = rank2 && rank3 ? rank2.percentage - rank3.percentage : null;
+  const gapPp2v3 = rawGapPp2v3 != null ? Number(rawGapPp2v3.toFixed(6)) : null;
 
   return {
     rank2,

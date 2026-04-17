@@ -618,6 +618,149 @@ describe("App hero clarity and first action", () => {
     expect(container.textContent).toContain("Ajustado");
   });
 
+  it("clasifica 0.50 pp actual como Ajustado (sin caer en Muy ajustado por float)", async () => {
+    const thresholdSnapshot = createSnapshot();
+    thresholdSnapshot.national = createScope({
+      totalVotosValidos: 5200,
+      candidates: [
+        {
+          code: "8",
+          partyName: "PARTIDO A",
+          candidateName: "CANDIDATA A",
+          votesValid: 2600,
+          pctValid: 50,
+          pctEmitted: 45
+        },
+        {
+          code: "10",
+          partyName: "PARTIDO B",
+          candidateName: "CANDIDATO B",
+          votesValid: 1313,
+          pctValid: 25.25,
+          pctEmitted: 22
+        },
+        {
+          code: "12",
+          partyName: "PARTIDO C",
+          candidateName: "CANDIDATA C",
+          votesValid: 1287,
+          pctValid: 24.75,
+          pctEmitted: 21
+        }
+      ],
+      featuredCandidates: [
+        {
+          code: "8",
+          partyName: "PARTIDO A",
+          candidateName: "CANDIDATA A",
+          votesValid: 2600,
+          pctValid: 50,
+          pctEmitted: 45
+        },
+        {
+          code: "10",
+          partyName: "PARTIDO B",
+          candidateName: "CANDIDATO B",
+          votesValid: 1313,
+          pctValid: 25.25,
+          pctEmitted: 22
+        },
+        {
+          code: "12",
+          partyName: "PARTIDO C",
+          candidateName: "CANDIDATA C",
+          votesValid: 1287,
+          pctValid: 24.75,
+          pctEmitted: 21
+        }
+      ],
+      otros: {
+        code: "otros",
+        label: "Otros",
+        votesValid: 0,
+        pctValid: 0,
+        pctEmitted: 0
+      }
+    });
+    thresholdSnapshot.foreign = createForeign({
+      totalVotosValidos: 0,
+      candidates: [
+        {
+          code: "8",
+          partyName: "PARTIDO A",
+          candidateName: "CANDIDATA A",
+          votesValid: 0,
+          pctValid: 0,
+          pctEmitted: 0
+        },
+        {
+          code: "10",
+          partyName: "PARTIDO B",
+          candidateName: "CANDIDATO B",
+          votesValid: 0,
+          pctValid: 0,
+          pctEmitted: 0
+        },
+        {
+          code: "12",
+          partyName: "PARTIDO C",
+          candidateName: "CANDIDATA C",
+          votesValid: 0,
+          pctValid: 0,
+          pctEmitted: 0
+        }
+      ],
+      featuredCandidates: [
+        {
+          code: "8",
+          partyName: "PARTIDO A",
+          candidateName: "CANDIDATA A",
+          votesValid: 0,
+          pctValid: 0,
+          pctEmitted: 0
+        },
+        {
+          code: "10",
+          partyName: "PARTIDO B",
+          candidateName: "CANDIDATO B",
+          votesValid: 0,
+          pctValid: 0,
+          pctEmitted: 0
+        },
+        {
+          code: "12",
+          partyName: "PARTIDO C",
+          candidateName: "CANDIDATA C",
+          votesValid: 0,
+          pctValid: 0,
+          pctEmitted: 0
+        }
+      ],
+      projectedVotes: {
+        "8": 0,
+        "10": 0,
+        "12": 0,
+        otros: 0
+      },
+      continents: []
+    });
+
+    fetchSnapshotMock.mockResolvedValue(thresholdSnapshot);
+    refreshSnapshotMock.mockResolvedValue(thresholdSnapshot);
+
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(container.textContent).toContain("0.50 pp");
+    expect(container.textContent).not.toContain("Muy ajustado");
+    expect(container.textContent).toContain("Ajustado");
+  });
+
   it("evita mezclar fuentes full+featured en el resumen actual cuando snapshot es mixto", async () => {
     const mixedSnapshot = createSnapshot();
     mixedSnapshot.national.candidates = [

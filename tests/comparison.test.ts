@@ -404,4 +404,47 @@ describe("getScopeSecondRoundGapVotes", () => {
 
     expect(gap).toBe(40);
   });
+
+  it("usa candidates + actas como fallback cuando projectedVotes no incluye rank2/rank3", () => {
+    const gap = getScopeSecondRoundGapVotes(
+      {
+        projectedVotes: {
+          "8": 500,
+          "10": 300,
+          otros: 200
+        },
+        actasContabilizadasPct: 80,
+        candidates: [
+          {
+            code: "8",
+            partyName: "PARTIDO A",
+            candidateName: "CANDIDATA A",
+            votesValid: 400,
+            pctValid: 40,
+            pctEmitted: 35
+          },
+          {
+            code: "10",
+            partyName: "PARTIDO B",
+            candidateName: "CANDIDATO B",
+            votesValid: 240,
+            pctValid: 24,
+            pctEmitted: 20
+          },
+          {
+            code: "21",
+            partyName: "PARTIDO D",
+            candidateName: "CANDIDATO D",
+            votesValid: 248,
+            pctValid: 24.8,
+            pctEmitted: 21
+          }
+        ]
+      },
+      "21",
+      "10"
+    );
+
+    expect(gap).toBe(10);
+  });
 });

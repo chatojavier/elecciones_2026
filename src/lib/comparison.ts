@@ -1,4 +1,5 @@
 import type {
+  CandidateResult,
   ElectionSnapshot,
   ForeignCountryResult,
   ProvinceResult,
@@ -117,11 +118,33 @@ function resolveSecondRoundStatusLevel(gapPp2v3: number | null): SecondRoundStat
 }
 
 export function getScopeSecondRoundGapVotes(
-  scope: Pick<ScopeResult, "projectedVotes"> | Pick<RegionResult, "projectedVotes">,
+  scope: {
+    projectedVotes: Record<string, number>;
+    candidates?: CandidateResult[];
+    actasContabilizadasPct?: number;
+  },
   rank2Code: string,
   rank3Code: string
 ) {
-  return (scope.projectedVotes[rank2Code] ?? 0) - (scope.projectedVotes[rank3Code] ?? 0);
+  const resolveProjectedVotes = (code: string) => {
+    const projectedFromScope = scope.projectedVotes[code];
+    if (typeof projectedFromScope === "number") {
+      return projectedFromScope;
+    }
+
+    if (!scope.candidates || typeof scope.actasContabilizadasPct !== "number") {
+      return 0;
+    }
+
+    const candidate = scope.candidates.find((item) => item.code === code);
+    if (!candidate) {
+      return 0;
+    }
+
+    return projectVotesByCountedActas(candidate.votesValid, scope.actasContabilizadasPct);
+  };
+
+  return resolveProjectedVotes(rank2Code) - resolveProjectedVotes(rank3Code);
 }
 
 export function buildSecondRoundInsight(snapshot: ElectionSnapshot): SecondRoundInsight {

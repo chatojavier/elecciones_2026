@@ -42,31 +42,15 @@ type SortKey =
   | "candidate"
   | "projection"
   | "gap_2v3";
+type AnalysisMode = "second_round" | "candidate";
 type LeafScopeResult = ProvinceResult | ForeignCountryResult;
+type ComparableScope = ScopeResult | ProvinceResult | ForeignCountryResult;
 
-function CandidatePill({
-  code,
-  label,
-  active,
-  onClick
-}: {
-  code: string;
-  label: string;
-  active: boolean;
-  onClick: (code: string) => void;
-}) {
-  return (
-    <button
-      className={`candidate-pill ${active ? "is-active" : ""}`}
-      onClick={() => onClick(code)}
-      style={{ ["--candidate-color" as string]: getCandidateColor(code) }}
-      type="button"
-    >
-      <span className="candidate-pill__dot" />
-      {formatTitleCase(label)}
-    </button>
-  );
-}
+const DEFAULT_ANALYSIS_MODE: AnalysisMode = "second_round";
+const DEFAULT_COMPARISON_MODE: ComparisonMode = "projected";
+const DEFAULT_SHOW_OTHERS = false;
+const DEFAULT_REGION_SORT: SortKey = "gap_2v3";
+const FALLBACK_REGION_SORT: SortKey = "projection";
 
 function FeaturedBar({
   item
@@ -259,6 +243,192 @@ function buildCurrentSecondRoundInsight(snapshot: ElectionSnapshot) {
   };
 }
 
+function getScopeProjectedTotalVotes(scope: ComparableScope) {
+  return Object.values(scope.projectedVotes).reduce((sum, votes) => sum + votes, 0);
+}
+
+function getScopeProjectedVotesByCode(scope: ComparableScope, code: string) {
+  const projectedFromScope = scope.projectedVotes[code];
+  if (typeof projectedFromScope === "number") {
+    return projectedFromScope;
+  }
+
+  if (scope.actasContabilizadasPct <= 0) {
+    return 0;
+  }
+
+  const candidate = scope.candidates.find((item) => item.code === code);
+  if (!candidate) {
+    return 0;
+  }
+
+  return Math.round(candidate.votesValid / (scope.actasContabilizadasPct / 100));
+}
+
+function getScopeActualVotesByCode(scope: ComparableScope, code: string) {
+  if (code === "otros") {
+    return scope.otros.votesValid;
+  }
+
+  const candidate =
+    scope.candidates.find((item) => item.code === code) ??
+    scope.featuredCandidates.find((item) => item.code === code);
+
+  return candidate?.votesValid ?? 0;
+}
+
+function getNationalActualVotesByCode(snapshot: ElectionSnapshot, code: string) {
+  const hasFullNationalCandidates = snapshot.national.candidates.length > 0;
+  const hasFullForeignCandidates = snapshot.foreign.candidates.length > 0;
+  const useFullCandidates = hasFullNationalCandidates && hasFullForeignCandidates;
+  const nationalCandidates = useFullCandidates
+    ? snapshot.national.candidates
+    : snapshot.national.featuredCandidates;
+  const foreignCandidates = useFullCandidates
+    ? snapshot.foreign.candidates
+    : snapshot.foreign.featuredCandidates;
+
+  return [...nationalCandidates, ...foreignCandidates]
+    .filter((candidate) => candidate.code === code)
+    .reduce((sum, candidate) => sum + candidate.votesValid, 0);
+}
+
+function buildSecondRoundComparisonItem(
+  snapshot: ElectionSnapshot,
+  candidate: NonNullable<ReturnType<typeof buildSecondRoundInsight>["rank2"]>
+): ComparisonItem {
+  const actualVotes = getNationalActualVotesByCode(snapshot, candidate.code);
+  const totalCurrentValidVotes =
+    snapshot.national.totalVotosValidos + snapshot.foreign.totalVotosValidos;
+  const actualPercentage = totalCurrentValidVotes > 0 ? (actualVotes / totalCurrentValidVotes) * 100 : 0;
+
+  return {
+    code: candidate.code,
+    label: candidate.label,
+    actualVotes,
+    actualPercentage,
+    projectedVotes: candidate.projectedVotes,
+    projectedPercentage: candidate.projectedPercentage,
+    deltaVotes: candidate.projectedVotes - actualVotes,
+    deltaPercentage: Number((candidate.projectedPercentage - actualPercentage).toFixed(3))
+  };
+}
+
+function getNationalProjectedVotesByCode(
+  snapshot: ElectionSnapshot,
+  secondRoundInsight: ReturnType<typeof buildSecondRoundInsight>,
+  code: string
+) {
+  const projectedFromSummary = snapshot.projectedNational.projectedVotes[code];
+  if (typeof projectedFromSummary === "number") {
+    return projectedFromSummary;
+  }
+
+  const runoffCandidate = [secondRoundInsight?.rank2, secondRoundInsight?.rank3].find(
+    (candidate) => candidate?.code === code
+  );
+
+  return runoffCandidate?.projectedVotes ?? 0;
+}
+
+function buildSecondRoundOthersBar(
+  snapshot: ElectionSnapshot,
+  baseOthersBar: ComparisonItem | null,
+  secondRoundInsight: ReturnType<typeof buildSecondRoundInsight> | null
+) {
+  if (!baseOthersBar || !secondRoundInsight?.rank2 || !secondRoundInsight.rank3) {
+    return baseOthersBar;
+  }
+
+  const runoffCandidates = [secondRoundInsight.rank2, secondRoundInsight.rank3].filter(
+    (candidate) => !snapshot.featuredCandidateCodes.includes(candidate.code)
+  );
+
+  if (runoffCandidates.length === 0) {
+    return baseOthersBar;
+  }
+
+  const totalCurrentValidVotes =
+    snapshot.national.totalVotosValidos + snapshot.foreign.totalVotosValidos;
+  const totalProjectedValidVotes = snapshot.projectedNational.totalProjectedValidVotes;
+  const excludedActualVotes = runoffCandidates.reduce(
+    (sum, candidate) => sum + getNationalActualVotesByCode(snapshot, candidate.code),
+    0
+  );
+  const excludedProjectedVotes = runoffCandidates.reduce(
+    (sum, candidate) => sum + getNationalProjectedVotesByCode(snapshot, secondRoundInsight, candidate.code),
+    0
+  );
+  const actualVotes = Math.max(0, baseOthersBar.actualVotes - excludedActualVotes);
+  const projectedVotes = Math.max(0, baseOthersBar.projectedVotes - excludedProjectedVotes);
+
+  if (actualVotes === 0 && projectedVotes === 0) {
+    return null;
+  }
+
+  const actualPercentage = totalCurrentValidVotes > 0 ? (actualVotes / totalCurrentValidVotes) * 100 : 0;
+  const projectedPercentage = totalProjectedValidVotes > 0 ? (projectedVotes / totalProjectedValidVotes) * 100 : 0;
+
+  return {
+    code: "otros",
+    label: "Otros",
+    actualVotes,
+    actualPercentage,
+    projectedVotes,
+    projectedPercentage,
+    deltaVotes: projectedVotes - actualVotes,
+    deltaPercentage: Number((projectedPercentage - actualPercentage).toFixed(3))
+  };
+}
+
+function getScopeSecondRoundGap(
+  scope: ComparableScope,
+  secondRoundCodes: { rank2Code: string; rank3Code: string } | null,
+  comparisonMode: ComparisonMode
+) {
+  if (!secondRoundCodes) {
+    return null;
+  }
+
+  const projectedGapVotes = getScopeSecondRoundGapVotes(
+    scope,
+    secondRoundCodes.rank2Code,
+    secondRoundCodes.rank3Code
+  );
+  const rank2Votes =
+    comparisonMode === "projected"
+      ? projectedGapVotes + getScopeProjectedVotesByCode(scope, secondRoundCodes.rank3Code)
+      : getScopeActualVotesByCode(scope, secondRoundCodes.rank2Code);
+  const rank3Votes =
+    comparisonMode === "projected"
+      ? getScopeProjectedVotesByCode(scope, secondRoundCodes.rank3Code)
+      : getScopeActualVotesByCode(scope, secondRoundCodes.rank3Code);
+  const totalVotes =
+    comparisonMode === "projected" ? getScopeProjectedTotalVotes(scope) : scope.totalVotosValidos;
+  const gapVotes = rank2Votes - rank3Votes;
+  const gapPercentage = totalVotes > 0 ? Number(((gapVotes / totalVotes) * 100).toFixed(3)) : 0;
+
+  return {
+    gapVotes,
+    gapPercentage
+  };
+}
+
+function getScopeComparisonVotes(
+  scope: ComparableScope,
+  analysisMode: AnalysisMode,
+  selectedCode: string,
+  comparisonMode: ComparisonMode,
+  secondRoundCodes: { rank2Code: string; rank3Code: string } | null
+) {
+  if (analysisMode === "second_round") {
+    return getScopeSecondRoundGap(scope, secondRoundCodes, comparisonMode)?.gapVotes ?? 0;
+  }
+
+  const comparison = buildScopeComparisonItem(scope, selectedCode);
+  return comparisonMode === "projected" ? comparison.projectedVotes : comparison.actualVotes;
+}
+
 function QuickInsightsSkeleton() {
   return (
     <section className="quick-insights quick-insights--loading" aria-label="Cargando resumen rápido">
@@ -300,9 +470,13 @@ function sortRegions(
   regions: RegionResult[],
   selectedCode: string,
   sortKey: SortKey,
+  analysisMode: AnalysisMode,
+  comparisonMode: ComparisonMode,
   secondRoundCodes: { rank2Code: string; rank3Code: string } | null
 ) {
   const sorted = [...regions];
+  const getGapSortValue = (scope: RegionResult) =>
+    getScopeSecondRoundGap(scope, secondRoundCodes, comparisonMode)?.gapVotes ?? Number.MAX_SAFE_INTEGER;
 
   sorted.sort((left, right) => {
     switch (sortKey) {
@@ -313,25 +487,23 @@ function sortRegions(
       case "participacion":
         return right.participacionCiudadanaPct - left.participacionCiudadanaPct;
       case "candidate": {
+        if (analysisMode === "second_round") {
+          const leftGap = getGapSortValue(left);
+          const rightGap = getGapSortValue(right);
+          if (leftGap === rightGap) {
+            return right.electores - left.electores;
+          }
+
+          return leftGap - rightGap;
+        }
+
         const leftCandidate = left.featuredCandidates.find((candidate) => candidate.code === selectedCode);
         const rightCandidate = right.featuredCandidates.find((candidate) => candidate.code === selectedCode);
         return (rightCandidate?.pctValid ?? 0) - (leftCandidate?.pctValid ?? 0);
       }
       case "gap_2v3": {
-        if (!secondRoundCodes) {
-          return (right.projectedVotes[selectedCode] ?? 0) - (left.projectedVotes[selectedCode] ?? 0);
-        }
-
-        const leftGap = getScopeSecondRoundGapVotes(
-          left,
-          secondRoundCodes.rank2Code,
-          secondRoundCodes.rank3Code
-        );
-        const rightGap = getScopeSecondRoundGapVotes(
-          right,
-          secondRoundCodes.rank2Code,
-          secondRoundCodes.rank3Code
-        );
+        const leftGap = getGapSortValue(left);
+        const rightGap = getGapSortValue(right);
 
         if (leftGap === rightGap) {
           return right.electores - left.electores;
@@ -340,6 +512,16 @@ function sortRegions(
         return leftGap - rightGap;
       }
       case "projection":
+        if (analysisMode === "second_round") {
+          const leftGap = getGapSortValue(left);
+          const rightGap = getGapSortValue(right);
+          if (leftGap === rightGap) {
+            return right.electores - left.electores;
+          }
+
+          return leftGap - rightGap;
+        }
+
         return (right.projectedVotes[selectedCode] ?? 0) - (left.projectedVotes[selectedCode] ?? 0);
       default:
         return 0;
@@ -351,20 +533,43 @@ function sortRegions(
 
 function sortLeafScopes(
   scopes: LeafScopeResult[],
+  analysisMode: AnalysisMode,
   selectedCode: string,
-  comparisonMode: ComparisonMode
+  comparisonMode: ComparisonMode,
+  secondRoundCodes: { rank2Code: string; rank3Code: string } | null
 ) {
   const sorted = [...scopes];
 
   sorted.sort((left, right) => {
-    const leftComparison = buildScopeComparisonItem(left, selectedCode);
-    const rightComparison = buildScopeComparisonItem(right, selectedCode);
+    if (analysisMode === "second_round") {
+      const leftGap =
+        getScopeSecondRoundGap(left, secondRoundCodes, comparisonMode)?.gapVotes ?? Number.MAX_SAFE_INTEGER;
+      const rightGap =
+        getScopeSecondRoundGap(right, secondRoundCodes, comparisonMode)?.gapVotes ?? Number.MAX_SAFE_INTEGER;
 
-    if (comparisonMode === "projected") {
-      return rightComparison.projectedVotes - leftComparison.projectedVotes;
+      if (leftGap === rightGap) {
+        return right.totalVotosValidos - left.totalVotosValidos;
+      }
+
+      return leftGap - rightGap;
     }
 
-    return rightComparison.actualVotes - leftComparison.actualVotes;
+    const leftVotes = getScopeComparisonVotes(
+      left,
+      analysisMode,
+      selectedCode,
+      comparisonMode,
+      secondRoundCodes
+    );
+    const rightVotes = getScopeComparisonVotes(
+      right,
+      analysisMode,
+      selectedCode,
+      comparisonMode,
+      secondRoundCodes
+    );
+
+    return rightVotes - leftVotes;
   });
 
   return sorted;
@@ -372,20 +577,43 @@ function sortLeafScopes(
 
 function sortForeignContinents(
   continents: ForeignContinentResult[],
+  analysisMode: AnalysisMode,
   selectedCode: string,
-  comparisonMode: ComparisonMode
+  comparisonMode: ComparisonMode,
+  secondRoundCodes: { rank2Code: string; rank3Code: string } | null
 ) {
   const sorted = [...continents];
 
   sorted.sort((left, right) => {
-    const leftComparison = buildScopeComparisonItem(left, selectedCode);
-    const rightComparison = buildScopeComparisonItem(right, selectedCode);
+    if (analysisMode === "second_round") {
+      const leftGap =
+        getScopeSecondRoundGap(left, secondRoundCodes, comparisonMode)?.gapVotes ?? Number.MAX_SAFE_INTEGER;
+      const rightGap =
+        getScopeSecondRoundGap(right, secondRoundCodes, comparisonMode)?.gapVotes ?? Number.MAX_SAFE_INTEGER;
 
-    if (comparisonMode === "projected") {
-      return rightComparison.projectedVotes - leftComparison.projectedVotes;
+      if (leftGap === rightGap) {
+        return right.totalVotosValidos - left.totalVotosValidos;
+      }
+
+      return leftGap - rightGap;
     }
 
-    return rightComparison.actualVotes - leftComparison.actualVotes;
+    const leftVotes = getScopeComparisonVotes(
+      left,
+      analysisMode,
+      selectedCode,
+      comparisonMode,
+      secondRoundCodes
+    );
+    const rightVotes = getScopeComparisonVotes(
+      right,
+      analysisMode,
+      selectedCode,
+      comparisonMode,
+      secondRoundCodes
+    );
+
+    return rightVotes - leftVotes;
   });
 
   return sorted;
@@ -398,9 +626,11 @@ function LeafScopeDrilldown({
   itemPluralLabel,
   recompositionLabel,
   scopes,
+  analysisMode,
   selectedCode,
   showOthers,
-  comparisonMode
+  comparisonMode,
+  secondRoundCodes
 }: {
   titleEyebrow: string;
   scopeLabel: string;
@@ -408,13 +638,25 @@ function LeafScopeDrilldown({
   itemPluralLabel: string;
   recompositionLabel: string;
   scopes: LeafScopeResult[];
+  analysisMode: AnalysisMode;
   selectedCode: string;
   showOthers: boolean;
   comparisonMode: ComparisonMode;
+  secondRoundCodes: { rank2Code: string; rank3Code: string } | null;
 }) {
   const comparisonLabel =
-    comparisonMode === "projected" ? "Proyección seleccionada" : "Actual seleccionado";
-  const sortedScopes = sortLeafScopes(scopes, selectedCode, comparisonMode);
+    analysisMode === "second_round"
+      ? `Brecha 2do vs 3ro (${comparisonMode === "projected" ? "Proyectado" : "Actual ONPE"})`
+      : comparisonMode === "projected"
+        ? "Proyección seleccionada"
+        : "Actual seleccionado";
+  const sortedScopes = sortLeafScopes(
+    scopes,
+    analysisMode,
+    selectedCode,
+    comparisonMode,
+    secondRoundCodes
+  );
 
   return (
     <section className="province-panel">
@@ -442,14 +684,24 @@ function LeafScopeDrilldown({
       <div className="province-list">
         {sortedScopes.map((scope) => {
           const selectedComparison = buildScopeComparisonItem(scope, selectedCode);
+          const secondRoundGap = getScopeSecondRoundGap(scope, secondRoundCodes, comparisonMode);
+          const hasSecondRoundGap = Boolean(secondRoundGap);
           const comparisonVotes =
-            comparisonMode === "projected"
-              ? selectedComparison.projectedVotes
-              : selectedComparison.actualVotes;
+            analysisMode === "second_round"
+              ? secondRoundGap?.gapVotes ?? 0
+              : comparisonMode === "projected"
+                ? selectedComparison.projectedVotes
+                : selectedComparison.actualVotes;
           const comparisonPercentage =
-            comparisonMode === "projected"
-              ? selectedComparison.projectedPercentage
-              : selectedComparison.actualPercentage;
+            analysisMode === "second_round"
+              ? secondRoundGap?.gapPercentage ?? 0
+              : comparisonMode === "projected"
+                ? selectedComparison.projectedPercentage
+                : selectedComparison.actualPercentage;
+          const comparisonDetail =
+            analysisMode === "second_round"
+              ? `${comparisonMode === "projected" ? "Proyectado" : "Actual ONPE"} · 2do vs 3ro`
+              : `${formatTitleCase(selectedComparison.label)} · ${comparisonMode === "projected" ? "Proyectado" : "Actual ONPE"}`;
 
           return (
             <article key={scope.scopeId} className="province-grid province-card">
@@ -470,11 +722,22 @@ function LeafScopeDrilldown({
               </div>
               <div className="province-card__cell" data-label={comparisonLabel}>
                 <div className="comparison-cell">
-                  <strong>{formatNumber(comparisonVotes)}</strong>
-                  <span>{formatPercent(comparisonPercentage, 2)}</span>
+                  <strong>
+                    {analysisMode === "second_round"
+                      ? hasSecondRoundGap
+                        ? formatSignedNumber(comparisonVotes)
+                        : "Sin dato"
+                      : formatNumber(comparisonVotes)}
+                  </strong>
+                  <span>
+                    {analysisMode === "second_round"
+                      ? hasSecondRoundGap
+                        ? `${formatSignedDecimal(comparisonPercentage, 2)} pp`
+                        : "Sin dato"
+                      : formatPercent(comparisonPercentage, 2)}
+                  </span>
                   <small>
-                    {formatTitleCase(selectedComparison.label)} ·{" "}
-                    {comparisonMode === "projected" ? "Proyectado" : "Actual ONPE"}
+                    {comparisonDetail}
                   </small>
                 </div>
               </div>
@@ -492,18 +755,28 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
-  const [sortKey, setSortKey] = useState<SortKey>("projection");
-  const [selectedCode, setSelectedCode] = useState<string>("");
-  const [showOthers, setShowOthers] = useState(true);
-  const [regionalComparisonMode, setRegionalComparisonMode] =
-    useState<ComparisonMode>("projected");
+  const [sortKey, setSortKey] = useState<SortKey>(DEFAULT_REGION_SORT);
+  const [analysisMode, setAnalysisMode] = useState<AnalysisMode>(DEFAULT_ANALYSIS_MODE);
+  const [comparisonMode, setComparisonMode] = useState<ComparisonMode>(DEFAULT_COMPARISON_MODE);
+  const [selectedCandidateCode, setSelectedCandidateCode] = useState<string>("");
+  const [showOthers, setShowOthers] = useState(DEFAULT_SHOW_OTHERS);
+  const [regionSearchQuery, setRegionSearchQuery] = useState("");
+  const [foreignSearchQuery, setForeignSearchQuery] = useState("");
   const [expandedRegionId, setExpandedRegionId] = useState<string | null>(null);
   const [expandedContinentId, setExpandedContinentId] = useState<string | null>(null);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [isMobileControlsSticky, setIsMobileControlsSticky] = useState(false);
+  const [isMobileControlsCollapsed, setIsMobileControlsCollapsed] = useState(false);
   const [clockNow, setClockNow] = useState(() => Date.now());
+  const candidateSelectRef = useRef<HTMLSelectElement | null>(null);
+  const globalControlsRef = useRef<HTMLElement | null>(null);
   const lastAutoRefreshKeyRef = useRef<string | null>(null);
   const quickInsightsImpressionRef = useRef<string | null>(null);
+  const globalControlsImpressionRef = useRef<string | null>(null);
+  const analysisModeDefaultRef = useRef<string | null>(null);
   const quickInsightsStatusRef = useRef<string | null>(null);
   const quickInsightsContextRef = useRef<string | null>(null);
+  const previousMobileStickyRef = useRef(false);
   const foreignContinents = snapshot?.foreign.continents ?? [];
 
   async function loadSnapshot(background = false) {
@@ -552,11 +825,41 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    function syncMobileControlsState() {
+      const isMobile = window.innerWidth <= 640;
+      const isSticky =
+        isMobile && globalControlsRef.current
+          ? globalControlsRef.current.getBoundingClientRect().top <= 8
+          : false;
+
+      setIsMobileViewport(isMobile);
+      setIsMobileControlsSticky(isSticky);
+
+      if (!isMobile || !isSticky) {
+        setIsMobileControlsCollapsed(false);
+      } else if (!previousMobileStickyRef.current && isSticky) {
+        setIsMobileControlsCollapsed(true);
+      }
+
+      previousMobileStickyRef.current = isSticky;
+    }
+
+    syncMobileControlsState();
+    window.addEventListener("scroll", syncMobileControlsState, { passive: true });
+    window.addEventListener("resize", syncMobileControlsState);
+
+    return () => {
+      window.removeEventListener("scroll", syncMobileControlsState);
+      window.removeEventListener("resize", syncMobileControlsState);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!snapshot) {
       return;
     }
 
-    setSelectedCode((currentCode) => {
+    setSelectedCandidateCode((currentCode) => {
       if (currentCode && snapshot.featuredCandidateCodes.includes(currentCode)) {
         return currentCode;
       }
@@ -659,16 +962,76 @@ export default function App() {
       return [];
     }
 
-    return sortRegions(snapshot.regions, selectedCode, sortKey, secondRoundCodes);
-  }, [secondRoundCodes, selectedCode, snapshot, sortKey]);
+    const orderedRegions = sortRegions(
+      snapshot.regions,
+      selectedCandidateCode,
+      sortKey,
+      analysisMode,
+      comparisonMode,
+      secondRoundCodes
+    );
+    const normalizedSearch = regionSearchQuery.trim().toLowerCase();
+
+    if (!normalizedSearch) {
+      return orderedRegions;
+    }
+
+    return orderedRegions.filter((region) => region.label.toLowerCase().includes(normalizedSearch));
+  }, [
+    analysisMode,
+    comparisonMode,
+    secondRoundCodes,
+    selectedCandidateCode,
+    snapshot,
+    sortKey,
+    regionSearchQuery
+  ]);
 
   const sortedContinents = useMemo(() => {
     if (!snapshot) {
       return [];
     }
 
-    return sortForeignContinents(foreignContinents, selectedCode, regionalComparisonMode);
-  }, [foreignContinents, regionalComparisonMode, selectedCode, snapshot]);
+    const orderedContinents = sortForeignContinents(
+      foreignContinents,
+      analysisMode,
+      selectedCandidateCode,
+      comparisonMode,
+      secondRoundCodes
+    );
+    const normalizedSearch = foreignSearchQuery.trim().toLowerCase();
+
+    if (!normalizedSearch) {
+      return orderedContinents;
+    }
+
+    return orderedContinents.flatMap((continent) => {
+      const continentMatches = continent.label.toLowerCase().includes(normalizedSearch);
+      const matchingCountries =
+        continent.countries?.filter((country) =>
+          country.label.toLowerCase().includes(normalizedSearch)
+        ) ?? [];
+
+      if (!continentMatches && matchingCountries.length === 0) {
+        return [];
+      }
+
+      return [
+        {
+          ...continent,
+          countries: continentMatches ? continent.countries : matchingCountries
+        }
+      ];
+    });
+  }, [
+    analysisMode,
+    comparisonMode,
+    foreignContinents,
+    foreignSearchQuery,
+    secondRoundCodes,
+    selectedCandidateCode,
+    snapshot
+  ]);
 
   const nationalComparisonItems = useMemo(() => {
     if (!snapshot) {
@@ -678,16 +1041,42 @@ export default function App() {
     return buildNationalComparisonItems(snapshot);
   }, [snapshot]);
 
-  const featuredComparisonBars = useMemo(
-    () => nationalComparisonItems.filter((item) => item.code !== "otros"),
-    [nationalComparisonItems]
-  );
+  const featuredComparisonBars = useMemo(() => {
+    if (analysisMode === "candidate") {
+      const featuredBars = nationalComparisonItems.filter((item) => item.code !== "otros");
+      return featuredBars.filter((item) => item.code === selectedCandidateCode);
+    }
 
-  const othersBar = snapshot
-    ? nationalComparisonItems.find((item) => item.code === "otros") ?? null
-    : null;
+    if (!snapshot || !secondRoundInsight?.rank2 || !secondRoundInsight.rank3) {
+      return [];
+    }
+
+    return [secondRoundInsight.rank2, secondRoundInsight.rank3].map((candidate) =>
+      buildSecondRoundComparisonItem(snapshot, candidate)
+    );
+  }, [analysisMode, nationalComparisonItems, secondRoundInsight, selectedCandidateCode, snapshot]);
+
+  const othersBar = useMemo(() => {
+    if (!snapshot) {
+      return null;
+    }
+
+    const baseOthersBar = nationalComparisonItems.find((item) => item.code === "otros") ?? null;
+
+    if (analysisMode !== "second_round") {
+      return baseOthersBar;
+    }
+
+    return buildSecondRoundOthersBar(snapshot, baseOthersBar, secondRoundInsight);
+  }, [analysisMode, nationalComparisonItems, secondRoundInsight, snapshot]);
+  const canUseSecondRoundMode = Boolean(secondRoundCodes);
+  const effectiveAnalysisMode: AnalysisMode = canUseSecondRoundMode ? analysisMode : "candidate";
   const selectedComparisonLabel =
-    regionalComparisonMode === "projected" ? "Proyección seleccionada" : "Actual seleccionado";
+    analysisMode === "second_round"
+      ? `Brecha 2do vs 3ro (${comparisonMode === "projected" ? "Proyectado" : "Actual ONPE"})`
+      : comparisonMode === "projected"
+        ? "Proyección seleccionada"
+        : "Actual seleccionado";
   const quickInsightsTrackingBase = {
     gap_pp_2v3: secondRoundInsight?.gapPp2v3 ?? undefined,
     gap_votes_2v3: secondRoundInsight?.gapVotes2v3 ?? undefined,
@@ -744,6 +1133,86 @@ export default function App() {
     quickInsightsContextRef.current = snapshot.generatedAt;
   }, [secondRoundInsight, snapshot]);
 
+  useEffect(() => {
+    if (!snapshot) {
+      return;
+    }
+
+    if (globalControlsImpressionRef.current === snapshot.generatedAt) {
+      return;
+    }
+
+    trackEvent("global_controls_impression", {
+      analysis_mode: effectiveAnalysisMode,
+      comparison_mode: comparisonMode,
+      show_others: showOthers,
+      snapshot_generated_at: snapshot.generatedAt
+    });
+    globalControlsImpressionRef.current = snapshot.generatedAt;
+  }, [comparisonMode, effectiveAnalysisMode, showOthers, snapshot]);
+
+  useEffect(() => {
+    if (!snapshot) {
+      return;
+    }
+
+    if (analysisModeDefaultRef.current === snapshot.generatedAt) {
+      return;
+    }
+
+    const defaultMode: AnalysisMode = canUseSecondRoundMode ? DEFAULT_ANALYSIS_MODE : "candidate";
+
+    if (!canUseSecondRoundMode) {
+      setAnalysisMode("candidate");
+    }
+
+    trackEvent("analysis_mode_default_applied", {
+      analysis_mode: defaultMode,
+      reason: canUseSecondRoundMode ? "editorial_default" : "fallback_insufficient_data",
+      snapshot_generated_at: snapshot.generatedAt
+    });
+    analysisModeDefaultRef.current = snapshot.generatedAt;
+  }, [canUseSecondRoundMode, snapshot]);
+
+  useEffect(() => {
+    if (canUseSecondRoundMode || sortKey !== "gap_2v3") {
+      return;
+    }
+
+    setSortKey(FALLBACK_REGION_SORT);
+  }, [canUseSecondRoundMode, sortKey]);
+
+  useEffect(() => {
+    if (analysisMode !== "candidate") {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      candidateSelectRef.current?.focus();
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [analysisMode]);
+
+  function trackGlobalControlChange(
+    controlName: "analysis_mode" | "comparison_mode" | "show_others" | "reset",
+    previousValue: string | boolean,
+    nextValue: string | boolean,
+    source: "global_bar" | "quick_insight_cta" = "global_bar"
+  ) {
+    if (previousValue === nextValue) {
+      return;
+    }
+
+    trackEvent("global_control_change", {
+      control_name: controlName,
+      previous_value: previousValue,
+      next_value: nextValue,
+      source,
+      snapshot_generated_at: snapshot?.generatedAt
+    });
+  }
+
   function handleRefreshClick() {
     trackEvent("refresh_snapshot", {
       source: "hero_status"
@@ -759,30 +1228,75 @@ export default function App() {
     });
   }
 
+  function handleAnalysisModeChange(
+    nextMode: AnalysisMode,
+    source: "global_bar" | "quick_insight_cta" = "global_bar"
+  ) {
+    if (nextMode === "second_round" && !canUseSecondRoundMode) {
+      return;
+    }
+
+    setAnalysisMode((currentMode) => {
+      trackGlobalControlChange("analysis_mode", currentMode, nextMode, source);
+      return nextMode;
+    });
+  }
+
+  function handleComparisonModeChange(
+    nextMode: ComparisonMode,
+    source: "global_bar" | "quick_insight_cta" = "global_bar"
+  ) {
+    setComparisonMode((currentMode) => {
+      trackGlobalControlChange("comparison_mode", currentMode, nextMode, source);
+      return nextMode;
+    });
+  }
+
   function handleShowOthersToggle() {
     setShowOthers((currentValue) => {
       const nextValue = !currentValue;
-
-      trackEvent("toggle_others_series", {
-        visible: nextValue
-      });
+      trackGlobalControlChange("show_others", currentValue, nextValue);
 
       return nextValue;
     });
   }
 
-  function handleRegionalModeChange(nextMode: ComparisonMode) {
-    setRegionalComparisonMode(nextMode);
-    trackEvent("change_regional_comparison_mode", {
-      mode: nextMode
+  function handleCandidateSelect(code: string, source: "global_bar" | "section_pill" = "global_bar") {
+    setSelectedCandidateCode(code);
+    trackEvent("select_candidate_focus", {
+      candidate_code: code,
+      source
     });
   }
 
-  function handleCandidateSelect(code: string) {
-    setSelectedCode(code);
-    trackEvent("select_candidate_focus", {
-      candidate_code: code
+  function handleGlobalReset() {
+    const nextAnalysisMode: AnalysisMode = canUseSecondRoundMode ? DEFAULT_ANALYSIS_MODE : "candidate";
+    const nextSortKey = canUseSecondRoundMode ? DEFAULT_REGION_SORT : FALLBACK_REGION_SORT;
+    trackGlobalControlChange("reset", "custom_state", "editorial_defaults");
+    trackGlobalControlChange("analysis_mode", analysisMode, nextAnalysisMode);
+    trackGlobalControlChange("comparison_mode", comparisonMode, DEFAULT_COMPARISON_MODE);
+    trackGlobalControlChange("show_others", showOthers, DEFAULT_SHOW_OTHERS);
+    setAnalysisMode(nextAnalysisMode);
+    setComparisonMode(DEFAULT_COMPARISON_MODE);
+    setShowOthers(DEFAULT_SHOW_OTHERS);
+    setSortKey(nextSortKey);
+  }
+
+  function handleQuickInsightDetailClick() {
+    if (canUseSecondRoundMode) {
+      handleAnalysisModeChange("second_round", "quick_insight_cta");
+    }
+
+    handleComparisonModeChange("projected", "quick_insight_cta");
+    trackEvent("quick_insight_detail_cta_click", {
+      source: "quick_insights",
+      section_target: "comparativa-central",
+      target_mode: canUseSecondRoundMode ? "second_round" : "candidate"
     });
+  }
+
+  function handleMobileControlsToggle() {
+    setIsMobileControlsCollapsed((currentValue) => !currentValue);
   }
 
   function handleRegionToggle(regionId: string) {
@@ -827,6 +1341,42 @@ export default function App() {
     });
   }
 
+  function getScopeComparisonDisplay(scope: ComparableScope) {
+    if (analysisMode === "second_round") {
+      const secondRoundGap = getScopeSecondRoundGap(scope, secondRoundCodes, comparisonMode);
+
+      if (!secondRoundGap) {
+        return {
+          votes: "Sin dato",
+          percentage: "Sin dato",
+          detail: `${comparisonMode === "projected" ? "Proyectado" : "Actual ONPE"} · 2do vs 3ro`
+        };
+      }
+
+      return {
+        votes: formatSignedNumber(secondRoundGap.gapVotes),
+        percentage: `${formatSignedDecimal(secondRoundGap.gapPercentage, 2)} pp`,
+        detail: `${comparisonMode === "projected" ? "Proyectado" : "Actual ONPE"} · 2do vs 3ro`
+      };
+    }
+
+    const selectedComparison = buildScopeComparisonItem(scope, selectedCandidateCode);
+    const comparisonVotes =
+      comparisonMode === "projected"
+        ? selectedComparison.projectedVotes
+        : selectedComparison.actualVotes;
+    const comparisonPercentage =
+      comparisonMode === "projected"
+        ? selectedComparison.projectedPercentage
+        : selectedComparison.actualPercentage;
+
+    return {
+      votes: formatNumber(comparisonVotes),
+      percentage: formatPercent(comparisonPercentage, 2),
+      detail: `${formatTitleCase(selectedComparison.label)} · ${comparisonMode === "projected" ? "Proyectado" : "Actual ONPE"}`
+    };
+  }
+
   const hasSecondRoundInsight =
     Boolean(secondRoundInsight?.rank2) &&
     Boolean(secondRoundInsight?.rank3) &&
@@ -862,6 +1412,16 @@ export default function App() {
   const actasPeruValue = formatPercent(secondRoundInsight?.actasPeruPct ?? 0, 2);
   const actasExteriorValue = formatPercent(secondRoundInsight?.actasExteriorPct ?? 0, 2);
   const deltaProyeccionValue = formatSignedNumber(secondRoundInsight?.deltaProyeccionVotes ?? 0);
+  const mobileAnalysisSummary =
+    analysisMode === "second_round" ? "Brecha 2do vs 3ro" : "Candidato específico";
+  const mobileCandidateSummary =
+    analysisMode === "candidate"
+      ? formatTitleCase(
+          featuredLegend.find((candidate) => candidate.code === selectedCandidateCode)?.label ?? "Sin dato"
+        )
+      : null;
+  const mobileComparisonSummary = comparisonMode === "projected" ? "Proyectado" : "Actual ONPE";
+  const mobileOthersSummary = showOthers ? "Otros On" : "Otros Off";
 
   if (loading) {
     return (
@@ -974,6 +1534,15 @@ export default function App() {
             <span className="quick-insight-chip">Delta proyección: {deltaProyeccionValue} votos</span>
           </div>
         </div>
+        <div className="quick-insights__actions">
+          <a
+            className="quick-insights__cta"
+            href="#comparativa-central"
+            onClick={handleQuickInsightDetailClick}
+          >
+            {canUseSecondRoundMode ? "Ver detalle 2do vs 3ro" : "Ver comparativa general"}
+          </a>
+        </div>
 
         <div className="quick-insights__matrix" aria-label="Comparativa actual y proyectada del corte a segunda vuelta">
           <div className="quick-insights__matrix-head" aria-hidden="true">
@@ -1031,12 +1600,125 @@ export default function App() {
         </div>
       </section>
 
+      <section
+        ref={globalControlsRef}
+        className={`global-controls ${isMobileControlsSticky ? "is-mobile-sticky" : ""} ${isMobileControlsCollapsed ? "is-collapsed" : ""}`}
+        aria-label="Controles globales"
+      >
+        {isMobileViewport && isMobileControlsSticky ? (
+          <div className="global-controls__mobile-summary">
+            <div className="global-controls__mobile-summary-text">
+              <span>{mobileAnalysisSummary}</span>
+              {mobileCandidateSummary ? <span>{mobileCandidateSummary}</span> : null}
+              <span>{mobileComparisonSummary}</span>
+              <span>{mobileOthersSummary}</span>
+            </div>
+            <button
+              className="global-controls__mobile-toggle"
+              type="button"
+              aria-expanded={!isMobileControlsCollapsed}
+              aria-label={isMobileControlsCollapsed ? "Expandir filtros" : "Colapsar filtros"}
+              onClick={handleMobileControlsToggle}
+            >
+              <span
+                className={`global-controls__mobile-toggle-icon ${isMobileControlsCollapsed ? "is-collapsed" : ""}`}
+                aria-hidden="true"
+              />
+            </button>
+          </div>
+        ) : null}
+
+        <div className="global-controls__row">
+          <div className="control">
+            <span>Analizar</span>
+            <select
+              className="global-controls__select"
+              aria-label="Analizar"
+              value={analysisMode}
+              onChange={(event) => handleAnalysisModeChange(event.target.value as AnalysisMode)}
+            >
+              <option value="second_round" disabled={!canUseSecondRoundMode}>
+                Brecha 2do vs 3ro
+              </option>
+              <option value="candidate">Candidato específico</option>
+            </select>
+            {!canUseSecondRoundMode ? (
+              <small className="global-controls__notice">
+                Sin data suficiente para 2do vs 3ro en este corte.
+              </small>
+            ) : null}
+          </div>
+
+          {analysisMode === "candidate" ? (
+            <div className="control control--candidate">
+              <span>Candidato</span>
+              <select
+                ref={candidateSelectRef}
+                className="global-controls__select"
+                aria-label="Candidato"
+                value={selectedCandidateCode}
+                onChange={(event) => handleCandidateSelect(event.target.value)}
+              >
+                {featuredLegend.map((candidate) => (
+                  <option key={candidate.code} value={candidate.code}>
+                    {formatTitleCase(candidate.label)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+
+          <div className="control">
+            <span>Comparar</span>
+            <select
+              className="global-controls__select"
+              aria-label="Comparar"
+              value={comparisonMode}
+              onChange={(event) => handleComparisonModeChange(event.target.value as ComparisonMode)}
+            >
+              <option value="projected">Proyectado</option>
+              <option value="current">Actual ONPE</option>
+            </select>
+          </div>
+
+          <div className="control control--compact">
+            <span>Otros</span>
+            <button
+              className={`toggle-button ${showOthers ? "is-active" : ""}`}
+              type="button"
+              aria-pressed={showOthers}
+              onClick={handleShowOthersToggle}
+            >
+              {showOthers ? "On" : "Off"}
+            </button>
+          </div>
+
+          <div className="control control--compact">
+            <span>Reset</span>
+            <button className="toggle-button" type="button" onClick={handleGlobalReset}>
+              Reset
+            </button>
+          </div>
+
+          <div className="global-controls__meta">
+            <nav className="global-controls__quick-nav" aria-label="Navegación rápida">
+              <a href="#lectura-regional">Regiones</a>
+              <a href="#lectura-exterior">Exterior</a>
+            </nav>
+          </div>
+        </div>
+      </section>
+
       <section className="content-grid">
         <section className="panel" id="comparativa-central">
           <div className="panel__header">
             <div>
               <p className="eyebrow">Comparativa central</p>
-              <h2>Candidatos destacados + Otros, total elección</h2>
+              <h2>
+                {analysisMode === "second_round"
+                  ? "Disputa por el 2do cupo, total elección"
+                  : "Candidato en foco + Otros, total elección"}
+              </h2>
             </div>
           </div>
 
@@ -1068,57 +1750,29 @@ export default function App() {
                   value={sortKey}
                   onChange={(event) => handleSortChange(event.target.value as SortKey)}
                 >
-                  <option value="gap_2v3">Brecha 2do vs 3ro</option>
-                  <option value="projection">Proyección</option>
-                  <option value="candidate">Candidato</option>
+                  {canUseSecondRoundMode ? <option value="gap_2v3">Brecha 2do vs 3ro</option> : null}
+                  {!canUseSecondRoundMode ? <option value="projection">Proyección</option> : null}
                   <option value="electores">Electores</option>
                   <option value="actas">Actas</option>
                   <option value="participacion">Participación</option>
+                  {analysisMode === "candidate" && canUseSecondRoundMode ? (
+                    <option value="projection">Proyección</option>
+                  ) : null}
+                  {analysisMode === "candidate" ? <option value="candidate">Candidato</option> : null}
                 </select>
               </label>
-
-              <button
-                className={`toggle-button ${showOthers ? "is-active" : ""}`}
-                type="button"
-                onClick={handleShowOthersToggle}
-              >
-                {showOthers ? "Ocultar Otros" : "Mostrar Otros"}
-              </button>
-
-              <div className="control">
-                <span>Columna final</span>
-                <div className="toggle-group" role="tablist" aria-label="Comparación regional">
-                  <button
-                    className={`toggle-button ${regionalComparisonMode === "projected" ? "is-active" : ""
-                      }`}
-                    type="button"
-                    onClick={() => handleRegionalModeChange("projected")}
-                  >
-                    Proyectado
-                  </button>
-                  <button
-                    className={`toggle-button ${regionalComparisonMode === "current" ? "is-active" : ""
-                      }`}
-                    type="button"
-                    onClick={() => handleRegionalModeChange("current")}
-                  >
-                    Actual ONPE
-                  </button>
-                </div>
-              </div>
+              <label className="control">
+                <span>Buscar región</span>
+                <input
+                  type="search"
+                  value={regionSearchQuery}
+                  onInput={(event) =>
+                    setRegionSearchQuery((event.target as HTMLInputElement).value)
+                  }
+                  placeholder="Ej. Arequipa"
+                />
+              </label>
             </div>
-          </div>
-
-          <div className="candidate-pill-row">
-            {featuredLegend.map((candidate) => (
-              <CandidatePill
-                key={candidate.code}
-                code={candidate.code}
-                label={candidate.label}
-                active={candidate.code === selectedCode}
-                onClick={handleCandidateSelect}
-              />
-            ))}
           </div>
 
           <div className="table-shell">
@@ -1137,15 +1791,8 @@ export default function App() {
               </thead>
               <tbody>
                 {sortedRegions.map((region) => {
-                  const selectedComparison = buildScopeComparisonItem(region, selectedCode);
                   const isExpanded = expandedRegionId === region.scopeId;
-                  const isProjectedMode = regionalComparisonMode === "projected";
-                  const comparisonVotes = isProjectedMode
-                    ? selectedComparison.projectedVotes
-                    : selectedComparison.actualVotes;
-                  const comparisonPercentage = isProjectedMode
-                    ? selectedComparison.projectedPercentage
-                    : selectedComparison.actualPercentage;
+                  const comparisonDisplay = getScopeComparisonDisplay(region);
 
                   return (
                     <Fragment key={region.scopeId}>
@@ -1168,11 +1815,10 @@ export default function App() {
                         </td>
                         <td data-label={selectedComparisonLabel}>
                           <div className="comparison-cell">
-                            <strong>{formatNumber(comparisonVotes)}</strong>
-                            <span>{formatPercent(comparisonPercentage, 2)}</span>
+                            <strong>{comparisonDisplay.votes}</strong>
+                            <span>{comparisonDisplay.percentage}</span>
                             <small>
-                              {formatTitleCase(selectedComparison.label)} ·{" "}
-                              {isProjectedMode ? "Proyectado" : "Actual ONPE"}
+                              {comparisonDisplay.detail}
                             </small>
                           </div>
                         </td>
@@ -1205,9 +1851,11 @@ export default function App() {
                               itemPluralLabel="provincias"
                               recompositionLabel="La proyección regional se recompone desde sus provincias"
                               scopes={region.provinces}
-                              selectedCode={selectedCode}
+                              analysisMode={analysisMode}
+                              selectedCode={selectedCandidateCode}
                               showOthers={showOthers}
-                              comparisonMode={regionalComparisonMode}
+                              comparisonMode={comparisonMode}
+                              secondRoundCodes={secondRoundCodes}
                             />
                           </td>
                         </tr>
@@ -1220,7 +1868,7 @@ export default function App() {
           </div>
         </section>
 
-        <section className="panel">
+        <section className="panel" id="lectura-exterior">
           <div className="panel__header panel__header--stack">
             <div>
               <p className="eyebrow">Lectura exterior</p>
@@ -1228,48 +1876,18 @@ export default function App() {
             </div>
 
             <div className="controls">
-              <button
-                className={`toggle-button ${showOthers ? "is-active" : ""}`}
-                type="button"
-                onClick={handleShowOthersToggle}
-              >
-                {showOthers ? "Ocultar Otros" : "Mostrar Otros"}
-              </button>
-
-              <div className="control">
-                <span>Columna final</span>
-                <div className="toggle-group" role="tablist" aria-label="Comparación extranjero">
-                  <button
-                    className={`toggle-button ${regionalComparisonMode === "projected" ? "is-active" : ""
-                      }`}
-                    type="button"
-                    onClick={() => handleRegionalModeChange("projected")}
-                  >
-                    Proyectado
-                  </button>
-                  <button
-                    className={`toggle-button ${regionalComparisonMode === "current" ? "is-active" : ""
-                      }`}
-                    type="button"
-                    onClick={() => handleRegionalModeChange("current")}
-                  >
-                    Actual ONPE
-                  </button>
-                </div>
-              </div>
+              <label className="control">
+                <span>Buscar continente o país</span>
+                <input
+                  type="search"
+                  value={foreignSearchQuery}
+                  onInput={(event) =>
+                    setForeignSearchQuery((event.target as HTMLInputElement).value)
+                  }
+                  placeholder="Ej. Europa o España"
+                />
+              </label>
             </div>
-          </div>
-
-          <div className="candidate-pill-row">
-            {featuredLegend.map((candidate) => (
-              <CandidatePill
-                key={`foreign-${candidate.code}`}
-                code={candidate.code}
-                label={candidate.label}
-                active={candidate.code === selectedCode}
-                onClick={handleCandidateSelect}
-              />
-            ))}
           </div>
 
           <div className="table-shell">
@@ -1286,15 +1904,8 @@ export default function App() {
               </thead>
               <tbody>
                 {sortedContinents.map((continent) => {
-                  const selectedComparison = buildScopeComparisonItem(continent, selectedCode);
                   const isExpanded = expandedContinentId === continent.scopeId;
-                  const isProjectedMode = regionalComparisonMode === "projected";
-                  const comparisonVotes = isProjectedMode
-                    ? selectedComparison.projectedVotes
-                    : selectedComparison.actualVotes;
-                  const comparisonPercentage = isProjectedMode
-                    ? selectedComparison.projectedPercentage
-                    : selectedComparison.actualPercentage;
+                  const comparisonDisplay = getScopeComparisonDisplay(continent);
 
                   return (
                     <Fragment key={continent.scopeId}>
@@ -1317,11 +1928,10 @@ export default function App() {
                         </td>
                         <td data-label={selectedComparisonLabel}>
                           <div className="comparison-cell">
-                            <strong>{formatNumber(comparisonVotes)}</strong>
-                            <span>{formatPercent(comparisonPercentage, 2)}</span>
+                            <strong>{comparisonDisplay.votes}</strong>
+                            <span>{comparisonDisplay.percentage}</span>
                             <small>
-                              {formatTitleCase(selectedComparison.label)} ·{" "}
-                              {isProjectedMode ? "Proyectado" : "Actual ONPE"}
+                              {comparisonDisplay.detail}
                             </small>
                           </div>
                         </td>
@@ -1357,9 +1967,11 @@ export default function App() {
                               itemPluralLabel="países"
                               recompositionLabel="La proyección continental se recompone desde sus países"
                               scopes={continent.countries ?? []}
-                              selectedCode={selectedCode}
+                              analysisMode={analysisMode}
+                              selectedCode={selectedCandidateCode}
                               showOthers={showOthers}
-                              comparisonMode={regionalComparisonMode}
+                              comparisonMode={comparisonMode}
+                              secondRoundCodes={secondRoundCodes}
                             />
                           </td>
                         </tr>

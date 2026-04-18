@@ -523,8 +523,8 @@ describe("App hero clarity and first action", () => {
     expect(container.textContent).toContain("Actas Perú:");
     expect(container.textContent).toContain("Actas exterior:");
     expect(container.textContent).toContain("Delta proyección:");
+    expect(container.textContent).toContain("Ver detalle 2do vs 3ro");
     expect(container.textContent).not.toContain("Disputa por el 2do cupo:");
-    expect(container.textContent).not.toContain("Ver detalle 2do vs 3ro");
 
     const primaryCta = container.querySelector('a[href="#lectura-regional"]');
     const secondaryCta = container.querySelector('a[href="#metodologia"]');
@@ -568,6 +568,263 @@ describe("App hero clarity and first action", () => {
       label: "ver_metodologia",
       section_target: "metodologia"
     });
+  });
+
+  it("aplica defaults globales y permite cambiar a candidato específico", async () => {
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const analysisSelect = container.querySelector('select[aria-label="Analizar"]') as HTMLSelectElement;
+    const othersButton = Array.from(container.querySelectorAll("button")).find((button) =>
+      button.textContent?.trim() === "Off"
+    ) as HTMLButtonElement;
+
+    expect(container.querySelector('select[aria-label="Candidato"]')).toBeNull();
+    expect(othersButton).not.toBeNull();
+    expect(othersButton.className).not.toContain("is-active");
+
+    await act(async () => {
+      analysisSelect.value = "candidate";
+      analysisSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    expect(container.querySelector('select[aria-label="Candidato"]')).not.toBeNull();
+    expect(trackEventMock).toHaveBeenCalledWith(
+      "global_control_change",
+      expect.objectContaining({
+        control_name: "analysis_mode",
+        previous_value: "second_round",
+        next_value: "candidate",
+        source: "global_bar"
+      })
+    );
+  });
+
+  it("CTA de quick insights fuerza estado global 2do vs 3ro + proyectado", async () => {
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const analysisSelect = container.querySelector('select[aria-label="Analizar"]') as HTMLSelectElement;
+    const comparisonSelect = container.querySelector('select[aria-label="Comparar"]') as HTMLSelectElement;
+
+    await act(async () => {
+      analysisSelect.value = "candidate";
+      analysisSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    await act(async () => {
+      comparisonSelect.value = "current";
+      comparisonSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    trackEventMock.mockClear();
+
+    const quickInsightCta = container.querySelector(
+      'a.quick-insights__cta[href="#comparativa-central"]'
+    ) as HTMLAnchorElement;
+
+    await act(async () => {
+      quickInsightCta.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(analysisSelect.value).toBe("second_round");
+    expect(comparisonSelect.value).toBe("projected");
+    expect(trackEventMock).toHaveBeenCalledWith(
+      "global_control_change",
+      expect.objectContaining({
+        control_name: "analysis_mode",
+        source: "quick_insight_cta"
+      })
+    );
+    expect(trackEventMock).toHaveBeenCalledWith(
+      "global_control_change",
+      expect.objectContaining({
+        control_name: "comparison_mode",
+        source: "quick_insight_cta"
+      })
+    );
+  });
+
+  it("registra impresión de controles con modo efectivo candidate cuando no hay segunda vuelta disponible", async () => {
+    const snapshotWithoutRank3 = createSnapshot();
+    snapshotWithoutRank3.national.featuredCandidates =
+      snapshotWithoutRank3.national.featuredCandidates.slice(0, 2);
+    snapshotWithoutRank3.foreign.featuredCandidates =
+      snapshotWithoutRank3.foreign.featuredCandidates.slice(0, 2);
+    snapshotWithoutRank3.projectedNational = {
+      ...snapshotWithoutRank3.projectedNational,
+      projectedVotes: {
+        "8": 1200,
+        "10": 900,
+        otros: 400
+      },
+      projectedPercentages: {
+        "8": 48,
+        "10": 36,
+        otros: 16
+      }
+    };
+    snapshotWithoutRank3.featuredCandidateCodes = ["8", "10"];
+
+    fetchSnapshotMock.mockResolvedValue(snapshotWithoutRank3);
+    refreshSnapshotMock.mockResolvedValue(snapshotWithoutRank3);
+
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(trackEventMock).toHaveBeenCalledWith(
+      "global_controls_impression",
+      expect.objectContaining({
+        analysis_mode: "candidate",
+        comparison_mode: "projected",
+        show_others: false,
+        snapshot_generated_at: snapshotWithoutRank3.generatedAt
+      })
+    );
+  });
+
+  it("ajusta el CTA de quick insights cuando no hay modo 2do vs 3ro disponible", async () => {
+    const snapshotWithoutRank3 = createSnapshot();
+    snapshotWithoutRank3.national.featuredCandidates =
+      snapshotWithoutRank3.national.featuredCandidates.slice(0, 2);
+    snapshotWithoutRank3.foreign.featuredCandidates =
+      snapshotWithoutRank3.foreign.featuredCandidates.slice(0, 2);
+    snapshotWithoutRank3.projectedNational = {
+      ...snapshotWithoutRank3.projectedNational,
+      projectedVotes: {
+        "8": 1200,
+        "10": 900,
+        otros: 400
+      },
+      projectedPercentages: {
+        "8": 48,
+        "10": 36,
+        otros: 16
+      }
+    };
+    snapshotWithoutRank3.featuredCandidateCodes = ["8", "10"];
+
+    fetchSnapshotMock.mockResolvedValue(snapshotWithoutRank3);
+    refreshSnapshotMock.mockResolvedValue(snapshotWithoutRank3);
+
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const analysisSelect = container.querySelector('select[aria-label="Analizar"]') as HTMLSelectElement;
+    const comparisonSelect = container.querySelector('select[aria-label="Comparar"]') as HTMLSelectElement;
+    const quickInsightCta = container.querySelector(
+      'a.quick-insights__cta[href="#comparativa-central"]'
+    ) as HTMLAnchorElement;
+
+    expect(quickInsightCta.textContent).toContain("Ver comparativa general");
+    expect(container.textContent).not.toContain("Ver detalle 2do vs 3ro");
+
+    trackEventMock.mockClear();
+
+    await act(async () => {
+      quickInsightCta.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(analysisSelect.value).toBe("candidate");
+    expect(comparisonSelect.value).toBe("projected");
+    expect(trackEventMock).not.toHaveBeenCalledWith(
+      "global_control_change",
+      expect.objectContaining({
+        control_name: "analysis_mode",
+        source: "quick_insight_cta"
+      })
+    );
+    expect(trackEventMock).toHaveBeenCalledWith(
+      "quick_insight_detail_cta_click",
+      expect.objectContaining({
+        target_mode: "candidate"
+      })
+    );
+  });
+
+  it("aplica búsqueda local en regiones y exterior", async () => {
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const regionSearch = container.querySelector('input[placeholder="Ej. Arequipa"]') as HTMLInputElement;
+    const foreignSearch = container.querySelector(
+      'input[placeholder="Ej. Europa o España"]'
+    ) as HTMLInputElement;
+
+    await act(async () => {
+      regionSearch.value = "lima";
+      regionSearch.dispatchEvent(new Event("input", { bubbles: true }));
+      regionSearch.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    expect(container.textContent).toContain("LIMA");
+    expect(container.textContent).not.toContain("AREQUIPA");
+
+    await act(async () => {
+      foreignSearch.value = "europa";
+      foreignSearch.dispatchEvent(new Event("input", { bubbles: true }));
+      foreignSearch.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    expect(container.textContent).toContain("EUROPA");
+    expect(container.textContent).not.toContain("AMÉRICA");
+  });
+
+  it("selecciona candidato desde la barra global", async () => {
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const analysisSelect = container.querySelector('select[aria-label="Analizar"]') as HTMLSelectElement;
+
+    await act(async () => {
+      analysisSelect.value = "candidate";
+      analysisSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    const candidateSelect = container.querySelector('select[aria-label="Candidato"]') as HTMLSelectElement;
+
+    await act(async () => {
+      candidateSelect.value = "12";
+      candidateSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    expect(trackEventMock).toHaveBeenCalledWith(
+      "select_candidate_focus",
+      expect.objectContaining({
+        candidate_code: "12",
+        source: "global_bar"
+      })
+    );
   });
 
   it("registra impresión, estado y contexto del módulo quick insights", async () => {
@@ -814,6 +1071,203 @@ describe("App hero clarity and first action", () => {
     expect(container.textContent).toContain("Candidato B");
   });
 
+  it("mantiene fallback de brecha 2do vs 3ro cuando el rank3 proyectado no es featured", async () => {
+    const fallbackSnapshot = createSnapshot();
+    fallbackSnapshot.national.candidates = [
+      {
+        code: "8",
+        partyName: "PARTIDO A",
+        candidateName: "CANDIDATA A",
+        votesValid: 400,
+        pctValid: 40,
+        pctEmitted: 35
+      },
+      {
+        code: "10",
+        partyName: "PARTIDO B",
+        candidateName: "CANDIDATO B",
+        votesValid: 300,
+        pctValid: 30,
+        pctEmitted: 26
+      },
+      {
+        code: "21",
+        partyName: "PARTIDO D",
+        candidateName: "CANDIDATO D",
+        votesValid: 248,
+        pctValid: 24.8,
+        pctEmitted: 21
+      }
+    ];
+    fallbackSnapshot.projectedNational = {
+      ...fallbackSnapshot.projectedNational,
+      projectedVotes: {
+        "8": 1200,
+        "10": 780,
+        "21": 760,
+        otros: 260
+      },
+      projectedPercentages: {
+        "8": 40,
+        "10": 26,
+        "21": 25.333,
+        otros: 8.667
+      }
+    };
+    fallbackSnapshot.regions = [
+      createRegion({
+        candidates: [
+          {
+            code: "8",
+            partyName: "PARTIDO A",
+            candidateName: "CANDIDATA A",
+            votesValid: 400,
+            pctValid: 40,
+            pctEmitted: 35
+          },
+          {
+            code: "10",
+            partyName: "PARTIDO B",
+            candidateName: "CANDIDATO B",
+            votesValid: 280,
+            pctValid: 28,
+            pctEmitted: 25
+          },
+          {
+            code: "21",
+            partyName: "PARTIDO D",
+            candidateName: "CANDIDATO D",
+            votesValid: 320,
+            pctValid: 32,
+            pctEmitted: 28
+          }
+        ],
+        projectedVotes: {
+          "8": 600,
+          "10": 350,
+          "12": 310,
+          otros: 250
+        }
+      })
+    ];
+
+    fetchSnapshotMock.mockResolvedValue(fallbackSnapshot);
+    refreshSnapshotMock.mockResolvedValue(fallbackSnapshot);
+
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const featuredBars = container.querySelector(".featured-bars");
+
+    expect(container.textContent).toContain("-50");
+    expect(container.textContent).toContain("-3.31 pp");
+    expect(featuredBars?.textContent).toContain("Candidato B");
+    expect(featuredBars?.textContent).toContain("Candidato D");
+  });
+
+  it('excluye contendores 2do vs 3ro no featured del agregado "Otros" en la comparativa central', async () => {
+    const fallbackSnapshot = createSnapshot();
+    fallbackSnapshot.national.candidates = [
+      {
+        code: "8",
+        partyName: "PARTIDO A",
+        candidateName: "CANDIDATA A",
+        votesValid: 400,
+        pctValid: 40,
+        pctEmitted: 35
+      },
+      {
+        code: "10",
+        partyName: "PARTIDO B",
+        candidateName: "CANDIDATO B",
+        votesValid: 300,
+        pctValid: 30,
+        pctEmitted: 26
+      },
+      {
+        code: "21",
+        partyName: "PARTIDO D",
+        candidateName: "CANDIDATO D",
+        votesValid: 248,
+        pctValid: 24.8,
+        pctEmitted: 21
+      }
+    ];
+    fallbackSnapshot.national.otros = {
+      code: "otros",
+      label: "Otros",
+      votesValid: 248,
+      pctValid: 24.8,
+      pctEmitted: 21
+    };
+    fallbackSnapshot.foreign = {
+      ...fallbackSnapshot.foreign,
+      totalVotosValidos: 0,
+      totalVotosEmitidos: 0,
+      candidates: fallbackSnapshot.foreign.featuredCandidates.map((candidate) => ({ ...candidate })),
+      featuredCandidates: [],
+      otros: {
+        code: "otros",
+        label: "Otros",
+        votesValid: 0,
+        pctValid: 0,
+        pctEmitted: 0
+      },
+      projectedVotes: {
+        otros: 0
+      },
+      continents: []
+    };
+    fallbackSnapshot.projectedNational = {
+      ...fallbackSnapshot.projectedNational,
+      totalProjectedValidVotes: 1185,
+      projectedVotes: {
+        "8": 500,
+        "10": 375,
+        otros: 310
+      },
+      projectedPercentages: {
+        "8": 42.194,
+        "10": 31.646,
+        otros: 26.16
+      }
+    };
+
+    fetchSnapshotMock.mockResolvedValue(fallbackSnapshot);
+    refreshSnapshotMock.mockResolvedValue(fallbackSnapshot);
+
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const othersButton = Array.from(container.querySelectorAll("button")).find((button) =>
+      button.textContent?.trim() === "Off"
+    ) as HTMLButtonElement;
+
+    await act(async () => {
+      othersButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    const featuredBars = container.querySelectorAll(".featured-bar");
+    const featuredBarsText = Array.from(featuredBars)
+      .map((bar) => bar.textContent ?? "")
+      .join(" ");
+
+    expect(featuredBars).toHaveLength(2);
+    expect(featuredBarsText).toContain("Candidato B");
+    expect(featuredBarsText).toContain("Candidato D");
+    expect(featuredBarsText).not.toContain("Otros");
+  });
+
   it("muestra estado no disponible cuando no hay 3 candidatos para el corte", async () => {
     const snapshotWithoutRank3 = createSnapshot();
     snapshotWithoutRank3.national.featuredCandidates =
@@ -847,6 +1301,13 @@ describe("App hero clarity and first action", () => {
     });
 
     expect(container.textContent).toContain("Insight no disponible");
+    const sortSelect = Array.from(container.querySelectorAll("select")).find((select) =>
+      select.parentElement?.textContent?.includes("Ordenar por")
+    ) as HTMLSelectElement;
+    const sortOptions = Array.from(sortSelect.options).map((option) => option.value);
+
+    expect(sortSelect.value).toBe("projection");
+    expect(sortOptions).not.toContain("gap_2v3");
   });
 });
 

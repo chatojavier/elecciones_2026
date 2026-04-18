@@ -1092,6 +1092,13 @@ describe("App hero clarity and first action", () => {
     });
 
     expect(container.textContent).toContain("Insight no disponible");
+    const sortSelect = Array.from(container.querySelectorAll("select")).find((select) =>
+      select.parentElement?.textContent?.includes("Ordenar por")
+    ) as HTMLSelectElement;
+    const sortOptions = Array.from(sortSelect.options).map((option) => option.value);
+
+    expect(sortSelect.value).toBe("projection");
+    expect(sortOptions).not.toContain("gap_2v3");
   });
 });
 

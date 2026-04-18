@@ -50,6 +50,7 @@ const DEFAULT_ANALYSIS_MODE: AnalysisMode = "second_round";
 const DEFAULT_COMPARISON_MODE: ComparisonMode = "projected";
 const DEFAULT_SHOW_OTHERS = false;
 const DEFAULT_REGION_SORT: SortKey = "gap_2v3";
+const FALLBACK_REGION_SORT: SortKey = "projection";
 
 function FeaturedBar({
   item
@@ -1073,6 +1074,14 @@ export default function App() {
   }, [canUseSecondRoundMode, snapshot]);
 
   useEffect(() => {
+    if (canUseSecondRoundMode || sortKey !== "gap_2v3") {
+      return;
+    }
+
+    setSortKey(FALLBACK_REGION_SORT);
+  }, [canUseSecondRoundMode, sortKey]);
+
+  useEffect(() => {
     if (analysisMode !== "candidate") {
       return;
     }
@@ -1161,6 +1170,7 @@ export default function App() {
 
   function handleGlobalReset() {
     const nextAnalysisMode: AnalysisMode = canUseSecondRoundMode ? DEFAULT_ANALYSIS_MODE : "candidate";
+    const nextSortKey = canUseSecondRoundMode ? DEFAULT_REGION_SORT : FALLBACK_REGION_SORT;
     trackGlobalControlChange("reset", "custom_state", "editorial_defaults");
     trackGlobalControlChange("analysis_mode", analysisMode, nextAnalysisMode);
     trackGlobalControlChange("comparison_mode", comparisonMode, DEFAULT_COMPARISON_MODE);
@@ -1168,7 +1178,7 @@ export default function App() {
     setAnalysisMode(nextAnalysisMode);
     setComparisonMode(DEFAULT_COMPARISON_MODE);
     setShowOthers(DEFAULT_SHOW_OTHERS);
-    setSortKey(DEFAULT_REGION_SORT);
+    setSortKey(nextSortKey);
   }
 
   function handleQuickInsightDetailClick() {
@@ -1635,11 +1645,14 @@ export default function App() {
                   value={sortKey}
                   onChange={(event) => handleSortChange(event.target.value as SortKey)}
                 >
-                  <option value="gap_2v3">Brecha 2do vs 3ro</option>
+                  {canUseSecondRoundMode ? <option value="gap_2v3">Brecha 2do vs 3ro</option> : null}
+                  {!canUseSecondRoundMode ? <option value="projection">Proyección</option> : null}
                   <option value="electores">Electores</option>
                   <option value="actas">Actas</option>
                   <option value="participacion">Participación</option>
-                  {analysisMode === "candidate" ? <option value="projection">Proyección</option> : null}
+                  {analysisMode === "candidate" && canUseSecondRoundMode ? (
+                    <option value="projection">Proyección</option>
+                  ) : null}
                   {analysisMode === "candidate" ? <option value="candidate">Candidato</option> : null}
                 </select>
               </label>

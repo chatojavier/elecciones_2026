@@ -523,8 +523,8 @@ describe("App hero clarity and first action", () => {
     expect(container.textContent).toContain("Actas Perú:");
     expect(container.textContent).toContain("Actas exterior:");
     expect(container.textContent).toContain("Delta proyección:");
+    expect(container.textContent).toContain("Ver detalle 2do vs 3ro");
     expect(container.textContent).not.toContain("Disputa por el 2do cupo:");
-    expect(container.textContent).not.toContain("Ver detalle 2do vs 3ro");
 
     const primaryCta = container.querySelector('a[href="#lectura-regional"]');
     const secondaryCta = container.querySelector('a[href="#metodologia"]');
@@ -568,6 +568,156 @@ describe("App hero clarity and first action", () => {
       label: "ver_metodologia",
       section_target: "metodologia"
     });
+  });
+
+  it("aplica defaults globales y permite cambiar a candidato específico", async () => {
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const analysisSelect = container.querySelector('select[aria-label="Analizar"]') as HTMLSelectElement;
+    const othersButton = Array.from(container.querySelectorAll("button")).find((button) =>
+      button.textContent?.trim() === "Off"
+    ) as HTMLButtonElement;
+
+    expect(container.querySelector('select[aria-label="Candidato"]')).toBeNull();
+    expect(othersButton).not.toBeNull();
+    expect(othersButton.className).not.toContain("is-active");
+
+    await act(async () => {
+      analysisSelect.value = "candidate";
+      analysisSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    expect(container.querySelector('select[aria-label="Candidato"]')).not.toBeNull();
+    expect(trackEventMock).toHaveBeenCalledWith(
+      "global_control_change",
+      expect.objectContaining({
+        control_name: "analysis_mode",
+        previous_value: "second_round",
+        next_value: "candidate",
+        source: "global_bar"
+      })
+    );
+  });
+
+  it("CTA de quick insights fuerza estado global 2do vs 3ro + proyectado", async () => {
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const analysisSelect = container.querySelector('select[aria-label="Analizar"]') as HTMLSelectElement;
+    const comparisonSelect = container.querySelector('select[aria-label="Comparar"]') as HTMLSelectElement;
+
+    await act(async () => {
+      analysisSelect.value = "candidate";
+      analysisSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    await act(async () => {
+      comparisonSelect.value = "current";
+      comparisonSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    trackEventMock.mockClear();
+
+    const quickInsightCta = container.querySelector(
+      'a.quick-insights__cta[href="#comparativa-central"]'
+    ) as HTMLAnchorElement;
+
+    await act(async () => {
+      quickInsightCta.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(analysisSelect.value).toBe("second_round");
+    expect(comparisonSelect.value).toBe("projected");
+    expect(trackEventMock).toHaveBeenCalledWith(
+      "global_control_change",
+      expect.objectContaining({
+        control_name: "analysis_mode",
+        source: "quick_insight_cta"
+      })
+    );
+    expect(trackEventMock).toHaveBeenCalledWith(
+      "global_control_change",
+      expect.objectContaining({
+        control_name: "comparison_mode",
+        source: "quick_insight_cta"
+      })
+    );
+  });
+
+  it("aplica búsqueda local en regiones y exterior", async () => {
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const regionSearch = container.querySelector('input[placeholder="Ej. Arequipa"]') as HTMLInputElement;
+    const foreignSearch = container.querySelector(
+      'input[placeholder="Ej. Europa o España"]'
+    ) as HTMLInputElement;
+
+    await act(async () => {
+      regionSearch.value = "lima";
+      regionSearch.dispatchEvent(new Event("input", { bubbles: true }));
+      regionSearch.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    expect(container.textContent).toContain("LIMA");
+    expect(container.textContent).not.toContain("AREQUIPA");
+
+    await act(async () => {
+      foreignSearch.value = "europa";
+      foreignSearch.dispatchEvent(new Event("input", { bubbles: true }));
+      foreignSearch.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    expect(container.textContent).toContain("EUROPA");
+    expect(container.textContent).not.toContain("AMÉRICA");
+  });
+
+  it("selecciona candidato desde la barra global", async () => {
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const analysisSelect = container.querySelector('select[aria-label="Analizar"]') as HTMLSelectElement;
+
+    await act(async () => {
+      analysisSelect.value = "candidate";
+      analysisSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    const candidateSelect = container.querySelector('select[aria-label="Candidato"]') as HTMLSelectElement;
+
+    await act(async () => {
+      candidateSelect.value = "12";
+      candidateSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    expect(trackEventMock).toHaveBeenCalledWith(
+      "select_candidate_focus",
+      expect.objectContaining({
+        candidate_code: "12",
+        source: "global_bar"
+      })
+    );
   });
 
   it("registra impresión, estado y contexto del módulo quick insights", async () => {

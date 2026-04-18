@@ -964,6 +964,101 @@ describe("App hero clarity and first action", () => {
     expect(container.textContent).toContain("Candidato B");
   });
 
+  it("mantiene fallback de brecha 2do vs 3ro cuando el rank3 proyectado no es featured", async () => {
+    const fallbackSnapshot = createSnapshot();
+    fallbackSnapshot.national.candidates = [
+      {
+        code: "8",
+        partyName: "PARTIDO A",
+        candidateName: "CANDIDATA A",
+        votesValid: 400,
+        pctValid: 40,
+        pctEmitted: 35
+      },
+      {
+        code: "10",
+        partyName: "PARTIDO B",
+        candidateName: "CANDIDATO B",
+        votesValid: 300,
+        pctValid: 30,
+        pctEmitted: 26
+      },
+      {
+        code: "21",
+        partyName: "PARTIDO D",
+        candidateName: "CANDIDATO D",
+        votesValid: 248,
+        pctValid: 24.8,
+        pctEmitted: 21
+      }
+    ];
+    fallbackSnapshot.projectedNational = {
+      ...fallbackSnapshot.projectedNational,
+      projectedVotes: {
+        "8": 1200,
+        "10": 780,
+        "21": 760,
+        otros: 260
+      },
+      projectedPercentages: {
+        "8": 40,
+        "10": 26,
+        "21": 25.333,
+        otros: 8.667
+      }
+    };
+    fallbackSnapshot.regions = [
+      createRegion({
+        candidates: [
+          {
+            code: "8",
+            partyName: "PARTIDO A",
+            candidateName: "CANDIDATA A",
+            votesValid: 400,
+            pctValid: 40,
+            pctEmitted: 35
+          },
+          {
+            code: "10",
+            partyName: "PARTIDO B",
+            candidateName: "CANDIDATO B",
+            votesValid: 280,
+            pctValid: 28,
+            pctEmitted: 25
+          },
+          {
+            code: "21",
+            partyName: "PARTIDO D",
+            candidateName: "CANDIDATO D",
+            votesValid: 320,
+            pctValid: 32,
+            pctEmitted: 28
+          }
+        ],
+        projectedVotes: {
+          "8": 600,
+          "10": 350,
+          "12": 310,
+          otros: 250
+        }
+      })
+    ];
+
+    fetchSnapshotMock.mockResolvedValue(fallbackSnapshot);
+    refreshSnapshotMock.mockResolvedValue(fallbackSnapshot);
+
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(container.textContent).toContain("-50");
+    expect(container.textContent).toContain("-2.62 pp");
+  });
+
   it("muestra estado no disponible cuando no hay 3 candidatos para el corte", async () => {
     const snapshotWithoutRank3 = createSnapshot();
     snapshotWithoutRank3.national.featuredCandidates =

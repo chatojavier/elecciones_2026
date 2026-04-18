@@ -10,6 +10,7 @@ import {
   buildSecondRoundInsight,
   buildNationalComparisonItems,
   buildScopeComparisonItem,
+  getScopeSecondRoundGapVotes,
   type ComparisonItem,
   type ComparisonMode,
   type SecondRoundStatusLevel
@@ -242,7 +243,38 @@ function buildCurrentSecondRoundInsight(snapshot: ElectionSnapshot) {
 }
 
 function getScopeProjectedTotalVotes(scope: ComparableScope) {
-  return Object.values(scope.projectedVotes).reduce((sum, votes) => sum + votes, 0);
+  const projectedVotesTotal = Object.values(scope.projectedVotes).reduce((sum, votes) => sum + votes, 0);
+  const fallbackProjectedVotes = scope.candidates.reduce((sum, candidate) => {
+    if (candidate.code === "otros" || typeof scope.projectedVotes[candidate.code] === "number") {
+      return sum;
+    }
+
+    if (scope.actasContabilizadasPct <= 0) {
+      return sum;
+    }
+
+    return sum + Math.round(candidate.votesValid / (scope.actasContabilizadasPct / 100));
+  }, 0);
+
+  return projectedVotesTotal + fallbackProjectedVotes;
+}
+
+function getScopeProjectedVotesByCode(scope: ComparableScope, code: string) {
+  const projectedFromScope = scope.projectedVotes[code];
+  if (typeof projectedFromScope === "number") {
+    return projectedFromScope;
+  }
+
+  if (scope.actasContabilizadasPct <= 0) {
+    return 0;
+  }
+
+  const candidate = scope.candidates.find((item) => item.code === code);
+  if (!candidate) {
+    return 0;
+  }
+
+  return Math.round(candidate.votesValid / (scope.actasContabilizadasPct / 100));
 }
 
 function getScopeActualVotesByCode(scope: ComparableScope, code: string) {
@@ -266,13 +298,18 @@ function getScopeSecondRoundGap(
     return null;
   }
 
+  const projectedGapVotes = getScopeSecondRoundGapVotes(
+    scope,
+    secondRoundCodes.rank2Code,
+    secondRoundCodes.rank3Code
+  );
   const rank2Votes =
     comparisonMode === "projected"
-      ? scope.projectedVotes[secondRoundCodes.rank2Code] ?? 0
+      ? projectedGapVotes + getScopeProjectedVotesByCode(scope, secondRoundCodes.rank3Code)
       : getScopeActualVotesByCode(scope, secondRoundCodes.rank2Code);
   const rank3Votes =
     comparisonMode === "projected"
-      ? scope.projectedVotes[secondRoundCodes.rank3Code] ?? 0
+      ? getScopeProjectedVotesByCode(scope, secondRoundCodes.rank3Code)
       : getScopeActualVotesByCode(scope, secondRoundCodes.rank3Code);
   const totalVotes =
     comparisonMode === "projected" ? getScopeProjectedTotalVotes(scope) : scope.totalVotosValidos;

@@ -655,6 +655,113 @@ describe("App hero clarity and first action", () => {
     );
   });
 
+  it("registra impresión de controles con modo efectivo candidate cuando no hay segunda vuelta disponible", async () => {
+    const snapshotWithoutRank3 = createSnapshot();
+    snapshotWithoutRank3.national.featuredCandidates =
+      snapshotWithoutRank3.national.featuredCandidates.slice(0, 2);
+    snapshotWithoutRank3.foreign.featuredCandidates =
+      snapshotWithoutRank3.foreign.featuredCandidates.slice(0, 2);
+    snapshotWithoutRank3.projectedNational = {
+      ...snapshotWithoutRank3.projectedNational,
+      projectedVotes: {
+        "8": 1200,
+        "10": 900,
+        otros: 400
+      },
+      projectedPercentages: {
+        "8": 48,
+        "10": 36,
+        otros: 16
+      }
+    };
+    snapshotWithoutRank3.featuredCandidateCodes = ["8", "10"];
+
+    fetchSnapshotMock.mockResolvedValue(snapshotWithoutRank3);
+    refreshSnapshotMock.mockResolvedValue(snapshotWithoutRank3);
+
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(trackEventMock).toHaveBeenCalledWith(
+      "global_controls_impression",
+      expect.objectContaining({
+        analysis_mode: "candidate",
+        comparison_mode: "projected",
+        show_others: false,
+        snapshot_generated_at: snapshotWithoutRank3.generatedAt
+      })
+    );
+  });
+
+  it("ajusta el CTA de quick insights cuando no hay modo 2do vs 3ro disponible", async () => {
+    const snapshotWithoutRank3 = createSnapshot();
+    snapshotWithoutRank3.national.featuredCandidates =
+      snapshotWithoutRank3.national.featuredCandidates.slice(0, 2);
+    snapshotWithoutRank3.foreign.featuredCandidates =
+      snapshotWithoutRank3.foreign.featuredCandidates.slice(0, 2);
+    snapshotWithoutRank3.projectedNational = {
+      ...snapshotWithoutRank3.projectedNational,
+      projectedVotes: {
+        "8": 1200,
+        "10": 900,
+        otros: 400
+      },
+      projectedPercentages: {
+        "8": 48,
+        "10": 36,
+        otros: 16
+      }
+    };
+    snapshotWithoutRank3.featuredCandidateCodes = ["8", "10"];
+
+    fetchSnapshotMock.mockResolvedValue(snapshotWithoutRank3);
+    refreshSnapshotMock.mockResolvedValue(snapshotWithoutRank3);
+
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const analysisSelect = container.querySelector('select[aria-label="Analizar"]') as HTMLSelectElement;
+    const comparisonSelect = container.querySelector('select[aria-label="Comparar"]') as HTMLSelectElement;
+    const quickInsightCta = container.querySelector(
+      'a.quick-insights__cta[href="#comparativa-central"]'
+    ) as HTMLAnchorElement;
+
+    expect(quickInsightCta.textContent).toContain("Ver comparativa general");
+    expect(container.textContent).not.toContain("Ver detalle 2do vs 3ro");
+
+    trackEventMock.mockClear();
+
+    await act(async () => {
+      quickInsightCta.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(analysisSelect.value).toBe("candidate");
+    expect(comparisonSelect.value).toBe("projected");
+    expect(trackEventMock).not.toHaveBeenCalledWith(
+      "global_control_change",
+      expect.objectContaining({
+        control_name: "analysis_mode",
+        source: "quick_insight_cta"
+      })
+    );
+    expect(trackEventMock).toHaveBeenCalledWith(
+      "quick_insight_detail_cta_click",
+      expect.objectContaining({
+        target_mode: "candidate"
+      })
+    );
+  });
+
   it("aplica búsqueda local en regiones y exterior", async () => {
     await act(async () => {
       root.render(<App />);
@@ -1055,8 +1162,12 @@ describe("App hero clarity and first action", () => {
       await Promise.resolve();
     });
 
+    const featuredBars = container.querySelector(".featured-bars");
+
     expect(container.textContent).toContain("-50");
-    expect(container.textContent).toContain("-2.62 pp");
+    expect(container.textContent).toContain("-3.31 pp");
+    expect(featuredBars?.textContent).toContain("Candidato B");
+    expect(featuredBars?.textContent).toContain("Candidato D");
   });
 
   it("muestra estado no disponible cuando no hay 3 candidatos para el corte", async () => {

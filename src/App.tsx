@@ -244,20 +244,7 @@ function buildCurrentSecondRoundInsight(snapshot: ElectionSnapshot) {
 }
 
 function getScopeProjectedTotalVotes(scope: ComparableScope) {
-  const projectedVotesTotal = Object.values(scope.projectedVotes).reduce((sum, votes) => sum + votes, 0);
-  const fallbackProjectedVotes = scope.candidates.reduce((sum, candidate) => {
-    if (candidate.code === "otros" || typeof scope.projectedVotes[candidate.code] === "number") {
-      return sum;
-    }
-
-    if (scope.actasContabilizadasPct <= 0) {
-      return sum;
-    }
-
-    return sum + Math.round(candidate.votesValid / (scope.actasContabilizadasPct / 100));
-  }, 0);
-
-  return projectedVotesTotal + fallbackProjectedVotes;
+  return Object.values(scope.projectedVotes).reduce((sum, votes) => sum + votes, 0);
 }
 
 function getScopeProjectedVotesByCode(scope: ComparableScope, code: string) {
@@ -288,6 +275,43 @@ function getScopeActualVotesByCode(scope: ComparableScope, code: string) {
     scope.featuredCandidates.find((item) => item.code === code);
 
   return candidate?.votesValid ?? 0;
+}
+
+function getNationalActualVotesByCode(snapshot: ElectionSnapshot, code: string) {
+  const hasFullNationalCandidates = snapshot.national.candidates.length > 0;
+  const hasFullForeignCandidates = snapshot.foreign.candidates.length > 0;
+  const useFullCandidates = hasFullNationalCandidates && hasFullForeignCandidates;
+  const nationalCandidates = useFullCandidates
+    ? snapshot.national.candidates
+    : snapshot.national.featuredCandidates;
+  const foreignCandidates = useFullCandidates
+    ? snapshot.foreign.candidates
+    : snapshot.foreign.featuredCandidates;
+
+  return [...nationalCandidates, ...foreignCandidates]
+    .filter((candidate) => candidate.code === code)
+    .reduce((sum, candidate) => sum + candidate.votesValid, 0);
+}
+
+function buildSecondRoundComparisonItem(
+  snapshot: ElectionSnapshot,
+  candidate: NonNullable<ReturnType<typeof buildSecondRoundInsight>["rank2"]>
+): ComparisonItem {
+  const actualVotes = getNationalActualVotesByCode(snapshot, candidate.code);
+  const totalCurrentValidVotes =
+    snapshot.national.totalVotosValidos + snapshot.foreign.totalVotosValidos;
+  const actualPercentage = totalCurrentValidVotes > 0 ? (actualVotes / totalCurrentValidVotes) * 100 : 0;
+
+  return {
+    code: candidate.code,
+    label: candidate.label,
+    actualVotes,
+    actualPercentage,
+    projectedVotes: candidate.projectedVotes,
+    projectedPercentage: candidate.projectedPercentage,
+    deltaVotes: candidate.projectedVotes - actualVotes,
+    deltaPercentage: Number((candidate.projectedPercentage - actualPercentage).toFixed(3))
+  };
 }
 
 function getScopeSecondRoundGap(
@@ -951,25 +975,25 @@ export default function App() {
   }, [snapshot]);
 
   const featuredComparisonBars = useMemo(() => {
-    const featuredBars = nationalComparisonItems.filter((item) => item.code !== "otros");
-
     if (analysisMode === "candidate") {
+      const featuredBars = nationalComparisonItems.filter((item) => item.code !== "otros");
       return featuredBars.filter((item) => item.code === selectedCandidateCode);
     }
 
-    if (!secondRoundCodes) {
-      return featuredBars;
+    if (!snapshot || !secondRoundInsight?.rank2 || !secondRoundInsight.rank3) {
+      return [];
     }
 
-    return featuredBars.filter(
-      (item) => item.code === secondRoundCodes.rank2Code || item.code === secondRoundCodes.rank3Code
+    return [secondRoundInsight.rank2, secondRoundInsight.rank3].map((candidate) =>
+      buildSecondRoundComparisonItem(snapshot, candidate)
     );
-  }, [analysisMode, nationalComparisonItems, secondRoundCodes, selectedCandidateCode]);
+  }, [analysisMode, nationalComparisonItems, secondRoundInsight, selectedCandidateCode, snapshot]);
 
   const othersBar = snapshot
     ? nationalComparisonItems.find((item) => item.code === "otros") ?? null
     : null;
   const canUseSecondRoundMode = Boolean(secondRoundCodes);
+  const effectiveAnalysisMode: AnalysisMode = canUseSecondRoundMode ? analysisMode : "candidate";
   const selectedComparisonLabel =
     analysisMode === "second_round"
       ? `Brecha 2do vs 3ro (${comparisonMode === "projected" ? "Proyectado" : "Actual ONPE"})`
@@ -1042,13 +1066,13 @@ export default function App() {
     }
 
     trackEvent("global_controls_impression", {
-      analysis_mode: analysisMode,
+      analysis_mode: effectiveAnalysisMode,
       comparison_mode: comparisonMode,
       show_others: showOthers,
       snapshot_generated_at: snapshot.generatedAt
     });
     globalControlsImpressionRef.current = snapshot.generatedAt;
-  }, [analysisMode, comparisonMode, showOthers, snapshot]);
+  }, [comparisonMode, effectiveAnalysisMode, showOthers, snapshot]);
 
   useEffect(() => {
     if (!snapshot) {
@@ -1182,11 +1206,15 @@ export default function App() {
   }
 
   function handleQuickInsightDetailClick() {
-    handleAnalysisModeChange("second_round", "quick_insight_cta");
+    if (canUseSecondRoundMode) {
+      handleAnalysisModeChange("second_round", "quick_insight_cta");
+    }
+
     handleComparisonModeChange("projected", "quick_insight_cta");
     trackEvent("quick_insight_detail_cta_click", {
       source: "quick_insights",
-      section_target: "comparativa-central"
+      section_target: "comparativa-central",
+      target_mode: canUseSecondRoundMode ? "second_round" : "candidate"
     });
   }
 
@@ -1435,7 +1463,7 @@ export default function App() {
             href="#comparativa-central"
             onClick={handleQuickInsightDetailClick}
           >
-            Ver detalle 2do vs 3ro
+            {canUseSecondRoundMode ? "Ver detalle 2do vs 3ro" : "Ver comparativa general"}
           </a>
         </div>
 

@@ -314,6 +314,73 @@ function buildSecondRoundComparisonItem(
   };
 }
 
+function getNationalProjectedVotesByCode(
+  snapshot: ElectionSnapshot,
+  secondRoundInsight: ReturnType<typeof buildSecondRoundInsight>,
+  code: string
+) {
+  const projectedFromSummary = snapshot.projectedNational.projectedVotes[code];
+  if (typeof projectedFromSummary === "number") {
+    return projectedFromSummary;
+  }
+
+  const runoffCandidate = [secondRoundInsight?.rank2, secondRoundInsight?.rank3].find(
+    (candidate) => candidate?.code === code
+  );
+
+  return runoffCandidate?.projectedVotes ?? 0;
+}
+
+function buildSecondRoundOthersBar(
+  snapshot: ElectionSnapshot,
+  baseOthersBar: ComparisonItem | null,
+  secondRoundInsight: ReturnType<typeof buildSecondRoundInsight> | null
+) {
+  if (!baseOthersBar || !secondRoundInsight?.rank2 || !secondRoundInsight.rank3) {
+    return baseOthersBar;
+  }
+
+  const runoffCandidates = [secondRoundInsight.rank2, secondRoundInsight.rank3].filter(
+    (candidate) => !snapshot.featuredCandidateCodes.includes(candidate.code)
+  );
+
+  if (runoffCandidates.length === 0) {
+    return baseOthersBar;
+  }
+
+  const totalCurrentValidVotes =
+    snapshot.national.totalVotosValidos + snapshot.foreign.totalVotosValidos;
+  const totalProjectedValidVotes = snapshot.projectedNational.totalProjectedValidVotes;
+  const excludedActualVotes = runoffCandidates.reduce(
+    (sum, candidate) => sum + getNationalActualVotesByCode(snapshot, candidate.code),
+    0
+  );
+  const excludedProjectedVotes = runoffCandidates.reduce(
+    (sum, candidate) => sum + getNationalProjectedVotesByCode(snapshot, secondRoundInsight, candidate.code),
+    0
+  );
+  const actualVotes = Math.max(0, baseOthersBar.actualVotes - excludedActualVotes);
+  const projectedVotes = Math.max(0, baseOthersBar.projectedVotes - excludedProjectedVotes);
+
+  if (actualVotes === 0 && projectedVotes === 0) {
+    return null;
+  }
+
+  const actualPercentage = totalCurrentValidVotes > 0 ? (actualVotes / totalCurrentValidVotes) * 100 : 0;
+  const projectedPercentage = totalProjectedValidVotes > 0 ? (projectedVotes / totalProjectedValidVotes) * 100 : 0;
+
+  return {
+    code: "otros",
+    label: "Otros",
+    actualVotes,
+    actualPercentage,
+    projectedVotes,
+    projectedPercentage,
+    deltaVotes: projectedVotes - actualVotes,
+    deltaPercentage: Number((projectedPercentage - actualPercentage).toFixed(3))
+  };
+}
+
 function getScopeSecondRoundGap(
   scope: ComparableScope,
   secondRoundCodes: { rank2Code: string; rank3Code: string } | null,
@@ -989,9 +1056,19 @@ export default function App() {
     );
   }, [analysisMode, nationalComparisonItems, secondRoundInsight, selectedCandidateCode, snapshot]);
 
-  const othersBar = snapshot
-    ? nationalComparisonItems.find((item) => item.code === "otros") ?? null
-    : null;
+  const othersBar = useMemo(() => {
+    if (!snapshot) {
+      return null;
+    }
+
+    const baseOthersBar = nationalComparisonItems.find((item) => item.code === "otros") ?? null;
+
+    if (analysisMode !== "second_round") {
+      return baseOthersBar;
+    }
+
+    return buildSecondRoundOthersBar(snapshot, baseOthersBar, secondRoundInsight);
+  }, [analysisMode, nationalComparisonItems, secondRoundInsight, snapshot]);
   const canUseSecondRoundMode = Boolean(secondRoundCodes);
   const effectiveAnalysisMode: AnalysisMode = canUseSecondRoundMode ? analysisMode : "candidate";
   const selectedComparisonLabel =

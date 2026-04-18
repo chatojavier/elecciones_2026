@@ -1170,6 +1170,104 @@ describe("App hero clarity and first action", () => {
     expect(featuredBars?.textContent).toContain("Candidato D");
   });
 
+  it('excluye contendores 2do vs 3ro no featured del agregado "Otros" en la comparativa central', async () => {
+    const fallbackSnapshot = createSnapshot();
+    fallbackSnapshot.national.candidates = [
+      {
+        code: "8",
+        partyName: "PARTIDO A",
+        candidateName: "CANDIDATA A",
+        votesValid: 400,
+        pctValid: 40,
+        pctEmitted: 35
+      },
+      {
+        code: "10",
+        partyName: "PARTIDO B",
+        candidateName: "CANDIDATO B",
+        votesValid: 300,
+        pctValid: 30,
+        pctEmitted: 26
+      },
+      {
+        code: "21",
+        partyName: "PARTIDO D",
+        candidateName: "CANDIDATO D",
+        votesValid: 248,
+        pctValid: 24.8,
+        pctEmitted: 21
+      }
+    ];
+    fallbackSnapshot.national.otros = {
+      code: "otros",
+      label: "Otros",
+      votesValid: 248,
+      pctValid: 24.8,
+      pctEmitted: 21
+    };
+    fallbackSnapshot.foreign = {
+      ...fallbackSnapshot.foreign,
+      totalVotosValidos: 0,
+      totalVotosEmitidos: 0,
+      candidates: fallbackSnapshot.foreign.featuredCandidates.map((candidate) => ({ ...candidate })),
+      featuredCandidates: [],
+      otros: {
+        code: "otros",
+        label: "Otros",
+        votesValid: 0,
+        pctValid: 0,
+        pctEmitted: 0
+      },
+      projectedVotes: {
+        otros: 0
+      },
+      continents: []
+    };
+    fallbackSnapshot.projectedNational = {
+      ...fallbackSnapshot.projectedNational,
+      totalProjectedValidVotes: 1185,
+      projectedVotes: {
+        "8": 500,
+        "10": 375,
+        otros: 310
+      },
+      projectedPercentages: {
+        "8": 42.194,
+        "10": 31.646,
+        otros: 26.16
+      }
+    };
+
+    fetchSnapshotMock.mockResolvedValue(fallbackSnapshot);
+    refreshSnapshotMock.mockResolvedValue(fallbackSnapshot);
+
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const othersButton = Array.from(container.querySelectorAll("button")).find((button) =>
+      button.textContent?.trim() === "Off"
+    ) as HTMLButtonElement;
+
+    await act(async () => {
+      othersButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    const featuredBars = container.querySelectorAll(".featured-bar");
+    const featuredBarsText = Array.from(featuredBars)
+      .map((bar) => bar.textContent ?? "")
+      .join(" ");
+
+    expect(featuredBars).toHaveLength(2);
+    expect(featuredBarsText).toContain("Candidato B");
+    expect(featuredBarsText).toContain("Candidato D");
+    expect(featuredBarsText).not.toContain("Otros");
+  });
+
   it("muestra estado no disponible cuando no hay 3 candidatos para el corte", async () => {
     const snapshotWithoutRank3 = createSnapshot();
     snapshotWithoutRank3.national.featuredCandidates =

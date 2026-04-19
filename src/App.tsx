@@ -278,15 +278,14 @@ function getScopeActualVotesByCode(scope: ComparableScope, code: string) {
 }
 
 function getNationalActualVotesByCode(snapshot: ElectionSnapshot, code: string) {
-  const hasFullNationalCandidates = snapshot.national.candidates.length > 0;
-  const hasFullForeignCandidates = snapshot.foreign.candidates.length > 0;
-  const useFullCandidates = hasFullNationalCandidates && hasFullForeignCandidates;
-  const nationalCandidates = useFullCandidates
-    ? snapshot.national.candidates
-    : snapshot.national.featuredCandidates;
-  const foreignCandidates = useFullCandidates
-    ? snapshot.foreign.candidates
-    : snapshot.foreign.featuredCandidates;
+  const nationalCandidates =
+    snapshot.national.candidates.length > 0
+      ? snapshot.national.candidates
+      : snapshot.national.featuredCandidates;
+  const foreignCandidates =
+    snapshot.foreign.candidates.length > 0
+      ? snapshot.foreign.candidates
+      : snapshot.foreign.featuredCandidates;
 
   return [...nationalCandidates, ...foreignCandidates]
     .filter((candidate) => candidate.code === code)
@@ -1236,6 +1235,9 @@ export default function App() {
       return;
     }
 
+    if (nextMode === "second_round" && sortKey === "candidate") {
+      setSortKey(DEFAULT_REGION_SORT);
+    }
     setAnalysisMode((currentMode) => {
       trackGlobalControlChange("analysis_mode", currentMode, nextMode, source);
       return nextMode;

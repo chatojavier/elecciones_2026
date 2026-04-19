@@ -655,6 +655,40 @@ describe("App hero clarity and first action", () => {
     );
   });
 
+  it("normaliza Ordenar por al salir de candidato específico hacia 2do vs 3ro", async () => {
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const analysisSelect = container.querySelector('select[aria-label="Analizar"]') as HTMLSelectElement;
+    const sortSelect = Array.from(container.querySelectorAll("select")).find((select) =>
+      select.parentElement?.textContent?.includes("Ordenar por")
+    ) as HTMLSelectElement;
+
+    await act(async () => {
+      analysisSelect.value = "candidate";
+      analysisSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    await act(async () => {
+      sortSelect.value = "candidate";
+      sortSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    expect(sortSelect.value).toBe("candidate");
+
+    await act(async () => {
+      analysisSelect.value = "second_round";
+      analysisSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    expect(sortSelect.value).toBe("gap_2v3");
+    expect(Array.from(sortSelect.options).map((option) => option.value)).not.toContain("candidate");
+  });
   it("registra impresión de controles con modo efectivo candidate cuando no hay segunda vuelta disponible", async () => {
     const snapshotWithoutRank3 = createSnapshot();
     snapshotWithoutRank3.national.featuredCandidates =
@@ -1168,6 +1202,7 @@ describe("App hero clarity and first action", () => {
     expect(container.textContent).toContain("-3.31 pp");
     expect(featuredBars?.textContent).toContain("Candidato B");
     expect(featuredBars?.textContent).toContain("Candidato D");
+    expect(featuredBars?.textContent).toContain("26.11%");
   });
 
   it('excluye contendores 2do vs 3ro no featured del agregado "Otros" en la comparativa central', async () => {

@@ -689,7 +689,6 @@ describe("App hero clarity and first action", () => {
     expect(sortSelect.value).toBe("gap_2v3");
     expect(Array.from(sortSelect.options).map((option) => option.value)).not.toContain("candidate");
   });
-
   it("registra impresión de controles con modo efectivo candidate cuando no hay segunda vuelta disponible", async () => {
     const snapshotWithoutRank3 = createSnapshot();
     snapshotWithoutRank3.national.featuredCandidates =

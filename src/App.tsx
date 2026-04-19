@@ -1238,7 +1238,6 @@ export default function App() {
     if (nextMode === "second_round" && sortKey === "candidate") {
       setSortKey(DEFAULT_REGION_SORT);
     }
-
     setAnalysisMode((currentMode) => {
       trackGlobalControlChange("analysis_mode", currentMode, nextMode, source);
       return nextMode;

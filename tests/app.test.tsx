@@ -689,6 +689,89 @@ describe("App hero clarity and first action", () => {
     expect(sortSelect.value).toBe("gap_2v3");
     expect(Array.from(sortSelect.options).map((option) => option.value)).not.toContain("candidate");
   });
+
+  it("muestra filtros móviles como overlay sticky sin empujar el layout", async () => {
+    const originalInnerWidth = window.innerWidth;
+
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const globalControls = container.querySelector(".global-controls") as HTMLElement;
+    expect(globalControls).not.toBeNull();
+
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      value: 390
+    });
+
+    Object.defineProperty(globalControls, "getBoundingClientRect", {
+      configurable: true,
+      value: () =>
+        ({
+          top: 24,
+          left: 0,
+          right: 390,
+          bottom: 80,
+          width: 390,
+          height: 56
+        } as DOMRect)
+    });
+
+    await act(async () => {
+      window.dispatchEvent(new Event("resize"));
+    });
+
+    const mobileToggle = container.querySelector(".global-controls__mobile-toggle") as HTMLButtonElement;
+    const mobileSummary = container.querySelector(".global-controls__mobile-summary");
+
+    expect(mobileSummary).not.toBeNull();
+    expect(mobileToggle).not.toBeNull();
+    expect(container.querySelector(".global-controls__mobile-overlay")).toBeNull();
+
+    await act(async () => {
+      mobileToggle.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(container.querySelector(".global-controls__mobile-overlay")).not.toBeNull();
+    expect(document.body.style.overflow).toBe("hidden");
+
+    await act(async () => {
+      mobileToggle.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(container.querySelector(".global-controls__mobile-overlay")).toBeNull();
+    expect(document.body.style.overflow).toBe("");
+
+    Object.defineProperty(globalControls, "getBoundingClientRect", {
+      configurable: true,
+      value: () =>
+        ({
+          top: 0,
+          left: 0,
+          right: 390,
+          bottom: 56,
+          width: 390,
+          height: 56
+        } as DOMRect)
+    });
+
+    await act(async () => {
+      window.dispatchEvent(new Event("scroll"));
+    });
+
+    expect(container.querySelector(".global-controls__mobile-summary")).not.toBeNull();
+
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      value: originalInnerWidth
+    });
+  });
+
   it("registra impresión de controles con modo efectivo candidate cuando no hay segunda vuelta disponible", async () => {
     const snapshotWithoutRank3 = createSnapshot();
     snapshotWithoutRank3.national.featuredCandidates =

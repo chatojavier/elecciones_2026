@@ -765,7 +765,7 @@ export default function App() {
   const [expandedContinentId, setExpandedContinentId] = useState<string | null>(null);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [isMobileControlsSticky, setIsMobileControlsSticky] = useState(false);
-  const [isMobileControlsCollapsed, setIsMobileControlsCollapsed] = useState(false);
+  const [isMobileControlsOverlayOpen, setIsMobileControlsOverlayOpen] = useState(false);
   const [clockNow, setClockNow] = useState(() => Date.now());
   const candidateSelectRef = useRef<HTMLSelectElement | null>(null);
   const globalControlsRef = useRef<HTMLElement | null>(null);
@@ -834,10 +834,8 @@ export default function App() {
       setIsMobileViewport(isMobile);
       setIsMobileControlsSticky(isSticky);
 
-      if (!isMobile || !isSticky) {
-        setIsMobileControlsCollapsed(false);
-      } else if (!previousMobileStickyRef.current && isSticky) {
-        setIsMobileControlsCollapsed(true);
+      if (!isMobile) {
+        setIsMobileControlsOverlayOpen(false);
       }
 
       previousMobileStickyRef.current = isSticky;
@@ -852,6 +850,19 @@ export default function App() {
       window.removeEventListener("resize", syncMobileControlsState);
     };
   }, []);
+
+  useEffect(() => {
+    if (!(isMobileViewport && isMobileControlsOverlayOpen)) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isMobileControlsOverlayOpen, isMobileViewport]);
 
   useEffect(() => {
     if (!snapshot) {
@@ -1298,7 +1309,7 @@ export default function App() {
   }
 
   function handleMobileControlsToggle() {
-    setIsMobileControlsCollapsed((currentValue) => !currentValue);
+    setIsMobileControlsOverlayOpen((currentValue) => !currentValue);
   }
 
   function handleRegionToggle(regionId: string) {
@@ -1424,6 +1435,90 @@ export default function App() {
       : null;
   const mobileComparisonSummary = comparisonMode === "projected" ? "Proyectado" : "Actual ONPE";
   const mobileOthersSummary = showOthers ? "Otros On" : "Otros Off";
+  const showMobileControlsSummary = isMobileViewport;
+  const showMobileControlsOverlay = isMobileViewport && isMobileControlsOverlayOpen;
+  const showInlineGlobalControlsRow = !isMobileViewport;
+  const globalControlsRow = (
+    <div className="global-controls__row">
+      <div className="control">
+        <span>Analizar</span>
+        <select
+          className="global-controls__select"
+          aria-label="Analizar"
+          value={analysisMode}
+          onChange={(event) => handleAnalysisModeChange(event.target.value as AnalysisMode)}
+        >
+          <option value="second_round" disabled={!canUseSecondRoundMode}>
+            Brecha 2do vs 3ro
+          </option>
+          <option value="candidate">Candidato específico</option>
+        </select>
+        {!canUseSecondRoundMode ? (
+          <small className="global-controls__notice">
+            Sin data suficiente para 2do vs 3ro en este corte.
+          </small>
+        ) : null}
+      </div>
+
+      {analysisMode === "candidate" ? (
+        <div className="control control--candidate">
+          <span>Candidato</span>
+          <select
+            ref={candidateSelectRef}
+            className="global-controls__select"
+            aria-label="Candidato"
+            value={selectedCandidateCode}
+            onChange={(event) => handleCandidateSelect(event.target.value)}
+          >
+            {featuredLegend.map((candidate) => (
+              <option key={candidate.code} value={candidate.code}>
+                {formatTitleCase(candidate.label)}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
+
+      <div className="control">
+        <span>Comparar</span>
+        <select
+          className="global-controls__select"
+          aria-label="Comparar"
+          value={comparisonMode}
+          onChange={(event) => handleComparisonModeChange(event.target.value as ComparisonMode)}
+        >
+          <option value="projected">Proyectado</option>
+          <option value="current">Actual ONPE</option>
+        </select>
+      </div>
+
+      <div className="control control--compact">
+        <span>Otros</span>
+        <button
+          className={`toggle-button ${showOthers ? "is-active" : ""}`}
+          type="button"
+          aria-pressed={showOthers}
+          onClick={handleShowOthersToggle}
+        >
+          {showOthers ? "On" : "Off"}
+        </button>
+      </div>
+
+      <div className="control control--compact">
+        <span>Reset</span>
+        <button className="toggle-button" type="button" onClick={handleGlobalReset}>
+          Reset
+        </button>
+      </div>
+
+      <div className="global-controls__meta">
+        <nav className="global-controls__quick-nav" aria-label="Navegación rápida">
+          <a href="#lectura-regional">Regiones</a>
+          <a href="#lectura-exterior">Exterior</a>
+        </nav>
+      </div>
+    </div>
+  );
 
   if (loading) {
     return (
@@ -1604,10 +1699,10 @@ export default function App() {
 
       <section
         ref={globalControlsRef}
-        className={`global-controls ${isMobileControlsSticky ? "is-mobile-sticky" : ""} ${isMobileControlsCollapsed ? "is-collapsed" : ""}`}
+        className={`global-controls ${isMobileControlsSticky ? "is-mobile-sticky" : ""} ${showMobileControlsOverlay ? "is-overlay-open" : ""}`}
         aria-label="Controles globales"
       >
-        {isMobileViewport && isMobileControlsSticky ? (
+        {showMobileControlsSummary ? (
           <div className="global-controls__mobile-summary">
             <div className="global-controls__mobile-summary-text">
               <span>{mobileAnalysisSummary}</span>
@@ -1618,97 +1713,25 @@ export default function App() {
             <button
               className="global-controls__mobile-toggle"
               type="button"
-              aria-expanded={!isMobileControlsCollapsed}
-              aria-label={isMobileControlsCollapsed ? "Expandir filtros" : "Colapsar filtros"}
+              aria-expanded={isMobileControlsOverlayOpen}
+              aria-label={isMobileControlsOverlayOpen ? "Ocultar filtros" : "Abrir filtros"}
               onClick={handleMobileControlsToggle}
             >
               <span
-                className={`global-controls__mobile-toggle-icon ${isMobileControlsCollapsed ? "is-collapsed" : ""}`}
+                className={`global-controls__mobile-toggle-icon ${isMobileControlsOverlayOpen ? "" : "is-collapsed"}`}
                 aria-hidden="true"
               />
             </button>
           </div>
         ) : null}
 
-        <div className="global-controls__row">
-          <div className="control">
-            <span>Analizar</span>
-            <select
-              className="global-controls__select"
-              aria-label="Analizar"
-              value={analysisMode}
-              onChange={(event) => handleAnalysisModeChange(event.target.value as AnalysisMode)}
-            >
-              <option value="second_round" disabled={!canUseSecondRoundMode}>
-                Brecha 2do vs 3ro
-              </option>
-              <option value="candidate">Candidato específico</option>
-            </select>
-            {!canUseSecondRoundMode ? (
-              <small className="global-controls__notice">
-                Sin data suficiente para 2do vs 3ro en este corte.
-              </small>
-            ) : null}
-          </div>
+        {showInlineGlobalControlsRow ? globalControlsRow : null}
 
-          {analysisMode === "candidate" ? (
-            <div className="control control--candidate">
-              <span>Candidato</span>
-              <select
-                ref={candidateSelectRef}
-                className="global-controls__select"
-                aria-label="Candidato"
-                value={selectedCandidateCode}
-                onChange={(event) => handleCandidateSelect(event.target.value)}
-              >
-                {featuredLegend.map((candidate) => (
-                  <option key={candidate.code} value={candidate.code}>
-                    {formatTitleCase(candidate.label)}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : null}
-
-          <div className="control">
-            <span>Comparar</span>
-            <select
-              className="global-controls__select"
-              aria-label="Comparar"
-              value={comparisonMode}
-              onChange={(event) => handleComparisonModeChange(event.target.value as ComparisonMode)}
-            >
-              <option value="projected">Proyectado</option>
-              <option value="current">Actual ONPE</option>
-            </select>
+        {showMobileControlsOverlay ? (
+          <div className="global-controls__mobile-overlay" role="dialog" aria-label="Filtros globales">
+            {globalControlsRow}
           </div>
-
-          <div className="control control--compact">
-            <span>Otros</span>
-            <button
-              className={`toggle-button ${showOthers ? "is-active" : ""}`}
-              type="button"
-              aria-pressed={showOthers}
-              onClick={handleShowOthersToggle}
-            >
-              {showOthers ? "On" : "Off"}
-            </button>
-          </div>
-
-          <div className="control control--compact">
-            <span>Reset</span>
-            <button className="toggle-button" type="button" onClick={handleGlobalReset}>
-              Reset
-            </button>
-          </div>
-
-          <div className="global-controls__meta">
-            <nav className="global-controls__quick-nav" aria-label="Navegación rápida">
-              <a href="#lectura-regional">Regiones</a>
-              <a href="#lectura-exterior">Exterior</a>
-            </nav>
-          </div>
-        </div>
+        ) : null}
       </section>
 
       <section className="content-grid">

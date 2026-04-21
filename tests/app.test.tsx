@@ -362,7 +362,7 @@ function createForeign(overrides: Partial<ForeignResult> = {}): ForeignResult {
   };
 }
 
-function createSnapshot(): ElectionSnapshot {
+function createSnapshot(overrides: Partial<ElectionSnapshot> = {}): ElectionSnapshot {
   const regionA = createRegion({});
   const regionB = createRegion({
     scopeId: "150000",
@@ -450,7 +450,8 @@ function createSnapshot(): ElectionSnapshot {
       }
     },
     featuredCandidateCodes: ["8", "10", "12"],
-    isStale: false
+    isStale: false,
+    ...overrides
   };
 }
 

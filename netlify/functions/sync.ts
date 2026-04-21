@@ -12,10 +12,11 @@ export const handler: Handler = async (event) => {
   connectLambda(event as unknown as Parameters<typeof connectLambda>[0]);
 
   try {
-    const { health } = await runSync();
+    const { snapshot, health } = await runSync();
 
     return jsonResponse({
       ok: true,
+      snapshot,
       health
     });
   } catch (error) {

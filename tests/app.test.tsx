@@ -4,6 +4,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 
 import App from "../src/App";
+import { formatDateTime } from "../src/lib/format";
 import type {
   ElectionSnapshot,
   ForeignResult,
@@ -361,7 +362,7 @@ function createForeign(overrides: Partial<ForeignResult> = {}): ForeignResult {
   };
 }
 
-function createSnapshot(): ElectionSnapshot {
+function createSnapshot(overrides: Partial<ElectionSnapshot> = {}): ElectionSnapshot {
   const regionA = createRegion({});
   const regionB = createRegion({
     scopeId: "150000",
@@ -449,7 +450,8 @@ function createSnapshot(): ElectionSnapshot {
       }
     },
     featuredCandidateCodes: ["8", "10", "12"],
-    isStale: false
+    isStale: false,
+    ...overrides
   };
 }
 
@@ -568,6 +570,40 @@ describe("App hero clarity and first action", () => {
       label: "ver_metodologia",
       section_target: "metodologia"
     });
+  });
+
+  it("actualiza la fecha visible cuando termina el refresh", async () => {
+    const initialSnapshot = createSnapshot({
+      generatedAt: "2026-04-15T12:00:00.000Z"
+    });
+    const refreshedSnapshot = createSnapshot({
+      generatedAt: "2026-04-15T12:05:00.000Z",
+      sourceLastUpdatedAt: "2026-04-15T12:04:00.000Z"
+    });
+    fetchSnapshotMock.mockResolvedValue(initialSnapshot);
+    refreshSnapshotMock.mockResolvedValue(refreshedSnapshot);
+
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(container.textContent).toContain(formatDateTime(initialSnapshot.generatedAt));
+
+    const refreshButton = Array.from(container.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Actualizar datos")
+    ) as HTMLButtonElement;
+
+    await act(async () => {
+      refreshButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(refreshSnapshotMock).toHaveBeenCalledTimes(1);
+    expect(container.textContent).toContain(formatDateTime(refreshedSnapshot.generatedAt));
   });
 
   it("aplica defaults globales y permite cambiar a candidato específico", async () => {

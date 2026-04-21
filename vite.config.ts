@@ -1,4 +1,6 @@
 import { execFile } from "node:child_process";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import { promisify } from "node:util";
 
 import react from "@vitejs/plugin-react";
@@ -24,10 +26,15 @@ export default defineConfig({
             await execFileAsync("node", ["scripts/generate-dev-snapshot.mjs"], {
               cwd: server.config.root
             });
+            const snapshotPath = resolve(
+              server.config.root,
+              process.env.DEV_SNAPSHOT_OUTPUT_PATH ?? "public/dev-snapshot.json"
+            );
+            const snapshot = JSON.parse(await readFile(snapshotPath, "utf8"));
 
             res.statusCode = 200;
             res.setHeader("Content-Type", "application/json");
-            res.end(JSON.stringify({ ok: true }));
+            res.end(JSON.stringify({ ok: true, snapshot }));
           } catch (error) {
             res.statusCode = 500;
             res.setHeader("Content-Type", "application/json");

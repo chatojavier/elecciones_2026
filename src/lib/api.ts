@@ -37,11 +37,17 @@ async function parseSyncResponse(response: Response) {
     throw new Error("El endpoint de sincronización no respondió JSON.");
   }
 
-  const payload = (await response.json()) as { ok?: boolean; error?: string };
+  const payload = (await response.json()) as {
+    ok?: boolean;
+    error?: string;
+    snapshot?: ElectionSnapshot;
+  };
 
   if (!payload.ok) {
     throw new Error(payload.error ?? "La sincronización de datos falló.");
   }
+
+  return payload.snapshot ? normalizeElectionSnapshot(payload.snapshot) : null;
 }
 
 function buildRequestUrl(endpoint: string) {
@@ -77,7 +83,11 @@ export async function refreshSnapshot() {
     method: "POST",
     cache: "no-store"
   });
-  await parseSyncResponse(syncResponse);
+  const syncedSnapshot = await parseSyncResponse(syncResponse);
+
+  if (syncedSnapshot) {
+    return syncedSnapshot;
+  }
 
   return await fetchSnapshotFromEndpoint(import.meta.env.DEV ? DEV_SNAPSHOT_ENDPOINT : SNAPSHOT_ENDPOINT);
 }

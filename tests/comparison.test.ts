@@ -1,8 +1,13 @@
 import {
+  buildComparisonCandidateOptions,
+  buildComparisonOthersBar,
   buildSecondRoundInsight,
   buildNationalComparisonItems,
   buildScopeComparisonItem,
-  getScopeSecondRoundGapVotes
+  getScopeComparisonGap,
+  getScopeSecondRoundGapVotes,
+  reconcileComparisonPair,
+  resolveDefaultComparisonPair
 } from "../src/lib/comparison";
 import type { ElectionSnapshot, RegionResult, ScopeResult } from "../src/lib/types";
 
@@ -695,5 +700,239 @@ describe("getScopeSecondRoundGapVotes", () => {
     );
 
     expect(gap).toBe(10);
+  });
+});
+
+describe("comparison pair helpers", () => {
+  it("resuelve el default A/B desde el ranking proyectado 2do vs 3ro", () => {
+    const resolution = resolveDefaultComparisonPair(secondRoundSnapshot);
+
+    expect(resolution).toMatchObject({
+      pair: {
+        candidateACode: "10",
+        candidateBCode: "12"
+      },
+      initSource: "default_rank_2v3",
+      status: "initialized"
+    });
+  });
+
+  it("reconcilia un par cuando uno de los candidatos deja de existir", () => {
+    const snapshotWithoutRank3: ElectionSnapshot = {
+      ...secondRoundSnapshot,
+      national: {
+        ...secondRoundSnapshot.national,
+        featuredCandidates: secondRoundSnapshot.national.featuredCandidates.filter(
+          (candidate) => candidate.code !== "12"
+        )
+      },
+      foreign: {
+        ...secondRoundSnapshot.foreign,
+        featuredCandidates: secondRoundSnapshot.foreign.featuredCandidates.filter(
+          (candidate) => candidate.code !== "12"
+        )
+      },
+      projectedNational: {
+        ...secondRoundSnapshot.projectedNational,
+        projectedVotes: {
+          "8": 1200,
+          "10": 780,
+          otros: 260
+        },
+        projectedPercentages: {
+          "8": 40,
+          "10": 26,
+          otros: 8.667
+        }
+      }
+    };
+
+    const resolution = reconcileComparisonPair(snapshotWithoutRank3, {
+      candidateACode: "10",
+      candidateBCode: "12"
+    });
+
+    expect(resolution).toMatchObject({
+      pair: {
+        candidateACode: "10",
+        candidateBCode: "8"
+      },
+      initSource: "fallback",
+      status: "reassigned"
+    });
+  });
+
+  it("expone opciones seleccionables sin incluir candidatos fantasma", () => {
+    const mixedSnapshot: ElectionSnapshot = {
+      ...secondRoundSnapshot,
+      projectedNational: {
+        ...secondRoundSnapshot.projectedNational,
+        projectedVotes: {
+          ...secondRoundSnapshot.projectedNational.projectedVotes,
+          "99": 900
+        },
+        projectedPercentages: {
+          ...secondRoundSnapshot.projectedNational.projectedPercentages,
+          "99": 30
+        }
+      }
+    };
+
+    const options = buildComparisonCandidateOptions(mixedSnapshot);
+
+    expect(options.map((candidate) => candidate.code)).not.toContain("99");
+  });
+});
+
+describe("A/B comparison calculations", () => {
+  it("calcula la brecha proyectada y actual entre A y B para un scope", () => {
+    const scopeWithThreeCandidates: ScopeResult = {
+      ...scope,
+      candidates: [
+        {
+          code: "8",
+          partyName: "PARTIDO A",
+          candidateName: "CANDIDATA A",
+          votesValid: 400,
+          pctValid: 40,
+          pctEmitted: 35
+        },
+        {
+          code: "10",
+          partyName: "PARTIDO B",
+          candidateName: "CANDIDATO B",
+          votesValid: 300,
+          pctValid: 30,
+          pctEmitted: 26
+        },
+        {
+          code: "12",
+          partyName: "PARTIDO C",
+          candidateName: "CANDIDATA C",
+          votesValid: 200,
+          pctValid: 20,
+          pctEmitted: 18
+        }
+      ],
+      featuredCandidates: [
+        ...scope.featuredCandidates,
+        {
+          code: "12",
+          partyName: "PARTIDO C",
+          candidateName: "CANDIDATA C",
+          votesValid: 200,
+          pctValid: 20,
+          pctEmitted: 18
+        }
+      ],
+      projectedVotes: {
+        "8": 500,
+        "10": 300,
+        "12": 250,
+        otros: 100
+      }
+    };
+
+    const projectedGap = getScopeComparisonGap(
+      scopeWithThreeCandidates,
+      {
+        candidateACode: "10",
+        candidateBCode: "12"
+      },
+      "projected"
+    );
+    const currentGap = getScopeComparisonGap(
+      scopeWithThreeCandidates,
+      {
+        candidateACode: "10",
+        candidateBCode: "12"
+      },
+      "current"
+    );
+
+    expect(projectedGap).toEqual({
+      gapVotes: 50,
+      gapPercentage: 4.348
+    });
+    expect(currentGap).toEqual({
+      gapVotes: 100,
+      gapPercentage: 12.5
+    });
+  });
+
+  it('excluye del agregado "Otros" a un contendiente seleccionado no destacado', () => {
+    const fallbackSnapshot: ElectionSnapshot = {
+      ...secondRoundSnapshot,
+      national: {
+        ...secondRoundSnapshot.national,
+        candidates: [
+          {
+            code: "8",
+            partyName: "PARTIDO A",
+            candidateName: "CANDIDATA A",
+            votesValid: 400,
+            pctValid: 40,
+            pctEmitted: 35
+          },
+          {
+            code: "10",
+            partyName: "PARTIDO B",
+            candidateName: "CANDIDATO B",
+            votesValid: 300,
+            pctValid: 30,
+            pctEmitted: 26
+          },
+          {
+            code: "21",
+            partyName: "PARTIDO D",
+            candidateName: "CANDIDATO D",
+            votesValid: 248,
+            pctValid: 24.8,
+            pctEmitted: 21
+          }
+        ],
+        otros: {
+          code: "otros",
+          label: "Otros",
+          votesValid: 248,
+          pctValid: 24.8,
+          pctEmitted: 21
+        }
+      },
+      foreign: {
+        ...secondRoundSnapshot.foreign,
+        totalVotosValidos: 0,
+        totalVotosEmitidos: 0,
+        candidates: [],
+        featuredCandidates: [],
+        otros: {
+          code: "otros",
+          label: "Otros",
+          votesValid: 0,
+          pctValid: 0,
+          pctEmitted: 0
+        }
+      },
+      projectedNational: {
+        ...secondRoundSnapshot.projectedNational,
+        totalProjectedValidVotes: 1185,
+        projectedVotes: {
+          "8": 500,
+          "10": 375,
+          "21": 310,
+          otros: 310
+        },
+        projectedPercentages: {
+          "8": 42.194,
+          "10": 31.646,
+          "21": 26.16,
+          otros: 26.16
+        }
+      }
+    };
+
+    const othersBar = buildComparisonOthersBar(fallbackSnapshot, ["10", "21"]);
+
+    expect(othersBar).toBeNull();
   });
 });

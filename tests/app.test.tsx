@@ -559,7 +559,7 @@ describe("App hero clarity and first action", () => {
     expect(container.textContent).toContain("Actas Perú:");
     expect(container.textContent).toContain("Actas exterior:");
     expect(container.textContent).toContain("Delta proyección:");
-    expect(container.textContent).toContain("Ver detalle 2do vs 3ro");
+    expect(container.textContent).toContain("Ver comparativa personalizada");
     expect(container.textContent).toContain("Estado de actualización");
     expect(container.textContent).toContain("Última actualización de esta app");
     expect(container.textContent).toContain("Próxima revisión automática");
@@ -911,7 +911,7 @@ describe("App hero clarity and first action", () => {
     expect(container.textContent).toContain("La app está al día.");
   });
 
-  it("aplica defaults globales y permite cambiar a candidato específico", async () => {
+  it("aplica defaults A/B y permite cambiar la comparación personalizada", async () => {
     await act(async () => {
       root.render(<App />);
     });
@@ -920,33 +920,35 @@ describe("App hero clarity and first action", () => {
       await Promise.resolve();
     });
 
-    const analysisSelect = container.querySelector('select[aria-label="Analizar"]') as HTMLSelectElement;
+    const candidateASelect = container.querySelector('select[aria-label="Candidato A"]') as HTMLSelectElement;
+    const candidateBSelect = container.querySelector('select[aria-label="Candidato B"]') as HTMLSelectElement;
     const othersButton = Array.from(container.querySelectorAll("button")).find((button) =>
       button.textContent?.trim() === "Off"
     ) as HTMLButtonElement;
 
-    expect(container.querySelector('select[aria-label="Candidato"]')).toBeNull();
+    expect(candidateASelect.value).toBe("10");
+    expect(candidateBSelect.value).toBe("12");
     expect(othersButton).not.toBeNull();
     expect(othersButton.className).not.toContain("is-active");
 
+    trackEventMock.mockClear();
+
     await act(async () => {
-      analysisSelect.value = "candidate";
-      analysisSelect.dispatchEvent(new Event("change", { bubbles: true }));
+      candidateASelect.value = "8";
+      candidateASelect.dispatchEvent(new Event("change", { bubbles: true }));
     });
 
-    expect(container.querySelector('select[aria-label="Candidato"]')).not.toBeNull();
+    expect(candidateASelect.value).toBe("8");
     expect(trackEventMock).toHaveBeenCalledWith(
-      "global_control_change",
+      "comparison_candidate_change",
       expect.objectContaining({
-        control_name: "analysis_mode",
-        previous_value: "second_round",
-        next_value: "candidate",
-        source: "global_bar"
+        candidate_a_code: "8",
+        candidate_b_code: "12"
       })
     );
   });
 
-  it("CTA de quick insights fuerza estado global 2do vs 3ro + proyectado", async () => {
+  it("CTA de quick insights conserva A/B y fuerza comparación proyectada", async () => {
     await act(async () => {
       root.render(<App />);
     });
@@ -955,12 +957,12 @@ describe("App hero clarity and first action", () => {
       await Promise.resolve();
     });
 
-    const analysisSelect = container.querySelector('select[aria-label="Analizar"]') as HTMLSelectElement;
+    const candidateASelect = container.querySelector('select[aria-label="Candidato A"]') as HTMLSelectElement;
     const comparisonSelect = container.querySelector('select[aria-label="Comparar"]') as HTMLSelectElement;
 
     await act(async () => {
-      analysisSelect.value = "candidate";
-      analysisSelect.dispatchEvent(new Event("change", { bubbles: true }));
+      candidateASelect.value = "8";
+      candidateASelect.dispatchEvent(new Event("change", { bubbles: true }));
     });
 
     await act(async () => {
@@ -978,15 +980,8 @@ describe("App hero clarity and first action", () => {
       quickInsightCta.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 
-    expect(analysisSelect.value).toBe("second_round");
+    expect(candidateASelect.value).toBe("8");
     expect(comparisonSelect.value).toBe("projected");
-    expect(trackEventMock).toHaveBeenCalledWith(
-      "global_control_change",
-      expect.objectContaining({
-        control_name: "analysis_mode",
-        source: "quick_insight_cta"
-      })
-    );
     expect(trackEventMock).toHaveBeenCalledWith(
       "global_control_change",
       expect.objectContaining({
@@ -994,9 +989,15 @@ describe("App hero clarity and first action", () => {
         source: "quick_insight_cta"
       })
     );
+    expect(trackEventMock).toHaveBeenCalledWith(
+      "quick_insight_detail_cta_click",
+      expect.objectContaining({
+        target_mode: "comparison_pair"
+      })
+    );
   });
 
-  it("normaliza Ordenar por al salir de candidato específico hacia 2do vs 3ro", async () => {
+  it("bloquea seleccionar el mismo candidato en A y B y muestra validación inline", async () => {
     await act(async () => {
       root.render(<App />);
     });
@@ -1005,30 +1006,26 @@ describe("App hero clarity and first action", () => {
       await Promise.resolve();
     });
 
-    const analysisSelect = container.querySelector('select[aria-label="Analizar"]') as HTMLSelectElement;
-    const sortSelect = Array.from(container.querySelectorAll("select")).find((select) =>
-      select.parentElement?.textContent?.includes("Ordenar por")
-    ) as HTMLSelectElement;
+    const candidateASelect = container.querySelector('select[aria-label="Candidato A"]') as HTMLSelectElement;
+    const candidateBSelect = container.querySelector('select[aria-label="Candidato B"]') as HTMLSelectElement;
+    expect(candidateASelect.value).toBe("10");
+    expect(candidateBSelect.value).toBe("12");
 
     await act(async () => {
-      analysisSelect.value = "candidate";
-      analysisSelect.dispatchEvent(new Event("change", { bubbles: true }));
+      candidateASelect.value = "12";
+      candidateASelect.dispatchEvent(new Event("change", { bubbles: true }));
     });
 
-    await act(async () => {
-      sortSelect.value = "candidate";
-      sortSelect.dispatchEvent(new Event("change", { bubbles: true }));
-    });
-
-    expect(sortSelect.value).toBe("candidate");
-
-    await act(async () => {
-      analysisSelect.value = "second_round";
-      analysisSelect.dispatchEvent(new Event("change", { bubbles: true }));
-    });
-
-    expect(sortSelect.value).toBe("gap_2v3");
-    expect(Array.from(sortSelect.options).map((option) => option.value)).not.toContain("candidate");
+    expect(candidateASelect.value).toBe("10");
+    expect(candidateASelect.getAttribute("aria-invalid")).toBe("true");
+    expect(container.textContent).toContain("Selecciona dos candidatos distintos.");
+    expect(trackEventMock).toHaveBeenCalledWith(
+      "comparison_validation_error",
+      expect.objectContaining({
+        candidate_a_code: "12",
+        candidate_b_code: "12"
+      })
+    );
   });
 
   it("muestra filtros móviles como overlay sticky sin empujar el layout", async () => {
@@ -1113,7 +1110,7 @@ describe("App hero clarity and first action", () => {
     });
   });
 
-  it("registra impresión de controles con modo efectivo candidate cuando no hay segunda vuelta disponible", async () => {
+  it("registra impresión de controles con el par A/B activo", async () => {
     const snapshotWithoutRank3 = createSnapshot();
     snapshotWithoutRank3.national.featuredCandidates =
       snapshotWithoutRank3.national.featuredCandidates.slice(0, 2);
@@ -1148,7 +1145,8 @@ describe("App hero clarity and first action", () => {
     expect(trackEventMock).toHaveBeenCalledWith(
       "global_controls_impression",
       expect.objectContaining({
-        analysis_mode: "candidate",
+        candidate_a_code: "8",
+        candidate_b_code: "10",
         comparison_mode: "projected",
         show_others: false,
         snapshot_generated_at: snapshotWithoutRank3.generatedAt
@@ -1156,7 +1154,7 @@ describe("App hero clarity and first action", () => {
     );
   });
 
-  it("ajusta el CTA de quick insights cuando no hay modo 2do vs 3ro disponible", async () => {
+  it("mantiene el CTA de quick insights en modo personalizado cuando falta rank3", async () => {
     const snapshotWithoutRank3 = createSnapshot();
     snapshotWithoutRank3.national.featuredCandidates =
       snapshotWithoutRank3.national.featuredCandidates.slice(0, 2);
@@ -1188,14 +1186,13 @@ describe("App hero clarity and first action", () => {
       await Promise.resolve();
     });
 
-    const analysisSelect = container.querySelector('select[aria-label="Analizar"]') as HTMLSelectElement;
+    const candidateASelect = container.querySelector('select[aria-label="Candidato A"]') as HTMLSelectElement;
     const comparisonSelect = container.querySelector('select[aria-label="Comparar"]') as HTMLSelectElement;
     const quickInsightCta = container.querySelector(
       'a.quick-insights__cta[href="#comparativa-central"]'
     ) as HTMLAnchorElement;
 
-    expect(quickInsightCta.textContent).toContain("Ver comparativa general");
-    expect(container.textContent).not.toContain("Ver detalle 2do vs 3ro");
+    expect(quickInsightCta.textContent).toContain("Ver comparativa personalizada");
 
     trackEventMock.mockClear();
 
@@ -1203,21 +1200,125 @@ describe("App hero clarity and first action", () => {
       quickInsightCta.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 
-    expect(analysisSelect.value).toBe("candidate");
+    expect(candidateASelect.value).toBe("8");
     expect(comparisonSelect.value).toBe("projected");
-    expect(trackEventMock).not.toHaveBeenCalledWith(
-      "global_control_change",
-      expect.objectContaining({
-        control_name: "analysis_mode",
-        source: "quick_insight_cta"
-      })
-    );
     expect(trackEventMock).toHaveBeenCalledWith(
       "quick_insight_detail_cta_click",
       expect.objectContaining({
-        target_mode: "candidate"
+        target_mode: "comparison_pair"
       })
     );
+  });
+
+  it("conserva la selección A/B cuando llega un snapshot nuevo con el mismo catálogo", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-15T12:06:00.000Z"));
+    const initialSnapshot = createSnapshot();
+    const refreshedSnapshot = createSnapshot({
+      generatedAt: "2026-04-15T12:10:00.000Z"
+    });
+
+    fetchSnapshotMock.mockResolvedValue(
+      createAppData(initialSnapshot, {
+        lastSuccessAt: initialSnapshot.generatedAt
+      })
+    );
+    refreshSnapshotMock.mockResolvedValue(
+      createAppData(refreshedSnapshot, {
+        lastSuccessAt: refreshedSnapshot.generatedAt
+      })
+    );
+
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const candidateASelect = container.querySelector('select[aria-label="Candidato A"]') as HTMLSelectElement;
+    const refreshButton = Array.from(container.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Actualizar ahora")
+    ) as HTMLButtonElement;
+
+    await act(async () => {
+      candidateASelect.value = "8";
+      candidateASelect.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    await act(async () => {
+      refreshButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(candidateASelect.value).toBe("8");
+    expect(container.textContent).not.toContain("Actualizamos la comparación con el mejor candidato disponible.");
+  });
+
+  it("reubica el candidato faltante cuando cambia el snapshot y muestra un ajuste automático", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-15T12:06:00.000Z"));
+    const initialSnapshot = createSnapshot();
+    const refreshedSnapshot = createSnapshot({
+      generatedAt: "2026-04-15T12:10:00.000Z"
+    });
+    refreshedSnapshot.national.featuredCandidates = refreshedSnapshot.national.featuredCandidates.filter(
+      (candidate) => candidate.code !== "12"
+    );
+    refreshedSnapshot.foreign.featuredCandidates = refreshedSnapshot.foreign.featuredCandidates.filter(
+      (candidate) => candidate.code !== "12"
+    );
+    refreshedSnapshot.projectedNational = {
+      ...refreshedSnapshot.projectedNational,
+      projectedVotes: {
+        "8": 1200,
+        "10": 900,
+        otros: 400
+      },
+      projectedPercentages: {
+        "8": 48,
+        "10": 36,
+        otros: 16
+      }
+    };
+
+    fetchSnapshotMock.mockResolvedValue(
+      createAppData(initialSnapshot, {
+        lastSuccessAt: initialSnapshot.generatedAt
+      })
+    );
+    refreshSnapshotMock.mockResolvedValue(
+      createAppData(refreshedSnapshot, {
+        lastSuccessAt: refreshedSnapshot.generatedAt
+      })
+    );
+
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const candidateASelect = container.querySelector('select[aria-label="Candidato A"]') as HTMLSelectElement;
+    const candidateBSelect = container.querySelector('select[aria-label="Candidato B"]') as HTMLSelectElement;
+    const refreshButton = Array.from(container.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Actualizar ahora")
+    ) as HTMLButtonElement;
+
+    expect(candidateASelect.value).toBe("10");
+    expect(candidateBSelect.value).toBe("12");
+
+    await act(async () => {
+      refreshButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(candidateASelect.value).toBe("10");
+    expect(candidateBSelect.value).toBe("8");
+    expect(container.textContent).toContain("Actualizamos la comparación con el mejor candidato disponible.");
   });
 
   it("aplica búsqueda local en regiones y exterior", async () => {
@@ -1253,7 +1354,7 @@ describe("App hero clarity and first action", () => {
     expect(container.textContent).not.toContain("AMÉRICA");
   });
 
-  it("selecciona candidato desde la barra global", async () => {
+  it("actualiza el tracking al cambiar el candidato B desde la barra global", async () => {
     await act(async () => {
       root.render(<App />);
     });
@@ -1262,25 +1363,18 @@ describe("App hero clarity and first action", () => {
       await Promise.resolve();
     });
 
-    const analysisSelect = container.querySelector('select[aria-label="Analizar"]') as HTMLSelectElement;
+    const candidateBSelect = container.querySelector('select[aria-label="Candidato B"]') as HTMLSelectElement;
 
     await act(async () => {
-      analysisSelect.value = "candidate";
-      analysisSelect.dispatchEvent(new Event("change", { bubbles: true }));
-    });
-
-    const candidateSelect = container.querySelector('select[aria-label="Candidato"]') as HTMLSelectElement;
-
-    await act(async () => {
-      candidateSelect.value = "12";
-      candidateSelect.dispatchEvent(new Event("change", { bubbles: true }));
+      candidateBSelect.value = "8";
+      candidateBSelect.dispatchEvent(new Event("change", { bubbles: true }));
     });
 
     expect(trackEventMock).toHaveBeenCalledWith(
-      "select_candidate_focus",
+      "comparison_candidate_change",
       expect.objectContaining({
-        candidate_code: "12",
-        source: "global_bar"
+        candidate_a_code: "10",
+        candidate_b_code: "8"
       })
     );
   });
@@ -1529,7 +1623,7 @@ describe("App hero clarity and first action", () => {
     expect(container.textContent).toContain("Candidato B");
   });
 
-  it("mantiene fallback de brecha 2do vs 3ro cuando el rank3 proyectado no es featured", async () => {
+  it("usa el mejor par disponible y comunica fallback cuando falta el rank3 seleccionable", async () => {
     const fallbackSnapshot = createSnapshot();
     fallbackSnapshot.national.candidates = [
       {
@@ -1622,11 +1716,10 @@ describe("App hero clarity and first action", () => {
 
     const featuredBars = container.querySelector(".featured-bars");
 
-    expect(container.textContent).toContain("-50");
-    expect(container.textContent).toContain("-3.31 pp");
+    expect(container.textContent).toContain("Ajustamos la comparación al mejor par disponible.");
     expect(featuredBars?.textContent).toContain("Candidato B");
-    expect(featuredBars?.textContent).toContain("Candidato D");
-    expect(featuredBars?.textContent).toContain("26.11%");
+    expect(featuredBars?.textContent).toContain("Candidata A");
+    expect(featuredBars?.textContent).not.toContain("Candidato D");
   });
 
   it('excluye contendores 2do vs 3ro no featured del agregado "Otros" en la comparativa central', async () => {
@@ -1765,8 +1858,8 @@ describe("App hero clarity and first action", () => {
     ) as HTMLSelectElement;
     const sortOptions = Array.from(sortSelect.options).map((option) => option.value);
 
-    expect(sortSelect.value).toBe("projection");
-    expect(sortOptions).not.toContain("gap_2v3");
+    expect(sortSelect.value).toBe("gap_2v3");
+    expect(sortOptions).toContain("gap_2v3");
   });
 });
 

@@ -516,9 +516,8 @@ small {
 .global-controls__row {
   display: grid;
   grid-template-columns:
-    minmax(180px, 1.05fr)
-    minmax(240px, 1.35fr)
-    minmax(180px, 1.05fr)
+    minmax(320px, 2fr)
+    minmax(180px, 1fr)
     auto
     auto
     auto;
@@ -530,6 +529,16 @@ small {
   margin: 0;
   color: #8f3f07;
   font-size: 0.72rem;
+}
+
+.global-controls__notice--error {
+  color: #b42318;
+}
+
+.global-controls__pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .global-controls__meta {
@@ -632,6 +641,14 @@ small {
 
 .control--candidate {
   min-width: 240px;
+}
+
+.control--candidate-pair {
+  min-width: 0;
+}
+
+.global-controls__pair .control--candidate {
+  min-width: 0;
 }
 
 .toggle-button.is-active {
@@ -1134,6 +1151,10 @@ small {
   }
 
   .global-controls__row {
+    grid-template-columns: 1fr;
+  }
+
+  .global-controls__pair {
     grid-template-columns: 1fr;
   }
 

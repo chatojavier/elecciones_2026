@@ -274,7 +274,6 @@ function sortLeafScopes(
       case "participacion":
         return right.participacionCiudadanaPct - left.participacionCiudadanaPct;
       case "gap_2v3":
-      case "electores":
       default: {
         const leftGap = getScopeComparisonGap(left, comparisonPair, comparisonMode).gapVotes;
         const rightGap = getScopeComparisonGap(right, comparisonPair, comparisonMode).gapVotes;
@@ -301,6 +300,8 @@ function sortForeignContinents(
 
   sorted.sort((left, right) => {
     switch (sortKey) {
+      case "electores":
+        return right.electores - left.electores;
       case "candidate": {
         const leftCandidate = buildScopeComparisonItem(left, comparisonPair.candidateACode);
         const rightCandidate = buildScopeComparisonItem(right, comparisonPair.candidateACode);
@@ -326,7 +327,6 @@ function sortForeignContinents(
       case "participacion":
         return right.participacionCiudadanaPct - left.participacionCiudadanaPct;
       case "gap_2v3":
-      case "electores":
       default: {
         const leftGap = getScopeComparisonGap(left, comparisonPair, comparisonMode).gapVotes;
         const rightGap = getScopeComparisonGap(right, comparisonPair, comparisonMode).gapVotes;
@@ -839,6 +839,7 @@ export default function App() {
     comparisonPair,
     foreignContinents,
     foreignSearchQuery,
+    sortKey,
     snapshot
   ]);
 

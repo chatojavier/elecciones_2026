@@ -1359,6 +1359,61 @@ describe("App hero clarity and first action", () => {
     expect(container.textContent).not.toContain("AMÉRICA");
   });
 
+  it("reordena continentes al cambiar ordenar por electores", async () => {
+    const snapshot = createSnapshot();
+    snapshot.foreign.continents = snapshot.foreign.continents.map((continent) =>
+      continent.label === "EUROPA"
+        ? {
+            ...continent,
+            electores: 120,
+            projectedVotes: {
+              ...continent.projectedVotes,
+              "8": 54,
+              "10": 50
+            }
+          }
+        : {
+            ...continent,
+            electores: 480,
+            projectedVotes: {
+              ...continent.projectedVotes,
+              "8": 130,
+              "10": 40
+            }
+          }
+    );
+
+    fetchSnapshotMock.mockResolvedValue(createAppData(snapshot));
+    refreshSnapshotMock.mockResolvedValue(createAppData(snapshot));
+
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const exteriorSection = container.querySelector("#lectura-exterior") as HTMLElement;
+    const getVisibleContinents = () =>
+      Array.from(
+        exteriorSection.querySelectorAll("tbody > tr.results-table__row > td[data-label=\"Continente\"] strong")
+      ).map((node) => node.textContent);
+
+    expect(getVisibleContinents().slice(0, 2)).toEqual(["EUROPA", "AMÉRICA"]);
+
+    const sortSelect = Array.from(container.querySelectorAll("select")).find((select) =>
+      select.parentElement?.textContent?.includes("Ordenar por")
+    ) as HTMLSelectElement;
+
+    await act(async () => {
+      sortSelect.value = "electores";
+      sortSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    expect(getVisibleContinents().slice(0, 2)).toEqual(["AMÉRICA", "EUROPA"]);
+  });
+
   it("actualiza el tracking al cambiar el candidato B desde la barra global", async () => {
     await act(async () => {
       root.render(<App />);

@@ -61,6 +61,14 @@ function buildFallbackHealth(snapshot: ElectionSnapshot): HealthStatus {
   };
 }
 
+function getUsableHealth(health: HealthStatus | null, snapshot: ElectionSnapshot) {
+  if (!health?.lastSuccessAt) {
+    return buildFallbackHealth(snapshot);
+  }
+
+  return health;
+}
+
 async function parseSyncResponse(response: Response) {
   const contentType = response.headers.get("content-type") ?? "";
 
@@ -135,7 +143,7 @@ export async function fetchAppData(): Promise<AppData> {
 
   return {
     snapshot,
-    health: health ?? buildFallbackHealth(snapshot)
+    health: getUsableHealth(health, snapshot)
   };
 }
 
@@ -155,7 +163,7 @@ export async function refreshAppData(): Promise<AppData> {
   if (syncedSnapshot) {
     return {
       snapshot: syncedSnapshot.snapshot,
-      health: syncedSnapshot.health ?? buildFallbackHealth(syncedSnapshot.snapshot)
+      health: getUsableHealth(syncedSnapshot.health, syncedSnapshot.snapshot)
     };
   }
 

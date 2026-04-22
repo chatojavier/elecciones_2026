@@ -112,6 +112,50 @@ describe("api trust data", () => {
     });
   });
 
+  it("usa fallback derivado del snapshot cuando /health responde sin lastSuccessAt", async () => {
+    const snapshot = createSnapshot({
+      generatedAt: "2026-04-21T12:05:00.000Z"
+    });
+    const health = createHealth({
+      status: "unknown",
+      lastSyncAt: null,
+      lastSuccessAt: null,
+      staleMinutes: null
+    });
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(snapshot), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json"
+          }
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(health), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json"
+          }
+        })
+      );
+
+    const result = await fetchAppData();
+
+    expect(result).toEqual({
+      snapshot,
+      health: {
+        status: "healthy",
+        source: "onpe",
+        lastSyncAt: snapshot.generatedAt,
+        lastSuccessAt: snapshot.generatedAt,
+        staleMinutes: null,
+        lastError: null
+      }
+    });
+  });
+
   it("usa snapshot y health devueltos por sync sin hacer fetch redundante", async () => {
     const snapshot = createSnapshot({
       generatedAt: "2026-04-21T12:05:00.000Z"

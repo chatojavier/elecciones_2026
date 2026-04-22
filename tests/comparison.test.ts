@@ -247,6 +247,11 @@ describe("buildSecondRoundInsight", () => {
   it("ordena por proyectado y calcula brecha 2do vs 3ro excluyendo Otros", () => {
     const insight = buildSecondRoundInsight(secondRoundSnapshot);
 
+    expect(insight.rank1).toMatchObject({
+      code: "8",
+      label: "CANDIDATA A",
+      projectedVotes: 1200
+    });
     expect(insight.rank2).toMatchObject({
       code: "10",
       label: "CANDIDATO B",

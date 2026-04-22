@@ -52,6 +52,7 @@ export interface SecondRoundCandidate {
 }
 
 export interface SecondRoundInsight {
+  rank1: SecondRoundCandidate | null;
   rank2: SecondRoundCandidate | null;
   rank3: SecondRoundCandidate | null;
   gapVotes2v3: number | null;
@@ -425,6 +426,7 @@ export function reconcileComparisonPair(
 
 export function buildSecondRoundInsight(snapshot: ElectionSnapshot): SecondRoundInsight {
   const voteEntries = buildProjectedVoteEntries(snapshot);
+  const rank1 = voteEntries[0] ?? null;
   const rank2 = voteEntries[1] ?? null;
   const rank3 = voteEntries[2] ?? null;
   const gapVotes2v3 = rank2 && rank3 ? rank2.projectedVotes - rank3.projectedVotes : null;
@@ -434,6 +436,7 @@ export function buildSecondRoundInsight(snapshot: ElectionSnapshot): SecondRound
     (snapshot.national.totalVotosValidos + snapshot.foreign.totalVotosValidos);
 
   return {
+    rank1,
     rank2,
     rank3,
     gapVotes2v3,

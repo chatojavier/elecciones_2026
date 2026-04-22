@@ -361,6 +361,11 @@ small {
   font-size: clamp(1.1rem, 1.8vw, 1.32rem);
   line-height: 1.15;
   font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.quick-insight-kpi small {
+  color: var(--muted);
 }
 
 .quick-insight-kpi__heading {

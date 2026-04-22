@@ -7,7 +7,6 @@ import {
   trackInitialPageView
 } from "./lib/analytics";
 import {
-  buildSecondRoundInsight,
   buildComparisonCandidateOptions,
   buildNationalComparisonPairItems,
   buildScopeComparisonItem,
@@ -17,8 +16,7 @@ import {
   type ComparisonCandidateOption,
   type ComparisonItem,
   type ComparisonMode,
-  type ComparisonPair,
-  type SecondRoundStatusLevel
+  type ComparisonPair
 } from "./lib/comparison";
 import { getCandidateColor } from "./lib/constants";
 import {
@@ -167,92 +165,6 @@ function CandidateStack({
       ) : null}
     </div>
   );
-}
-
-function getStatusCopy(statusLevel: SecondRoundStatusLevel) {
-  switch (statusLevel) {
-    case "stable":
-      return { label: "Estable", className: "quick-insights__status-badge is-stable" };
-    case "tight":
-      return { label: "Ajustado", className: "quick-insights__status-badge is-tight" };
-    case "very_tight":
-      return { label: "Muy ajustado", className: "quick-insights__status-badge is-very-tight" };
-    default:
-      return { label: "Sin dato", className: "quick-insights__status-badge" };
-  }
-}
-
-function resolveSecondRoundStatusLevel(gapPp2v3: number | null): SecondRoundStatusLevel {
-  if (gapPp2v3 === null) {
-    return "unknown";
-  }
-
-  if (gapPp2v3 < 0.5) {
-    return "very_tight";
-  }
-
-  if (gapPp2v3 < 1.5) {
-    return "tight";
-  }
-
-  return "stable";
-}
-
-function buildCurrentSecondRoundInsight(snapshot: ElectionSnapshot) {
-  const currentVotesByCode = new Map<string, { votes: number; label: string }>();
-  const hasFullNationalCandidates = snapshot.national.candidates.length > 0;
-  const hasFullForeignCandidates = snapshot.foreign.candidates.length > 0;
-  // Keep a single source strategy across scopes to avoid mixing full and featured data.
-  const useFullCandidates = hasFullNationalCandidates && hasFullForeignCandidates;
-  const nationalCandidates = useFullCandidates
-    ? snapshot.national.candidates
-    : snapshot.national.featuredCandidates;
-  const foreignCandidates = useFullCandidates
-    ? snapshot.foreign.candidates
-    : snapshot.foreign.featuredCandidates;
-
-  for (const candidate of [...nationalCandidates, ...foreignCandidates]) {
-    if (candidate.code === "otros") {
-      continue;
-    }
-
-    const currentEntry = currentVotesByCode.get(candidate.code);
-    currentVotesByCode.set(candidate.code, {
-      votes: (currentEntry?.votes ?? 0) + candidate.votesValid,
-      label: currentEntry?.label ?? candidate.candidateName
-    });
-  }
-
-  const totalCurrentValidVotes =
-    snapshot.national.totalVotosValidos + snapshot.foreign.totalVotosValidos;
-  const rankedEntries = Array.from(currentVotesByCode.entries())
-    .map(([code, entry]) => ({
-      code,
-      label: entry.label,
-      votes: entry.votes,
-      percentage: totalCurrentValidVotes > 0 ? (entry.votes / totalCurrentValidVotes) * 100 : 0
-    }))
-    .sort((left, right) => {
-      if (right.votes !== left.votes) {
-        return right.votes - left.votes;
-      }
-
-      return right.percentage - left.percentage;
-    });
-
-  const rank2 = rankedEntries[1] ?? null;
-  const rank3 = rankedEntries[2] ?? null;
-  const gapVotes2v3 = rank2 && rank3 ? rank2.votes - rank3.votes : null;
-  const rawGapPp2v3 = rank2 && rank3 ? rank2.percentage - rank3.percentage : null;
-  const gapPp2v3 = rawGapPp2v3 != null ? Number(rawGapPp2v3.toFixed(6)) : null;
-
-  return {
-    rank2,
-    rank3,
-    gapVotes2v3,
-    gapPp2v3,
-    statusLevel: resolveSecondRoundStatusLevel(gapPp2v3)
-  };
 }
 
 function getComparisonColumnLabel(comparisonMode: ComparisonMode) {
@@ -525,8 +437,8 @@ function QuickInsightsSkeleton() {
     <section className="quick-insights quick-insights--loading" aria-label="Cargando resumen rápido">
       <div className="quick-insights__header">
         <div className="quick-insights__header-main">
-          <p className="eyebrow">Resumen clave: segunda vuelta</p>
-          <h2>Resumen clave: segunda vuelta</h2>
+          <p className="eyebrow">Resumen rápido</p>
+          <h2>Comparativa rápida de candidatos</h2>
         </div>
         <div className="quick-insights__chips quick-insights__chips--header">
           {Array.from({ length: 3 }).map((_, index) => (
@@ -587,8 +499,6 @@ export default function App() {
   const comparisonPairInitializationRef = useRef<string | null>(null);
   const quickInsightsImpressionRef = useRef<string | null>(null);
   const globalControlsImpressionRef = useRef<string | null>(null);
-  const quickInsightsStatusRef = useRef<string | null>(null);
-  const quickInsightsContextRef = useRef<string | null>(null);
   const freshnessStatusShownRef = useRef<string | null>(null);
   const previousFreshnessStatusRef = useRef<AppFreshnessStatus | null>(null);
   const sourceWithoutNewCutRef = useRef<string | null>(null);
@@ -868,21 +778,6 @@ export default function App() {
     setComparisonAdjustmentMessage(null);
   }, [snapshot]);
 
-  const secondRoundInsight = useMemo(() => {
-    if (!snapshot) {
-      return null;
-    }
-
-    return buildSecondRoundInsight(snapshot);
-  }, [snapshot]);
-  const currentSecondRoundInsight = useMemo(() => {
-    if (!snapshot) {
-      return null;
-    }
-
-    return buildCurrentSecondRoundInsight(snapshot);
-  }, [snapshot]);
-
   const sortedRegions = useMemo(() => {
     if (!snapshot || !comparisonPair) {
       return [];
@@ -954,62 +849,59 @@ export default function App() {
 
     return buildNationalComparisonPairItems(snapshot, comparisonPair);
   }, [comparisonPair, snapshot]);
+  const comparisonItemsByCode = useMemo(
+    () => new Map(featuredComparisonBars.map((item) => [item.code, item])),
+    [featuredComparisonBars]
+  );
   const selectedComparisonLabel = getComparisonColumnLabel(comparisonMode);
+  const candidateAItem = comparisonPair
+    ? comparisonItemsByCode.get(comparisonPair.candidateACode) ?? null
+    : null;
+  const candidateBItem = comparisonPair
+    ? comparisonItemsByCode.get(comparisonPair.candidateBCode) ?? null
+    : null;
+  const candidateALabel = comparisonPair
+    ? formatTitleCase(comparisonOptionLabels.get(comparisonPair.candidateACode) ?? "Sin dato")
+    : "Sin dato";
+  const candidateBLabel = comparisonPair
+    ? formatTitleCase(comparisonOptionLabels.get(comparisonPair.candidateBCode) ?? "Sin dato")
+    : "Sin dato";
   const quickInsightsTrackingBase = {
-    gap_pp_2v3: secondRoundInsight?.gapPp2v3 ?? undefined,
-    gap_votes_2v3: secondRoundInsight?.gapVotes2v3 ?? undefined,
-    rank2_candidate: secondRoundInsight?.rank2?.label ?? undefined,
-    rank3_candidate: secondRoundInsight?.rank3?.label ?? undefined,
+    candidate_a_code: comparisonPair?.candidateACode ?? undefined,
+    candidate_b_code: comparisonPair?.candidateBCode ?? undefined,
+    candidate_a_label: candidateALabel !== "Sin dato" ? candidateALabel : undefined,
+    candidate_b_label: candidateBLabel !== "Sin dato" ? candidateBLabel : undefined,
+    actual_gap_percentage:
+      candidateAItem && candidateBItem
+        ? Number((candidateAItem.actualPercentage - candidateBItem.actualPercentage).toFixed(3))
+        : undefined,
+    actual_gap_votes:
+      candidateAItem && candidateBItem ? candidateAItem.actualVotes - candidateBItem.actualVotes : undefined,
+    projected_gap_percentage:
+      candidateAItem && candidateBItem
+        ? Number((candidateAItem.projectedPercentage - candidateBItem.projectedPercentage).toFixed(3))
+        : undefined,
+    projected_gap_votes:
+      candidateAItem && candidateBItem
+        ? candidateAItem.projectedVotes - candidateBItem.projectedVotes
+        : undefined,
     snapshot_generated_at: snapshot?.generatedAt ?? undefined
   };
 
   useEffect(() => {
-    if (!snapshot || !secondRoundInsight) {
+    if (!snapshot || !comparisonPair) {
       return;
     }
 
-    if (quickInsightsImpressionRef.current === snapshot.generatedAt) {
+    const impressionKey = `${snapshot.generatedAt}:${comparisonPair.candidateACode}:${comparisonPair.candidateBCode}`;
+
+    if (quickInsightsImpressionRef.current === impressionKey) {
       return;
     }
 
     trackEvent("quick_insights_impression", quickInsightsTrackingBase);
-    quickInsightsImpressionRef.current = snapshot.generatedAt;
-  }, [quickInsightsTrackingBase, secondRoundInsight, snapshot]);
-
-  useEffect(() => {
-    if (!snapshot || !secondRoundInsight) {
-      return;
-    }
-
-    if (quickInsightsStatusRef.current === snapshot.generatedAt) {
-      return;
-    }
-
-    trackEvent("second_round_status_shown", {
-      status_level: secondRoundInsight.statusLevel,
-      gap_pp_2v3: secondRoundInsight.gapPp2v3 ?? undefined,
-      snapshot_generated_at: snapshot.generatedAt
-    });
-    quickInsightsStatusRef.current = snapshot.generatedAt;
-  }, [secondRoundInsight, snapshot]);
-
-  useEffect(() => {
-    if (!snapshot || !secondRoundInsight) {
-      return;
-    }
-
-    if (quickInsightsContextRef.current === snapshot.generatedAt) {
-      return;
-    }
-
-    trackEvent("second_round_context_shown", {
-      actas_peru: secondRoundInsight.actasPeruPct,
-      actas_exterior: secondRoundInsight.actasExteriorPct,
-      delta_proyeccion: secondRoundInsight.deltaProyeccionVotes,
-      snapshot_generated_at: snapshot.generatedAt
-    });
-    quickInsightsContextRef.current = snapshot.generatedAt;
-  }, [secondRoundInsight, snapshot]);
+    quickInsightsImpressionRef.current = impressionKey;
+  }, [comparisonPair, quickInsightsTrackingBase, snapshot]);
 
   useEffect(() => {
     if (!snapshot || !health) {
@@ -1264,41 +1156,49 @@ export default function App() {
     };
   }
 
-  const hasSecondRoundInsight =
-    Boolean(secondRoundInsight?.rank2) &&
-    Boolean(secondRoundInsight?.rank3) &&
-    secondRoundInsight?.gapPp2v3 != null &&
-    secondRoundInsight?.gapVotes2v3 != null;
-  const hasCurrentSecondRoundInsight =
-    Boolean(currentSecondRoundInsight?.rank2) &&
-    Boolean(currentSecondRoundInsight?.rank3) &&
-    currentSecondRoundInsight?.gapPp2v3 != null &&
-    currentSecondRoundInsight?.gapVotes2v3 != null;
-  const statusCopy = getStatusCopy(secondRoundInsight?.statusLevel ?? "unknown");
-  const currentStatusCopy = getStatusCopy(currentSecondRoundInsight?.statusLevel ?? "unknown");
-  const rank2Value = secondRoundInsight?.rank2 ? formatTitleCase(secondRoundInsight.rank2.label) : null;
-  const currentRank2Value = currentSecondRoundInsight?.rank2
-    ? formatTitleCase(currentSecondRoundInsight.rank2.label)
+  const quickInsightsTitle = comparisonPair
+    ? `${candidateALabel} vs ${candidateBLabel}`
+    : "Comparación no disponible";
+  const currentCandidateAPercentageValue = candidateAItem
+    ? formatPercent(candidateAItem.actualPercentage, 2)
     : null;
-  const gapVotesValue =
-    secondRoundInsight?.gapVotes2v3 != null
-      ? `${formatSignedNumber(secondRoundInsight.gapVotes2v3)} votos`
+  const currentCandidateAVotesValue = candidateAItem
+    ? `${formatNumber(candidateAItem.actualVotes)} votos`
+    : null;
+  const currentCandidateBPercentageValue = candidateBItem
+    ? formatPercent(candidateBItem.actualPercentage, 2)
+    : null;
+  const currentCandidateBVotesValue = candidateBItem
+    ? `${formatNumber(candidateBItem.actualVotes)} votos`
+    : null;
+  const currentGapPpValue =
+    candidateAItem && candidateBItem
+      ? `${formatSignedDecimal(candidateAItem.actualPercentage - candidateBItem.actualPercentage, 2)} pp`
       : null;
   const currentGapVotesValue =
-    currentSecondRoundInsight?.gapVotes2v3 != null
-      ? `${formatSignedNumber(currentSecondRoundInsight.gapVotes2v3)} votos`
+    candidateAItem && candidateBItem
+      ? `${formatSignedNumber(candidateAItem.actualVotes - candidateBItem.actualVotes)} votos`
       : null;
-  const gapPpValue =
-    secondRoundInsight?.gapPp2v3 != null
-      ? `${secondRoundInsight.gapPp2v3.toFixed(2)} pp`
+  const projectedCandidateAPercentageValue = candidateAItem
+    ? formatPercent(candidateAItem.projectedPercentage, 2)
+    : null;
+  const projectedCandidateAVotesValue = candidateAItem
+    ? `${formatNumber(candidateAItem.projectedVotes)} votos`
+    : null;
+  const projectedCandidateBPercentageValue = candidateBItem
+    ? formatPercent(candidateBItem.projectedPercentage, 2)
+    : null;
+  const projectedCandidateBVotesValue = candidateBItem
+    ? `${formatNumber(candidateBItem.projectedVotes)} votos`
+    : null;
+  const projectedGapPpValue =
+    candidateAItem && candidateBItem
+      ? `${formatSignedDecimal(candidateAItem.projectedPercentage - candidateBItem.projectedPercentage, 2)} pp`
       : null;
-  const currentGapPpValue =
-    currentSecondRoundInsight?.gapPp2v3 != null
-      ? `${currentSecondRoundInsight.gapPp2v3.toFixed(2)} pp`
+  const projectedGapVotesValue =
+    candidateAItem && candidateBItem
+      ? `${formatSignedNumber(candidateAItem.projectedVotes - candidateBItem.projectedVotes)} votos`
       : null;
-  const actasPeruValue = formatPercent(secondRoundInsight?.actasPeruPct ?? 0, 2);
-  const actasExteriorValue = formatPercent(secondRoundInsight?.actasExteriorPct ?? 0, 2);
-  const deltaProyeccionValue = formatSignedNumber(secondRoundInsight?.deltaProyeccionVotes ?? 0);
   const mobileCandidateASummary = comparisonPair
     ? `A: ${formatTitleCase(comparisonOptionLabels.get(comparisonPair.candidateACode) ?? "Sin dato")}`
     : "A: Sin dato";
@@ -1516,90 +1416,6 @@ export default function App() {
         </div>
       </section>
 
-      <section className="quick-insights" aria-labelledby="quick-insights-title">
-        <div className="quick-insights__header">
-          <div className="quick-insights__header-main">
-            <p className="eyebrow">Resumen rápido</p>
-            <h2 id="quick-insights-title">Resumen clave: segunda vuelta</h2>
-            <p>
-              Quién está entrando hoy a segunda vuelta y qué tan ajustada es la pelea por el 2do cupo.
-            </p>
-          </div>
-          <div
-            className="quick-insights__chips quick-insights__chips--header"
-            aria-label="Contexto mínimo de conteo y proyección"
-          >
-            <span className="quick-insight-chip">Actas Perú: {actasPeruValue}</span>
-            <span className="quick-insight-chip">Actas exterior: {actasExteriorValue}</span>
-            <span className="quick-insight-chip">Delta proyección: {deltaProyeccionValue} votos</span>
-          </div>
-        </div>
-        <div className="quick-insights__actions">
-          <a
-            className="quick-insights__cta"
-            href="#comparativa-central"
-            onClick={handleQuickInsightDetailClick}
-          >
-            Ver comparativa personalizada
-          </a>
-        </div>
-
-        <div className="quick-insights__matrix" aria-label="Comparativa actual y proyectada del corte a segunda vuelta">
-          <div className="quick-insights__matrix-head" aria-hidden="true">
-            <span />
-            <p>Hoy clasifica a segunda vuelta</p>
-            <p>Brecha porcentual (2do - 3ro)</p>
-            <p>Diferencia en votos (2do - 3ro)</p>
-          </div>
-
-          <div className="quick-insights__matrix-row">
-            <p className="quick-insights__row-label">Actual ONPE</p>
-            <article className="quick-insight-kpi">
-              <p className="quick-insight-kpi__mobile-label">Hoy clasifica a segunda vuelta</p>
-              <strong>{currentRank2Value ?? "Insight no disponible"}</strong>
-            </article>
-            <article className="quick-insight-kpi">
-              <div className="quick-insight-kpi__heading">
-                <p className="quick-insight-kpi__mobile-label">Brecha porcentual (2do - 3ro)</p>
-                {hasCurrentSecondRoundInsight ? (
-                  <span className={currentStatusCopy.className}>
-                    {currentStatusCopy.label}
-                  </span>
-                ) : null}
-              </div>
-              <strong>{currentGapPpValue ?? "Insight no disponible"}</strong>
-            </article>
-            <article className="quick-insight-kpi">
-              <p className="quick-insight-kpi__mobile-label">Diferencia en votos (2do - 3ro)</p>
-              <strong>{currentGapVotesValue ?? "Insight no disponible"}</strong>
-            </article>
-          </div>
-
-          <div className="quick-insights__matrix-row">
-            <p className="quick-insights__row-label">Proyección total</p>
-            <article className="quick-insight-kpi">
-              <p className="quick-insight-kpi__mobile-label">Hoy clasifica a segunda vuelta</p>
-              <strong>{rank2Value ?? "Insight no disponible"}</strong>
-            </article>
-            <article className="quick-insight-kpi">
-              <div className="quick-insight-kpi__heading">
-                <p className="quick-insight-kpi__mobile-label">Brecha porcentual (2do - 3ro)</p>
-                {hasSecondRoundInsight ? (
-                  <span className={statusCopy.className}>
-                    {statusCopy.label}
-                  </span>
-                ) : null}
-              </div>
-              <strong>{gapPpValue ?? "Insight no disponible"}</strong>
-            </article>
-            <article className="quick-insight-kpi">
-              <p className="quick-insight-kpi__mobile-label">Diferencia en votos (2do - 3ro)</p>
-              <strong>{gapVotesValue ?? "Insight no disponible"}</strong>
-            </article>
-          </div>
-        </div>
-      </section>
-
       <section
         ref={globalControlsRef}
         className={`global-controls ${isMobileControlsSticky ? "is-mobile-sticky" : ""} ${showMobileControlsOverlay ? "is-overlay-open" : ""}`}
@@ -1635,6 +1451,82 @@ export default function App() {
             {globalControlsRow}
           </div>
         ) : null}
+      </section>
+
+      <section className="quick-insights" aria-labelledby="quick-insights-title">
+        <div className="quick-insights__header">
+          <div className="quick-insights__header-main">
+            <p className="eyebrow">Resumen rápido</p>
+            <h2 id="quick-insights-title">Comparativa rápida de candidatos</h2>
+            <p>
+              Contraste inmediato de {quickInsightsTitle} en el total de la elección, con corte actual y proyección.
+            </p>
+          </div>
+          <div
+            className="quick-insights__chips quick-insights__chips--header"
+            aria-label="Contexto de la comparativa rápida"
+          >
+            <span className="quick-insight-chip">A: {candidateALabel}</span>
+            <span className="quick-insight-chip">B: {candidateBLabel}</span>
+            <span className="quick-insight-chip">Vista activa: {mobileComparisonSummary}</span>
+          </div>
+        </div>
+        <div className="quick-insights__actions">
+          <a
+            className="quick-insights__cta"
+            href="#comparativa-central"
+            onClick={handleQuickInsightDetailClick}
+          >
+            Ver comparativa personalizada
+          </a>
+        </div>
+
+        <div className="quick-insights__matrix" aria-label="Comparativa rápida actual y proyectada de los candidatos seleccionados">
+          <div className="quick-insights__matrix-head" aria-hidden="true">
+            <span />
+            <p>{candidateALabel}</p>
+            <p>{candidateBLabel}</p>
+            <p>Brecha A vs B</p>
+          </div>
+
+          <div className="quick-insights__matrix-row">
+            <p className="quick-insights__row-label">Actual ONPE</p>
+            <article className="quick-insight-kpi">
+              <p className="quick-insight-kpi__mobile-label">{candidateALabel}</p>
+              <strong>{currentCandidateAPercentageValue ?? "Insight no disponible"}</strong>
+              <small>{currentCandidateAVotesValue ?? "Sin dato"}</small>
+            </article>
+            <article className="quick-insight-kpi">
+              <p className="quick-insight-kpi__mobile-label">{candidateBLabel}</p>
+              <strong>{currentCandidateBPercentageValue ?? "Insight no disponible"}</strong>
+              <small>{currentCandidateBVotesValue ?? "Sin dato"}</small>
+            </article>
+            <article className="quick-insight-kpi">
+              <p className="quick-insight-kpi__mobile-label">Brecha A vs B</p>
+              <strong>{currentGapPpValue ?? "Insight no disponible"}</strong>
+              <small>{currentGapVotesValue ?? "Sin dato"}</small>
+            </article>
+          </div>
+
+          <div className="quick-insights__matrix-row">
+            <p className="quick-insights__row-label">Proyección total</p>
+            <article className="quick-insight-kpi">
+              <p className="quick-insight-kpi__mobile-label">{candidateALabel}</p>
+              <strong>{projectedCandidateAPercentageValue ?? "Insight no disponible"}</strong>
+              <small>{projectedCandidateAVotesValue ?? "Sin dato"}</small>
+            </article>
+            <article className="quick-insight-kpi">
+              <p className="quick-insight-kpi__mobile-label">{candidateBLabel}</p>
+              <strong>{projectedCandidateBPercentageValue ?? "Insight no disponible"}</strong>
+              <small>{projectedCandidateBVotesValue ?? "Sin dato"}</small>
+            </article>
+            <article className="quick-insight-kpi">
+              <p className="quick-insight-kpi__mobile-label">Brecha A vs B</p>
+              <strong>{projectedGapPpValue ?? "Insight no disponible"}</strong>
+              <small>{projectedGapVotesValue ?? "Sin dato"}</small>
+            </article>
+          </div>
+        </div>
       </section>
 
       <section className="content-grid">

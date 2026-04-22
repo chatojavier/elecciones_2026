@@ -550,21 +550,26 @@ describe("App hero clarity and first action", () => {
       "Consulta resultados ONPE, compara candidatos y explora regiones y votos extranjeros con datos actualizados."
     );
     expect(container.textContent).toContain("Actualizamos esta vista con nuevos cortes oficiales de ONPE.");
-    expect(container.textContent).toContain("Resumen clave: segunda vuelta");
+    expect(container.textContent).toContain("Comparativa rápida de candidatos");
     expect(container.textContent).toContain("Actual ONPE");
     expect(container.textContent).toContain("Proyección total");
-    expect(container.textContent).toContain("Brecha porcentual (2do - 3ro)");
-    expect(container.textContent).toContain("Hoy clasifica a segunda vuelta");
-    expect(container.textContent).toContain("Diferencia en votos (2do - 3ro)");
-    expect(container.textContent).toContain("Actas Perú:");
-    expect(container.textContent).toContain("Actas exterior:");
-    expect(container.textContent).toContain("Delta proyección:");
+    expect(container.textContent).toContain("Candidato B vs Candidata C");
+    expect(container.textContent).toContain("Brecha A vs B");
+    expect(container.textContent).toContain("A: Candidato B");
+    expect(container.textContent).toContain("B: Candidata C");
+    expect(container.textContent).toContain("Vista activa:");
     expect(container.textContent).toContain("Ver comparativa personalizada");
     expect(container.textContent).toContain("Estado de actualización");
     expect(container.textContent).toContain("Última actualización de esta app");
     expect(container.textContent).toContain("Próxima revisión automática");
     expect(container.textContent).toContain("Última publicación ONPE");
     expect(container.textContent).not.toContain("Disputa por el 2do cupo:");
+
+    const globalControls = container.querySelector(".global-controls") as HTMLElement;
+    const quickInsights = container.querySelector(".quick-insights") as HTMLElement;
+    expect(globalControls).not.toBeNull();
+    expect(quickInsights).not.toBeNull();
+    expect(globalControls.compareDocumentPosition(quickInsights) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
 
     const primaryCta = container.querySelector('a[href="#lectura-regional"]');
     const secondaryCta = container.querySelector('a[href="#metodologia"]');
@@ -1379,7 +1384,7 @@ describe("App hero clarity and first action", () => {
     );
   });
 
-  it("registra impresión, estado y contexto del módulo quick insights", async () => {
+  it("registra impresión del módulo quick insights con el par A/B activo", async () => {
     await act(async () => {
       root.render(<App />);
     });
@@ -1391,30 +1396,16 @@ describe("App hero clarity and first action", () => {
     expect(trackEventMock).toHaveBeenCalledWith(
       "quick_insights_impression",
       expect.objectContaining({
-        gap_pp_2v3: 0.667,
-        gap_votes_2v3: 20,
-        rank2_candidate: "CANDIDATO B",
-        rank3_candidate: "CANDIDATA C"
-      })
-    );
-    expect(trackEventMock).toHaveBeenCalledWith(
-      "second_round_status_shown",
-      expect.objectContaining({
-        status_level: "tight",
-        gap_pp_2v3: 0.667
-      })
-    );
-    expect(trackEventMock).toHaveBeenCalledWith(
-      "second_round_context_shown",
-      expect.objectContaining({
-        actas_peru: 80,
-        actas_exterior: 80,
-        delta_proyeccion: 2050
+        candidate_a_code: "10",
+        candidate_b_code: "12",
+        candidate_a_label: "Candidato B",
+        candidate_b_label: "Candidata C",
+        projected_gap_votes: 20
       })
     );
   });
 
-  it("muestra la aproximación dentro del KPI de brecha porcentual", async () => {
+  it("muestra la brecha A vs B dentro del resumen rápido", async () => {
     await act(async () => {
       root.render(<App />);
     });
@@ -1423,151 +1414,24 @@ describe("App hero clarity and first action", () => {
       await Promise.resolve();
     });
 
-    expect(container.textContent).toContain("Brecha porcentual (2do - 3ro)");
-    expect(container.textContent).toContain("Ajustado");
+    expect(container.textContent).toContain("Brecha A vs B");
+    expect(container.textContent).toContain("+0.67 pp");
+    expect(container.textContent).toContain("+20 votos");
   });
 
-  it("clasifica 0.50 pp actual como Ajustado (sin caer en Muy ajustado por float)", async () => {
-    const thresholdSnapshot = createSnapshot();
-    thresholdSnapshot.national = createScope({
-      totalVotosValidos: 5200,
-      candidates: [
-        {
-          code: "8",
-          partyName: "PARTIDO A",
-          candidateName: "CANDIDATA A",
-          votesValid: 2600,
-          pctValid: 50,
-          pctEmitted: 45
-        },
-        {
-          code: "10",
-          partyName: "PARTIDO B",
-          candidateName: "CANDIDATO B",
-          votesValid: 1313,
-          pctValid: 25.25,
-          pctEmitted: 22
-        },
-        {
-          code: "12",
-          partyName: "PARTIDO C",
-          candidateName: "CANDIDATA C",
-          votesValid: 1287,
-          pctValid: 24.75,
-          pctEmitted: 21
-        }
-      ],
-      featuredCandidates: [
-        {
-          code: "8",
-          partyName: "PARTIDO A",
-          candidateName: "CANDIDATA A",
-          votesValid: 2600,
-          pctValid: 50,
-          pctEmitted: 45
-        },
-        {
-          code: "10",
-          partyName: "PARTIDO B",
-          candidateName: "CANDIDATO B",
-          votesValid: 1313,
-          pctValid: 25.25,
-          pctEmitted: 22
-        },
-        {
-          code: "12",
-          partyName: "PARTIDO C",
-          candidateName: "CANDIDATA C",
-          votesValid: 1287,
-          pctValid: 24.75,
-          pctEmitted: 21
-        }
-      ],
-      otros: {
-        code: "otros",
-        label: "Otros",
-        votesValid: 0,
-        pctValid: 0,
-        pctEmitted: 0
-      }
-    });
-    thresholdSnapshot.foreign = createForeign({
-      totalVotosValidos: 0,
-      candidates: [
-        {
-          code: "8",
-          partyName: "PARTIDO A",
-          candidateName: "CANDIDATA A",
-          votesValid: 0,
-          pctValid: 0,
-          pctEmitted: 0
-        },
-        {
-          code: "10",
-          partyName: "PARTIDO B",
-          candidateName: "CANDIDATO B",
-          votesValid: 0,
-          pctValid: 0,
-          pctEmitted: 0
-        },
-        {
-          code: "12",
-          partyName: "PARTIDO C",
-          candidateName: "CANDIDATA C",
-          votesValid: 0,
-          pctValid: 0,
-          pctEmitted: 0
-        }
-      ],
-      featuredCandidates: [
-        {
-          code: "8",
-          partyName: "PARTIDO A",
-          candidateName: "CANDIDATA A",
-          votesValid: 0,
-          pctValid: 0,
-          pctEmitted: 0
-        },
-        {
-          code: "10",
-          partyName: "PARTIDO B",
-          candidateName: "CANDIDATO B",
-          votesValid: 0,
-          pctValid: 0,
-          pctEmitted: 0
-        },
-        {
-          code: "12",
-          partyName: "PARTIDO C",
-          candidateName: "CANDIDATA C",
-          votesValid: 0,
-          pctValid: 0,
-          pctEmitted: 0
-        }
-      ],
-      projectedVotes: {
-        "8": 0,
-        "10": 0,
-        "12": 0,
-        otros: 0
-      },
-      continents: []
-    });
-
-    fetchSnapshotMock.mockResolvedValue(createAppData(thresholdSnapshot));
-    refreshSnapshotMock.mockResolvedValue(createAppData(thresholdSnapshot));
-
+  it("actualiza el resumen rápido cuando cambia el par A/B", async () => {
     await act(async () => {
       root.render(<App />);
     });
 
     await act(async () => {
-      await Promise.resolve();
+      const candidateASelect = container.querySelector('select[aria-label="Candidato A"]') as HTMLSelectElement;
+      candidateASelect.value = "8";
+      candidateASelect.dispatchEvent(new Event("change", { bubbles: true }));
     });
 
-    expect(container.textContent).toContain("0.50 pp");
-    expect(container.textContent).not.toContain("Muy ajustado");
-    expect(container.textContent).toContain("Ajustado");
+    expect(container.textContent).toContain("A: Candidata A");
+    expect(container.textContent).toContain("Candidata A vs Candidata C");
   });
 
   it("evita mezclar fuentes full+featured en el resumen actual cuando snapshot es mixto", async () => {
@@ -1852,7 +1716,8 @@ describe("App hero clarity and first action", () => {
       await Promise.resolve();
     });
 
-    expect(container.textContent).toContain("Insight no disponible");
+    expect(container.textContent).toContain("Ajustamos la comparación al mejor par disponible.");
+    expect(container.textContent).toContain("Candidata A vs Candidato B");
     const sortSelect = Array.from(container.querySelectorAll("select")).find((select) =>
       select.parentElement?.textContent?.includes("Ordenar por")
     ) as HTMLSelectElement;
@@ -1983,7 +1848,7 @@ describe("App province drilldown", () => {
       await Promise.resolve();
     });
 
-    expect(container.textContent).toContain("Resumen clave: segunda vuelta");
+    expect(container.textContent).toContain("Comparativa rápida de candidatos");
     expect(container.textContent).toContain("Tabla de continentes y países");
     expect(container.textContent).not.toContain("Detalle por país");
   });

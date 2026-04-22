@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 
-import { fetchSnapshot, refreshSnapshot } from "./lib/api";
+import { fetchAppData, refreshAppData } from "./lib/api";
 import {
   initializeAnalytics,
   trackEvent,
@@ -16,21 +16,30 @@ import {
   type SecondRoundStatusLevel
 } from "./lib/comparison";
 import { getCandidateColor } from "./lib/constants";
-import { computeIsStale } from "./lib/domain";
 import {
   formatDateTime,
-  getElapsedMinutes,
   formatNumber,
   formatPercent,
   formatRelativeMinutes,
   formatSignedDecimal,
   formatSignedNumber,
+  formatTime,
   formatTitleCase
 } from "./lib/format";
+import {
+  deriveAppFreshnessStatus,
+  getAppFetchAgeMinutes,
+  getNextAutoRefreshInMinutes,
+  getSourceAgeMinutes,
+  getSourceHasNewCut,
+  shouldAutoRefresh,
+  type AppFreshnessStatus
+} from "./lib/trust";
 import type {
   ElectionSnapshot,
   ForeignContinentResult,
   ForeignCountryResult,
+  HealthStatus,
   ProvinceResult,
   RegionResult,
   ScopeResult
@@ -751,10 +760,14 @@ function LeafScopeDrilldown({
 
 export default function App() {
   const [snapshot, setSnapshot] = useState<ElectionSnapshot | null>(null);
+  const [health, setHealth] = useState<HealthStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [refreshFeedback, setRefreshFeedback] = useState<{
+    kind: "success" | "error";
+    message: string;
+  } | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>(DEFAULT_REGION_SORT);
   const [analysisMode, setAnalysisMode] = useState<AnalysisMode>(DEFAULT_ANALYSIS_MODE);
   const [comparisonMode, setComparisonMode] = useState<ComparisonMode>(DEFAULT_COMPARISON_MODE);
@@ -776,27 +789,81 @@ export default function App() {
   const analysisModeDefaultRef = useRef<string | null>(null);
   const quickInsightsStatusRef = useRef<string | null>(null);
   const quickInsightsContextRef = useRef<string | null>(null);
+  const freshnessStatusShownRef = useRef<string | null>(null);
+  const previousFreshnessStatusRef = useRef<AppFreshnessStatus | null>(null);
+  const sourceWithoutNewCutRef = useRef<string | null>(null);
   const previousMobileStickyRef = useRef(false);
   const foreignContinents = snapshot?.foreign.continents ?? [];
 
-  async function loadSnapshot(background = false) {
+  async function loadAppData(
+    options: {
+      background?: boolean;
+      trigger?: "initial" | "manual" | "auto";
+    } = {}
+  ) {
+    const { background = false, trigger = "initial" } = options;
+
     if (background) {
       setRefreshing(true);
-      setRefreshError(null);
+      setRefreshFeedback(null);
     } else {
       setLoading(true);
     }
 
     try {
-      const data = background ? await refreshSnapshot() : await fetchSnapshot();
-      setSnapshot(data);
+      const previousSnapshot = snapshot;
+      const data = background ? await refreshAppData() : await fetchAppData();
+
+      setSnapshot(data.snapshot);
+      setHealth(data.health);
       setError(null);
-      setRefreshError(null);
+      if (!background || trigger !== "manual") {
+        setRefreshFeedback(null);
+      }
+
+      if (trigger === "manual") {
+        const sourceHasNewCut = getSourceHasNewCut(
+          data.snapshot.sourceLastUpdatedAt,
+          data.health.lastSuccessAt,
+          previousSnapshot?.sourceLastUpdatedAt ?? null
+        );
+
+        setRefreshFeedback({
+          kind: "success",
+          message: "App actualizada correctamente."
+        });
+        trackEvent("refresh_manual_success", {
+          app_fetch_age_minutes: getAppFetchAgeMinutes(data.health.lastSuccessAt, clockNow) ?? undefined,
+          app_freshness_status: deriveAppFreshnessStatus(data.health.lastSuccessAt, clockNow),
+          source_age_minutes: getSourceAgeMinutes(data.snapshot.sourceLastUpdatedAt, clockNow),
+          source_has_new_cut: sourceHasNewCut,
+          snapshot_generated_at: data.snapshot.generatedAt
+        });
+      }
     } catch (reason) {
       const message = (reason as Error).message;
 
       if (background && snapshot) {
-        setRefreshError(message);
+        if (trigger === "manual") {
+          setRefreshFeedback({
+            kind: "error",
+            message: "No se pudo actualizar. Intenta nuevamente."
+          });
+          trackEvent("refresh_manual_error", {
+            app_fetch_age_minutes: getAppFetchAgeMinutes(health?.lastSuccessAt ?? null, clockNow) ?? undefined,
+            app_freshness_status: deriveAppFreshnessStatus(health?.lastSuccessAt ?? null, clockNow),
+            source_age_minutes: snapshot ? getSourceAgeMinutes(snapshot.sourceLastUpdatedAt, clockNow) : undefined,
+            source_has_new_cut: snapshot
+              ? getSourceHasNewCut(
+                  snapshot.sourceLastUpdatedAt,
+                  health?.lastSuccessAt ?? null,
+                  snapshot.sourceLastUpdatedAt
+                )
+              : undefined,
+            snapshot_generated_at: snapshot?.generatedAt,
+            error_message: message
+          });
+        }
       } else {
         setError(message);
       }
@@ -813,7 +880,7 @@ export default function App() {
     initializeAnalytics();
     trackInitialPageView();
 
-    void loadSnapshot();
+    void loadAppData();
   }, []);
 
   useEffect(() => {
@@ -910,27 +977,48 @@ export default function App() {
     });
   }, [foreignContinents, snapshot]);
 
-  const snapshotAgeMinutes = snapshot ? getElapsedMinutes(snapshot.generatedAt, clockNow) : null;
-  const isSnapshotStale = snapshot ? computeIsStale(snapshot.generatedAt, clockNow) : false;
+  const appLastSuccessAt = health?.lastSuccessAt ?? null;
+  const appFetchAgeMinutes = getAppFetchAgeMinutes(appLastSuccessAt, clockNow);
+  const sourceAgeMinutes = snapshot ? getSourceAgeMinutes(snapshot.sourceLastUpdatedAt, clockNow) : null;
+  const appFreshnessStatus = deriveAppFreshnessStatus(appLastSuccessAt, clockNow);
+  const nextAutoRefreshInMinutes = getNextAutoRefreshInMinutes(appLastSuccessAt, clockNow);
+  const sourceHasNewCut = snapshot
+    ? getSourceHasNewCut(snapshot.sourceLastUpdatedAt, appLastSuccessAt)
+    : true;
+  const statusNote = refreshFeedback?.kind === "error"
+    ? refreshFeedback.message
+    : refreshFeedback?.kind === "success" && appFreshnessStatus === "Al día"
+      ? refreshFeedback.message
+      : appFreshnessStatus === "Desactualizado"
+        ? "Mostramos el último snapshot disponible."
+        : !sourceHasNewCut
+          ? "ONPE aún no publica un corte más reciente."
+          : "La app está al día.";
+  const appFreshnessPayload = {
+    app_fetch_age_minutes: appFetchAgeMinutes ?? undefined,
+    app_freshness_status: appFreshnessStatus,
+    source_age_minutes: sourceAgeMinutes ?? undefined,
+    source_has_new_cut: sourceHasNewCut,
+    snapshot_generated_at: snapshot?.generatedAt ?? undefined
+  };
 
   useEffect(() => {
-    if (!snapshot || snapshotAgeMinutes === null || loading || refreshing) {
+    if (!snapshot || loading || refreshing || !shouldAutoRefresh(appLastSuccessAt, clockNow)) {
       return;
     }
 
-    if (snapshotAgeMinutes !== 16 && snapshotAgeMinutes !== 31) {
-      return;
-    }
-
-    const refreshKey = `${snapshot.generatedAt}:${snapshotAgeMinutes}`;
+    const refreshKey = `${appLastSuccessAt ?? "none"}:${snapshot.generatedAt}:${clockNow}`;
 
     if (lastAutoRefreshKeyRef.current === refreshKey) {
       return;
     }
 
     lastAutoRefreshKeyRef.current = refreshKey;
-    void loadSnapshot(true);
-  }, [clockNow, loading, refreshing, snapshot, snapshotAgeMinutes]);
+    void loadAppData({
+      background: true,
+      trigger: "auto"
+    });
+  }, [appLastSuccessAt, clockNow, loading, refreshing, snapshot]);
 
   const featuredLegend = useMemo(() => {
     if (!snapshot) {
@@ -1146,6 +1234,46 @@ export default function App() {
   }, [secondRoundInsight, snapshot]);
 
   useEffect(() => {
+    if (!snapshot || !health) {
+      return;
+    }
+
+    const impressionKey = `${snapshot.generatedAt}:${appFreshnessStatus}:${sourceHasNewCut}`;
+
+    if (freshnessStatusShownRef.current !== impressionKey) {
+      trackEvent("app_freshness_status_shown", appFreshnessPayload);
+      freshnessStatusShownRef.current = impressionKey;
+    }
+
+    if (
+      previousFreshnessStatusRef.current !== null &&
+      previousFreshnessStatusRef.current !== appFreshnessStatus
+    ) {
+      trackEvent("app_freshness_status_changed", {
+        ...appFreshnessPayload,
+        previous_status: previousFreshnessStatusRef.current
+      });
+    }
+
+    previousFreshnessStatusRef.current = appFreshnessStatus;
+  }, [appFreshnessPayload, appFreshnessStatus, health, snapshot, sourceHasNewCut]);
+
+  useEffect(() => {
+    if (!snapshot || sourceHasNewCut) {
+      return;
+    }
+
+    const contextKey = `${snapshot.generatedAt}:${sourceHasNewCut}`;
+
+    if (sourceWithoutNewCutRef.current === contextKey) {
+      return;
+    }
+
+    trackEvent("source_without_new_cut_shown", appFreshnessPayload);
+    sourceWithoutNewCutRef.current = contextKey;
+  }, [appFreshnessPayload, snapshot, sourceHasNewCut]);
+
+  useEffect(() => {
     if (!snapshot) {
       return;
     }
@@ -1226,11 +1354,16 @@ export default function App() {
   }
 
   function handleRefreshClick() {
+    trackEvent("refresh_manual_click", appFreshnessPayload);
     trackEvent("refresh_snapshot", {
-      source: "hero_status"
+      source: "hero_status",
+      ...appFreshnessPayload
     });
 
-    void loadSnapshot(true);
+    void loadAppData({
+      background: true,
+      trigger: "manual"
+    });
   }
 
   function handleSortChange(nextSortKey: SortKey) {
@@ -1579,23 +1712,43 @@ export default function App() {
 
         <div className="hero__status">
           <div>
-            <span>Fuente</span>
-            <strong>ONPE oficial</strong>
+            <span>Última actualización de esta app</span>
+            <strong>
+              {appLastSuccessAt
+                ? `${formatRelativeMinutes(appLastSuccessAt, clockNow)} (${formatTime(appLastSuccessAt)})`
+                : "Sin actualización exitosa reciente"}
+            </strong>
           </div>
           <div>
-            <span>Actualizado</span>
-            <strong>{formatDateTime(snapshot.generatedAt)}</strong>
+            <span>Próxima revisión automática</span>
+            <strong>
+              {nextAutoRefreshInMinutes === null
+                ? "Pendiente"
+                : nextAutoRefreshInMinutes === 0
+                  ? "En curso"
+                  : `en ${nextAutoRefreshInMinutes} min`}
+            </strong>
           </div>
           <div>
-            <span>Fuente ONPE</span>
-            <strong>{formatRelativeMinutes(snapshot.sourceLastUpdatedAt, clockNow)}</strong>
+            <span>Última publicación ONPE</span>
+            <strong>
+              {`${formatRelativeMinutes(snapshot.sourceLastUpdatedAt, clockNow)} (${formatTime(
+                snapshot.sourceLastUpdatedAt
+              )})`}
+            </strong>
           </div>
           <div id="estado-actualizacion">
             <div className="status-card__top">
               <div>
-                <span>Estado</span>
-                <strong className={isSnapshotStale ? "status-badge is-stale" : "status-badge"}>
-                  {isSnapshotStale ? "Stale" : "Al día"}
+                <span>Estado de actualización</span>
+                <strong
+                  className={
+                    appFreshnessStatus === "Desactualizado"
+                      ? "status-badge is-stale"
+                      : "status-badge"
+                  }
+                >
+                  {appFreshnessStatus}
                 </strong>
               </div>
               <button
@@ -1605,11 +1758,14 @@ export default function App() {
                 disabled={refreshing}
               >
                 {refreshing ? <span className="refresh-button__spinner" aria-hidden="true" /> : null}
-                {refreshing ? "Actualizando..." : "Actualizar datos"}
+                {refreshing ? "Actualizando datos..." : "Actualizar ahora"}
               </button>
             </div>
             <small className="status-card__note">
-              {refreshError ?? "Fuerza una nueva consulta a ONPE."}
+              {statusNote}
+            </small>
+            <small className="status-card__meta">
+              Snapshot visible: {formatDateTime(snapshot.generatedAt)}
             </small>
           </div>
         </div>

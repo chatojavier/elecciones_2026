@@ -81,6 +81,12 @@ export function formatDateTime(value: string) {
   }).format(new Date(value));
 }
 
+export function formatTime(value: string) {
+  return new Intl.DateTimeFormat("es-PE", {
+    timeStyle: "short"
+  }).format(new Date(value));
+}
+
 export function getElapsedMinutes(value: string, now = Date.now()) {
   const diffMs = now - new Date(value).getTime();
   return Math.max(0, Math.round(diffMs / 60000));

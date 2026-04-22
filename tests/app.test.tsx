@@ -1469,9 +1469,14 @@ describe("App hero clarity and first action", () => {
       await Promise.resolve();
     });
 
-    expect(container.textContent).toContain("Brecha A vs B");
-    expect(container.textContent).toContain("+0.67 pp");
-    expect(container.textContent).toContain("+20 votos");
+    const quickInsights = container.querySelector(".quick-insights") as HTMLElement;
+
+    expect(quickInsights.textContent).toContain("Brecha A vs B");
+    expect(quickInsights.textContent).toContain("+0.67 pp");
+    expect(quickInsights.textContent).toContain("+20 votos");
+    expect(quickInsights.textContent).toContain("Ajustado");
+    expect(quickInsights.querySelectorAll(".quick-insights__candidate-swatch").length).toBeGreaterThan(0);
+    expect(quickInsights.querySelectorAll(".quick-insight-kpi__delta-badge.is-negative").length).toBe(2);
   });
 
   it("actualiza el resumen rápido cuando cambia el par A/B", async () => {

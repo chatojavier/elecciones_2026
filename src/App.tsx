@@ -57,10 +57,42 @@ type SortKey =
   | "gap_2v3";
 type LeafScopeResult = ProvinceResult | ForeignCountryResult;
 type ComparableScope = ScopeResult | ProvinceResult | ForeignCountryResult;
+type QuickInsightGapStatus = "stable" | "tight" | "very_tight" | "unknown";
 
 const DEFAULT_COMPARISON_MODE: ComparisonMode = "projected";
 const DEFAULT_SHOW_OTHERS = false;
 const DEFAULT_REGION_SORT: SortKey = "gap_2v3";
+
+function getQuickInsightGapStatus(gapPp: number | null): QuickInsightGapStatus {
+  if (gapPp === null) {
+    return "unknown";
+  }
+
+  const absoluteGap = Math.abs(gapPp);
+
+  if (absoluteGap < 0.5) {
+    return "very_tight";
+  }
+
+  if (absoluteGap < 1.5) {
+    return "tight";
+  }
+
+  return "stable";
+}
+
+function getQuickInsightGapStatusCopy(status: QuickInsightGapStatus) {
+  switch (status) {
+    case "stable":
+      return { label: "Estable", className: "quick-insights__status-badge is-stable" };
+    case "tight":
+      return { label: "Ajustado", className: "quick-insights__status-badge is-tight" };
+    case "very_tight":
+      return { label: "Muy ajustado", className: "quick-insights__status-badge is-very-tight" };
+    default:
+      return { label: "Sin dato", className: "quick-insights__status-badge" };
+  }
+}
 
 function FeaturedBar({
   item
@@ -1200,6 +1232,28 @@ export default function App() {
     candidateAItem && candidateBItem
       ? `${formatSignedNumber(candidateAItem.projectedVotes - candidateBItem.projectedVotes)} votos`
       : null;
+  const candidateADeltaPpValue =
+    candidateAItem
+      ? `${formatSignedDecimal(candidateAItem.deltaPercentage, 2)} pp`
+      : null;
+  const candidateBDeltaPpValue =
+    candidateBItem
+      ? `${formatSignedDecimal(candidateBItem.deltaPercentage, 2)} pp`
+      : null;
+  const currentGapStatusCopy = getQuickInsightGapStatusCopy(
+    getQuickInsightGapStatus(
+      candidateAItem && candidateBItem
+        ? candidateAItem.actualPercentage - candidateBItem.actualPercentage
+        : null
+    )
+  );
+  const projectedGapStatusCopy = getQuickInsightGapStatusCopy(
+    getQuickInsightGapStatus(
+      candidateAItem && candidateBItem
+        ? candidateAItem.projectedPercentage - candidateBItem.projectedPercentage
+        : null
+    )
+  );
   const actasPeruValue = formatPercent(snapshot?.national.actasContabilizadasPct ?? 0, 2);
   const actasExteriorValue = formatPercent(snapshot?.foreign.actasContabilizadasPct ?? 0, 2);
   const deltaProyeccionValue = formatSignedNumber(
@@ -1491,25 +1545,54 @@ export default function App() {
         <div className="quick-insights__matrix" aria-label="Comparativa rápida actual y proyectada de los candidatos seleccionados">
           <div className="quick-insights__matrix-head" aria-hidden="true">
             <span />
-            <p>{candidateALabel}</p>
-            <p>{candidateBLabel}</p>
+            <p className="quick-insights__candidate-heading">
+              <span
+                className="quick-insights__candidate-swatch"
+                style={{ background: getCandidateColor(comparisonPair?.candidateACode ?? "otros") }}
+              />
+              {candidateALabel}
+            </p>
+            <p className="quick-insights__candidate-heading">
+              <span
+                className="quick-insights__candidate-swatch"
+                style={{ background: getCandidateColor(comparisonPair?.candidateBCode ?? "otros") }}
+              />
+              {candidateBLabel}
+            </p>
             <p>Brecha A vs B</p>
           </div>
 
           <div className="quick-insights__matrix-row">
             <p className="quick-insights__row-label">Actual ONPE</p>
             <article className="quick-insight-kpi">
-              <p className="quick-insight-kpi__mobile-label">{candidateALabel}</p>
+              <p className="quick-insight-kpi__mobile-label quick-insight-kpi__mobile-label--candidate">
+                <span
+                  className="quick-insights__candidate-swatch"
+                  style={{ background: getCandidateColor(comparisonPair?.candidateACode ?? "otros") }}
+                />
+                {candidateALabel}
+              </p>
               <strong>{currentCandidateAPercentageValue ?? "Insight no disponible"}</strong>
               <small>{currentCandidateAVotesValue ?? "Sin dato"}</small>
             </article>
             <article className="quick-insight-kpi">
-              <p className="quick-insight-kpi__mobile-label">{candidateBLabel}</p>
+              <p className="quick-insight-kpi__mobile-label quick-insight-kpi__mobile-label--candidate">
+                <span
+                  className="quick-insights__candidate-swatch"
+                  style={{ background: getCandidateColor(comparisonPair?.candidateBCode ?? "otros") }}
+                />
+                {candidateBLabel}
+              </p>
               <strong>{currentCandidateBPercentageValue ?? "Insight no disponible"}</strong>
               <small>{currentCandidateBVotesValue ?? "Sin dato"}</small>
             </article>
-            <article className="quick-insight-kpi">
-              <p className="quick-insight-kpi__mobile-label">Brecha A vs B</p>
+            <article className="quick-insight-kpi quick-insight-kpi--has-floating-badge">
+              <div className="quick-insight-kpi__heading quick-insight-kpi__heading--floating">
+                <p className="quick-insight-kpi__mobile-label">Brecha A vs B</p>
+                <span className={currentGapStatusCopy.className}>
+                  {currentGapStatusCopy.label}
+                </span>
+              </div>
               <strong>{currentGapPpValue ?? "Insight no disponible"}</strong>
               <small>{currentGapVotesValue ?? "Sin dato"}</small>
             </article>
@@ -1517,18 +1600,57 @@ export default function App() {
 
           <div className="quick-insights__matrix-row">
             <p className="quick-insights__row-label">Proyección total</p>
-            <article className="quick-insight-kpi">
-              <p className="quick-insight-kpi__mobile-label">{candidateALabel}</p>
+            <article className="quick-insight-kpi quick-insight-kpi--has-floating-badge">
+              <div className="quick-insight-kpi__heading quick-insight-kpi__heading--floating">
+                <p className="quick-insight-kpi__mobile-label quick-insight-kpi__mobile-label--candidate">
+                  <span
+                    className="quick-insights__candidate-swatch"
+                    style={{ background: getCandidateColor(comparisonPair?.candidateACode ?? "otros") }}
+                  />
+                  {candidateALabel}
+                </p>
+                <span
+                  className={`quick-insight-kpi__delta-badge ${
+                    candidateAItem && candidateAItem.deltaPercentage >= 0
+                      ? "is-positive"
+                      : "is-negative"
+                  }`}
+                >
+                  {candidateADeltaPpValue ?? "Sin dato"}
+                </span>
+              </div>
               <strong>{projectedCandidateAPercentageValue ?? "Insight no disponible"}</strong>
               <small>{projectedCandidateAVotesValue ?? "Sin dato"}</small>
             </article>
-            <article className="quick-insight-kpi">
-              <p className="quick-insight-kpi__mobile-label">{candidateBLabel}</p>
+            <article className="quick-insight-kpi quick-insight-kpi--has-floating-badge">
+              <div className="quick-insight-kpi__heading quick-insight-kpi__heading--floating">
+                <p className="quick-insight-kpi__mobile-label quick-insight-kpi__mobile-label--candidate">
+                  <span
+                    className="quick-insights__candidate-swatch"
+                    style={{ background: getCandidateColor(comparisonPair?.candidateBCode ?? "otros") }}
+                  />
+                  {candidateBLabel}
+                </p>
+                <span
+                  className={`quick-insight-kpi__delta-badge ${
+                    candidateBItem && candidateBItem.deltaPercentage >= 0
+                      ? "is-positive"
+                      : "is-negative"
+                  }`}
+                >
+                  {candidateBDeltaPpValue ?? "Sin dato"}
+                </span>
+              </div>
               <strong>{projectedCandidateBPercentageValue ?? "Insight no disponible"}</strong>
               <small>{projectedCandidateBVotesValue ?? "Sin dato"}</small>
             </article>
-            <article className="quick-insight-kpi">
-              <p className="quick-insight-kpi__mobile-label">Brecha A vs B</p>
+            <article className="quick-insight-kpi quick-insight-kpi--has-floating-badge">
+              <div className="quick-insight-kpi__heading quick-insight-kpi__heading--floating">
+                <p className="quick-insight-kpi__mobile-label">Brecha A vs B</p>
+                <span className={projectedGapStatusCopy.className}>
+                  {projectedGapStatusCopy.label}
+                </span>
+              </div>
               <strong>{projectedGapPpValue ?? "Insight no disponible"}</strong>
               <small>{projectedGapVotesValue ?? "Sin dato"}</small>
             </article>

@@ -16,6 +16,7 @@ import {
   type SecondRoundStatusLevel
 } from "./lib/comparison";
 import { getCandidateColor } from "./lib/constants";
+import { computeIsStale } from "./lib/domain";
 import {
   formatDateTime,
   getElapsedMinutes,
@@ -909,18 +910,19 @@ export default function App() {
     });
   }, [foreignContinents, snapshot]);
 
-  const sourceAgeMinutes = snapshot ? getElapsedMinutes(snapshot.sourceLastUpdatedAt, clockNow) : null;
+  const snapshotAgeMinutes = snapshot ? getElapsedMinutes(snapshot.generatedAt, clockNow) : null;
+  const isSnapshotStale = snapshot ? computeIsStale(snapshot.generatedAt, clockNow) : false;
 
   useEffect(() => {
-    if (!snapshot || sourceAgeMinutes === null || loading || refreshing) {
+    if (!snapshot || snapshotAgeMinutes === null || loading || refreshing) {
       return;
     }
 
-    if (sourceAgeMinutes !== 16 && sourceAgeMinutes !== 31) {
+    if (snapshotAgeMinutes !== 16 && snapshotAgeMinutes !== 31) {
       return;
     }
 
-    const refreshKey = `${snapshot.sourceLastUpdatedAt}:${sourceAgeMinutes}`;
+    const refreshKey = `${snapshot.generatedAt}:${snapshotAgeMinutes}`;
 
     if (lastAutoRefreshKeyRef.current === refreshKey) {
       return;
@@ -928,7 +930,7 @@ export default function App() {
 
     lastAutoRefreshKeyRef.current = refreshKey;
     void loadSnapshot(true);
-  }, [clockNow, loading, refreshing, snapshot, sourceAgeMinutes]);
+  }, [clockNow, loading, refreshing, snapshot, snapshotAgeMinutes]);
 
   const featuredLegend = useMemo(() => {
     if (!snapshot) {
@@ -1592,8 +1594,8 @@ export default function App() {
             <div className="status-card__top">
               <div>
                 <span>Estado</span>
-                <strong className={snapshot.isStale ? "status-badge is-stale" : "status-badge"}>
-                  {snapshot.isStale ? "Stale" : "Al día"}
+                <strong className={isSnapshotStale ? "status-badge is-stale" : "status-badge"}>
+                  {isSnapshotStale ? "Stale" : "Al día"}
                 </strong>
               </div>
               <button

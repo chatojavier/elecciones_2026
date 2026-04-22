@@ -218,8 +218,8 @@ describe("sumProjectedVotes", () => {
 });
 
 describe("computeIsStale", () => {
-  it("marca stale cuando la fuente supera el umbral", () => {
-    const oldDate = new Date(Date.now() - 31 * 60 * 1000).toISOString();
+  it("marca stale cuando el ultimo fetch supera el umbral", () => {
+    const oldDate = new Date(Date.now() - 16 * 60 * 1000).toISOString();
     expect(computeIsStale(oldDate)).toBe(true);
   });
 });

@@ -5,7 +5,6 @@ import {
   buildProjectedNationalSummary,
   buildProvinceResult,
   buildScopeResult,
-  computeIsStale,
   getScopeMetaTotals,
   sumProjectedVotes
 } from "../../../src/lib/domain";
@@ -19,6 +18,7 @@ import type {
   ScopeResult
 } from "../../../src/lib/types";
 import { ONPE_ELECTION_ID } from "./config";
+import { getElapsedMinutes } from "./freshness";
 import {
   fetchDepartments,
   fetchForeignContinents,
@@ -305,24 +305,19 @@ export async function buildElectionSnapshot() {
     regions,
     projectedNational,
     featuredCandidateCodes,
-    isStale: computeIsStale(sourceLastUpdatedAt)
+    isStale: false
   };
 
   return snapshot;
 }
 
 function healthFromSnapshot(snapshot: ElectionSnapshot): HealthStatus {
-  const staleMinutes = Math.max(
-    0,
-    Math.round((Date.now() - new Date(snapshot.sourceLastUpdatedAt).getTime()) / 60000)
-  );
-
   return {
-    status: snapshot.isStale ? "degraded" : "healthy",
+    status: "healthy",
     source: "onpe",
     lastSyncAt: snapshot.generatedAt,
     lastSuccessAt: snapshot.generatedAt,
-    staleMinutes,
+    staleMinutes: getElapsedMinutes(snapshot.generatedAt),
     lastError: null
   };
 }
@@ -344,10 +339,7 @@ export async function runSync() {
     const now = new Date().toISOString();
 
     const staleMinutes = previousSnapshot
-      ? Math.max(
-          0,
-          Math.round((Date.now() - new Date(previousSnapshot.sourceLastUpdatedAt).getTime()) / 60000)
-        )
+      ? getElapsedMinutes(previousSnapshot.generatedAt)
       : null;
 
     const degradedHealth: HealthStatus = {

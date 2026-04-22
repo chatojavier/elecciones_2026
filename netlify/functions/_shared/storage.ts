@@ -5,6 +5,10 @@ import {
   SNAPSHOT_KEY,
   STORAGE_NAME
 } from "./config";
+import {
+  hydrateHealthFreshness,
+  hydrateSnapshotFreshness
+} from "./freshness";
 import { normalizeElectionSnapshot } from "../../../src/lib/normalizeSnapshot";
 import type { ElectionSnapshot, HealthStatus } from "../../../src/lib/types";
 
@@ -15,7 +19,7 @@ function getStorageStore() {
 export async function readSnapshot() {
   const store = getStorageStore();
   const snapshot = (await store.get(SNAPSHOT_KEY, { type: "json" })) as ElectionSnapshot | null;
-  return snapshot ? normalizeElectionSnapshot(snapshot) : null;
+  return snapshot ? hydrateSnapshotFreshness(normalizeElectionSnapshot(snapshot)) : null;
 }
 
 export async function writeSnapshot(snapshot: ElectionSnapshot) {
@@ -25,7 +29,8 @@ export async function writeSnapshot(snapshot: ElectionSnapshot) {
 
 export async function readHealth() {
   const store = getStorageStore();
-  return (await store.get(HEALTH_KEY, { type: "json" })) as HealthStatus | null;
+  const health = (await store.get(HEALTH_KEY, { type: "json" })) as HealthStatus | null;
+  return health ? hydrateHealthFreshness(health) : null;
 }
 
 export async function writeHealth(health: HealthStatus) {

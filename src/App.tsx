@@ -1199,6 +1199,12 @@ export default function App() {
     candidateAItem && candidateBItem
       ? `${formatSignedNumber(candidateAItem.projectedVotes - candidateBItem.projectedVotes)} votos`
       : null;
+  const actasPeruValue = formatPercent(snapshot?.national.actasContabilizadasPct ?? 0, 2);
+  const actasExteriorValue = formatPercent(snapshot?.foreign.actasContabilizadasPct ?? 0, 2);
+  const deltaProyeccionValue = formatSignedNumber(
+    (snapshot?.projectedNational.totalProjectedValidVotes ?? 0) -
+      ((snapshot?.national.totalVotosValidos ?? 0) + (snapshot?.foreign.totalVotosValidos ?? 0))
+  );
   const mobileCandidateASummary = comparisonPair
     ? `A: ${formatTitleCase(comparisonOptionLabels.get(comparisonPair.candidateACode) ?? "Sin dato")}`
     : "A: Sin dato";
@@ -1466,9 +1472,9 @@ export default function App() {
             className="quick-insights__chips quick-insights__chips--header"
             aria-label="Contexto de la comparativa rápida"
           >
-            <span className="quick-insight-chip">A: {candidateALabel}</span>
-            <span className="quick-insight-chip">B: {candidateBLabel}</span>
-            <span className="quick-insight-chip">Vista activa: {mobileComparisonSummary}</span>
+            <span className="quick-insight-chip">Actas Perú: {actasPeruValue}</span>
+            <span className="quick-insight-chip">Actas exterior: {actasExteriorValue}</span>
+            <span className="quick-insight-chip">Delta proyección: {deltaProyeccionValue} votos</span>
           </div>
         </div>
         <div className="quick-insights__actions">

@@ -555,9 +555,9 @@ describe("App hero clarity and first action", () => {
     expect(container.textContent).toContain("Proyección total");
     expect(container.textContent).toContain("Candidato B vs Candidata C");
     expect(container.textContent).toContain("Brecha A vs B");
-    expect(container.textContent).toContain("A: Candidato B");
-    expect(container.textContent).toContain("B: Candidata C");
-    expect(container.textContent).toContain("Vista activa:");
+    expect(container.textContent).toContain("Actas Perú:");
+    expect(container.textContent).toContain("Actas exterior:");
+    expect(container.textContent).toContain("Delta proyección:");
     expect(container.textContent).toContain("Ver comparativa personalizada");
     expect(container.textContent).toContain("Estado de actualización");
     expect(container.textContent).toContain("Última actualización de esta app");
@@ -1430,7 +1430,7 @@ describe("App hero clarity and first action", () => {
       candidateASelect.dispatchEvent(new Event("change", { bubbles: true }));
     });
 
-    expect(container.textContent).toContain("A: Candidata A");
+    expect(container.textContent).toContain("Actas Perú:");
     expect(container.textContent).toContain("Candidata A vs Candidata C");
   });
 

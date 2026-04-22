@@ -305,7 +305,7 @@ export async function buildElectionSnapshot() {
     regions,
     projectedNational,
     featuredCandidateCodes,
-    isStale: computeIsStale(sourceLastUpdatedAt)
+    isStale: computeIsStale(generatedAt)
   };
 
   return snapshot;
@@ -314,7 +314,7 @@ export async function buildElectionSnapshot() {
 function healthFromSnapshot(snapshot: ElectionSnapshot): HealthStatus {
   const staleMinutes = Math.max(
     0,
-    Math.round((Date.now() - new Date(snapshot.sourceLastUpdatedAt).getTime()) / 60000)
+    Math.round((Date.now() - new Date(snapshot.generatedAt).getTime()) / 60000)
   );
 
   return {
@@ -346,7 +346,7 @@ export async function runSync() {
     const staleMinutes = previousSnapshot
       ? Math.max(
           0,
-          Math.round((Date.now() - new Date(previousSnapshot.sourceLastUpdatedAt).getTime()) / 60000)
+          Math.round((Date.now() - new Date(previousSnapshot.generatedAt).getTime()) / 60000)
         )
       : null;
 

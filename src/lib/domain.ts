@@ -280,8 +280,8 @@ export function buildProjectedNationalSummary(
   };
 }
 
-export function computeIsStale(isoDate: string) {
-  const minutes = (Date.now() - new Date(isoDate).getTime()) / 60000;
+export function computeIsStale(isoDate: string, now = Date.now()) {
+  const minutes = (now - new Date(isoDate).getTime()) / 60000;
   return minutes > STALE_AFTER_MINUTES;
 }
 

@@ -493,6 +493,7 @@ describe("App hero clarity and first action", () => {
     act(() => {
       root.unmount();
     });
+    vi.useRealTimers();
     container.remove();
     fetchSnapshotMock.mockReset();
     refreshSnapshotMock.mockReset();
@@ -570,6 +571,30 @@ describe("App hero clarity and first action", () => {
       label: "ver_metodologia",
       section_target: "metodologia"
     });
+  });
+
+  it("marca stale si el ultimo fetch supera el umbral aunque ONPE sea mas reciente", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-15T12:55:00.000Z"));
+    fetchSnapshotMock.mockResolvedValue(
+      createSnapshot({
+        generatedAt: "2026-04-15T12:00:00.000Z",
+        sourceLastUpdatedAt: "2026-04-15T12:40:00.000Z",
+        isStale: false
+      })
+    );
+
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(container.querySelector("#estado-actualizacion .status-badge")?.textContent).toBe("Stale");
+    expect(container.textContent).toContain("hace 15 minutos");
+    expect(container.textContent).toContain(formatDateTime("2026-04-15T12:00:00.000Z"));
   });
 
   it("actualiza la fecha visible cuando termina el refresh", async () => {

@@ -795,6 +795,122 @@ describe("App hero clarity and first action", () => {
     expect(container.textContent).toContain("hace 1 minuto");
   });
 
+  it("reintenta auto-refresh tras un fallo transitorio en segundo plano", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-15T12:16:00.000Z"));
+
+    fetchSnapshotMock.mockResolvedValue(
+      createAppData(
+        createSnapshot({
+          generatedAt: "2026-04-15T12:00:00.000Z",
+          sourceLastUpdatedAt: "2026-04-15T11:58:00.000Z"
+        }),
+        {
+          lastSuccessAt: "2026-04-15T12:00:00.000Z"
+        }
+      )
+    );
+    refreshSnapshotMock
+      .mockRejectedValueOnce(new Error("timeout"))
+      .mockResolvedValueOnce(
+        createAppData(
+          createSnapshot({
+            generatedAt: "2026-04-15T12:17:00.000Z",
+            sourceLastUpdatedAt: "2026-04-15T12:16:00.000Z"
+          }),
+          {
+            lastSuccessAt: "2026-04-15T12:17:00.000Z"
+          }
+        )
+      );
+
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(refreshSnapshotMock).toHaveBeenCalledTimes(1);
+    expect(container.textContent).toContain("Mostramos el último snapshot disponible.");
+
+    await act(async () => {
+      vi.advanceTimersByTime(15_000);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(refreshSnapshotMock).toHaveBeenCalledTimes(2);
+    expect(container.textContent).toContain(formatDateTime("2026-04-15T12:17:00.000Z"));
+  });
+
+  it("limpia feedback manual despues de una actualizacion automática exitosa", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-15T12:14:00.000Z"));
+
+    const initialSnapshot = createSnapshot({
+      generatedAt: "2026-04-15T12:00:00.000Z",
+      sourceLastUpdatedAt: "2026-04-15T11:59:00.000Z"
+    });
+    const manualSnapshot = createSnapshot({
+      generatedAt: "2026-04-15T12:05:00.000Z",
+      sourceLastUpdatedAt: "2026-04-15T12:04:00.000Z"
+    });
+    const autoSnapshot = createSnapshot({
+      generatedAt: "2026-04-15T12:20:00.000Z",
+      sourceLastUpdatedAt: "2026-04-15T12:20:00.000Z"
+    });
+
+    fetchSnapshotMock.mockResolvedValue(
+      createAppData(initialSnapshot, {
+        lastSuccessAt: initialSnapshot.generatedAt
+      })
+    );
+    refreshSnapshotMock
+      .mockResolvedValueOnce(
+        createAppData(manualSnapshot, {
+          lastSuccessAt: manualSnapshot.generatedAt
+        })
+      )
+      .mockResolvedValueOnce(
+        createAppData(autoSnapshot, {
+          lastSuccessAt: autoSnapshot.generatedAt
+        })
+      );
+
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const refreshButton = Array.from(container.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Actualizar ahora")
+    ) as HTMLButtonElement;
+
+    await act(async () => {
+      refreshButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(container.textContent).toContain("App actualizada correctamente.");
+
+    await act(async () => {
+      vi.setSystemTime(new Date("2026-04-15T12:20:00.000Z"));
+      vi.advanceTimersByTime(6 * 60_000);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(refreshSnapshotMock).toHaveBeenCalledTimes(2);
+    expect(container.textContent).not.toContain("App actualizada correctamente.");
+    expect(container.textContent).toContain("La app está al día.");
+  });
+
   it("aplica defaults globales y permite cambiar a candidato específico", async () => {
     await act(async () => {
       root.render(<App />);

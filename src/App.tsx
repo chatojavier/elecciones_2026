@@ -805,9 +805,7 @@ export default function App() {
 
     if (background) {
       setRefreshing(true);
-      if (trigger === "manual") {
-        setRefreshFeedback(null);
-      }
+      setRefreshFeedback(null);
     } else {
       setLoading(true);
     }
@@ -819,7 +817,7 @@ export default function App() {
       setSnapshot(data.snapshot);
       setHealth(data.health);
       setError(null);
-      if (!background) {
+      if (!background || trigger !== "manual") {
         setRefreshFeedback(null);
       }
 
@@ -987,12 +985,15 @@ export default function App() {
   const sourceHasNewCut = snapshot
     ? getSourceHasNewCut(snapshot.sourceLastUpdatedAt, appLastSuccessAt)
     : true;
-  const statusNote = refreshFeedback?.message
-    ?? (appFreshnessStatus === "Desactualizado"
-      ? "Mostramos el último snapshot disponible."
-      : !sourceHasNewCut
-        ? "ONPE aún no publica un corte más reciente."
-        : "La app está al día.");
+  const statusNote = refreshFeedback?.kind === "error"
+    ? refreshFeedback.message
+    : refreshFeedback?.kind === "success" && appFreshnessStatus === "Al día"
+      ? refreshFeedback.message
+      : appFreshnessStatus === "Desactualizado"
+        ? "Mostramos el último snapshot disponible."
+        : !sourceHasNewCut
+          ? "ONPE aún no publica un corte más reciente."
+          : "La app está al día.";
   const appFreshnessPayload = {
     app_fetch_age_minutes: appFetchAgeMinutes ?? undefined,
     app_freshness_status: appFreshnessStatus,
@@ -1006,7 +1007,7 @@ export default function App() {
       return;
     }
 
-    const refreshKey = `${appLastSuccessAt ?? "none"}:${snapshot.generatedAt}`;
+    const refreshKey = `${appLastSuccessAt ?? "none"}:${snapshot.generatedAt}:${clockNow}`;
 
     if (lastAutoRefreshKeyRef.current === refreshKey) {
       return;

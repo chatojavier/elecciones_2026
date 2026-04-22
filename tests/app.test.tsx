@@ -8,21 +8,28 @@ import { formatDateTime } from "../src/lib/format";
 import type {
   ElectionSnapshot,
   ForeignResult,
+  HealthStatus,
   RegionResult,
   ScopeResult
 } from "../src/lib/types";
 
-const { fetchSnapshotMock, refreshSnapshotMock, initializeAnalyticsMock, trackEventMock, trackInitialPageViewMock } = vi.hoisted(() => ({
-  fetchSnapshotMock: vi.fn<() => Promise<ElectionSnapshot>>(),
-  refreshSnapshotMock: vi.fn<() => Promise<ElectionSnapshot>>(),
+const {
+  fetchSnapshotMock,
+  refreshSnapshotMock,
+  initializeAnalyticsMock,
+  trackEventMock,
+  trackInitialPageViewMock
+} = vi.hoisted(() => ({
+  fetchSnapshotMock: vi.fn(),
+  refreshSnapshotMock: vi.fn(),
   initializeAnalyticsMock: vi.fn(),
   trackEventMock: vi.fn(),
   trackInitialPageViewMock: vi.fn()
 }));
 
 vi.mock("../src/lib/api", () => ({
-  fetchSnapshot: fetchSnapshotMock,
-  refreshSnapshot: refreshSnapshotMock
+  fetchAppData: fetchSnapshotMock,
+  refreshAppData: refreshSnapshotMock
 }));
 
 vi.mock("../src/lib/analytics", () => ({
@@ -469,6 +476,32 @@ function createLegacySnapshot(): ElectionSnapshot {
   };
 }
 
+function createHealth(overrides: Partial<HealthStatus> = {}): HealthStatus {
+  return {
+    status: "healthy",
+    source: "onpe",
+    lastSyncAt: "2026-04-15T12:00:00.000Z",
+    lastSuccessAt: "2026-04-15T12:00:00.000Z",
+    staleMinutes: 0,
+    lastError: null,
+    ...overrides
+  };
+}
+
+function createAppData(
+  snapshot: ElectionSnapshot = createSnapshot(),
+  healthOverrides: Partial<HealthStatus> = {}
+) {
+  return {
+    snapshot,
+    health: createHealth({
+      lastSyncAt: snapshot.generatedAt,
+      lastSuccessAt: snapshot.generatedAt,
+      ...healthOverrides
+    })
+  };
+}
+
 describe("App hero clarity and first action", () => {
   let container: HTMLDivElement;
   let root: Root;
@@ -479,8 +512,8 @@ describe("App hero clarity and first action", () => {
         IS_REACT_ACT_ENVIRONMENT?: boolean;
       }
     ).IS_REACT_ACT_ENVIRONMENT = true;
-    fetchSnapshotMock.mockResolvedValue(createSnapshot());
-    refreshSnapshotMock.mockResolvedValue(createSnapshot());
+    fetchSnapshotMock.mockResolvedValue(createAppData());
+    refreshSnapshotMock.mockResolvedValue(createAppData());
     initializeAnalyticsMock.mockReset();
     trackEventMock.mockReset();
     trackInitialPageViewMock.mockReset();
@@ -527,6 +560,10 @@ describe("App hero clarity and first action", () => {
     expect(container.textContent).toContain("Actas exterior:");
     expect(container.textContent).toContain("Delta proyección:");
     expect(container.textContent).toContain("Ver detalle 2do vs 3ro");
+    expect(container.textContent).toContain("Estado de actualización");
+    expect(container.textContent).toContain("Última actualización de esta app");
+    expect(container.textContent).toContain("Próxima revisión automática");
+    expect(container.textContent).toContain("Última publicación ONPE");
     expect(container.textContent).not.toContain("Disputa por el 2do cupo:");
 
     const primaryCta = container.querySelector('a[href="#lectura-regional"]');
@@ -573,15 +610,19 @@ describe("App hero clarity and first action", () => {
     });
   });
 
-  it("marca stale si el ultimo fetch supera el umbral aunque ONPE sea mas reciente", async () => {
+  it("mantiene la app al dia aunque ONPE no tenga un corte reciente", async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-04-15T12:55:00.000Z"));
+    vi.setSystemTime(new Date("2026-04-15T12:42:00.000Z"));
     fetchSnapshotMock.mockResolvedValue(
-      createSnapshot({
-        generatedAt: "2026-04-15T12:00:00.000Z",
-        sourceLastUpdatedAt: "2026-04-15T12:40:00.000Z",
-        isStale: false
-      })
+      createAppData(
+        createSnapshot({
+          generatedAt: "2026-04-15T12:40:00.000Z",
+          sourceLastUpdatedAt: "2026-04-15T12:00:00.000Z"
+        }),
+        {
+          lastSuccessAt: "2026-04-15T12:40:00.000Z"
+        }
+      )
     );
 
     await act(async () => {
@@ -592,12 +633,49 @@ describe("App hero clarity and first action", () => {
       await Promise.resolve();
     });
 
-    expect(container.querySelector("#estado-actualizacion .status-badge")?.textContent).toBe("Stale");
+    expect(container.querySelector("#estado-actualizacion .status-badge")?.textContent).toBe("Al día");
+    expect(container.textContent).toContain("ONPE aún no publica un corte más reciente.");
+    expect(container.textContent).toContain("hace 2 minutos");
+    expect(container.textContent).toContain("hace 42 minutos");
+  });
+
+  it("marca stale si el ultimo fetch supera el umbral aunque ONPE sea mas reciente", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-15T12:55:00.000Z"));
+    refreshSnapshotMock.mockRejectedValue(new Error("timeout"));
+    fetchSnapshotMock.mockResolvedValue(
+      createAppData(
+        createSnapshot({
+          generatedAt: "2026-04-15T12:00:00.000Z",
+          sourceLastUpdatedAt: "2026-04-15T12:40:00.000Z",
+          isStale: false
+        }),
+        {
+          lastSuccessAt: "2026-04-15T12:00:00.000Z"
+        }
+      )
+    );
+
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(container.querySelector("#estado-actualizacion .status-badge")?.textContent).toBe(
+      "Desactualizado"
+    );
+    expect(container.textContent).toContain("Última actualización de esta app");
+    expect(container.textContent).toContain("hace 55 minutos");
     expect(container.textContent).toContain("hace 15 minutos");
-    expect(container.textContent).toContain(formatDateTime("2026-04-15T12:00:00.000Z"));
+    expect(container.textContent).toContain("Mostramos el último snapshot disponible.");
   });
 
   it("actualiza la fecha visible cuando termina el refresh", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-15T12:06:00.000Z"));
     const initialSnapshot = createSnapshot({
       generatedAt: "2026-04-15T12:00:00.000Z"
     });
@@ -605,8 +683,16 @@ describe("App hero clarity and first action", () => {
       generatedAt: "2026-04-15T12:05:00.000Z",
       sourceLastUpdatedAt: "2026-04-15T12:04:00.000Z"
     });
-    fetchSnapshotMock.mockResolvedValue(initialSnapshot);
-    refreshSnapshotMock.mockResolvedValue(refreshedSnapshot);
+    fetchSnapshotMock.mockResolvedValue(
+      createAppData(initialSnapshot, {
+        lastSuccessAt: initialSnapshot.generatedAt
+      })
+    );
+    refreshSnapshotMock.mockResolvedValue(
+      createAppData(refreshedSnapshot, {
+        lastSuccessAt: refreshedSnapshot.generatedAt
+      })
+    );
 
     await act(async () => {
       root.render(<App />);
@@ -619,7 +705,7 @@ describe("App hero clarity and first action", () => {
     expect(container.textContent).toContain(formatDateTime(initialSnapshot.generatedAt));
 
     const refreshButton = Array.from(container.querySelectorAll("button")).find((button) =>
-      button.textContent?.includes("Actualizar datos")
+      button.textContent?.includes("Actualizar ahora")
     ) as HTMLButtonElement;
 
     await act(async () => {
@@ -628,7 +714,85 @@ describe("App hero clarity and first action", () => {
     });
 
     expect(refreshSnapshotMock).toHaveBeenCalledTimes(1);
+    expect(container.textContent).toContain("App actualizada correctamente.");
     expect(container.textContent).toContain(formatDateTime(refreshedSnapshot.generatedAt));
+  });
+
+  it("mantiene el ultimo snapshot visible cuando falla el refresh manual", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-15T12:06:00.000Z"));
+    const initialSnapshot = createSnapshot({
+      generatedAt: "2026-04-15T12:00:00.000Z"
+    });
+    fetchSnapshotMock.mockResolvedValue(createAppData(initialSnapshot));
+    refreshSnapshotMock.mockRejectedValue(new Error("timeout"));
+
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const refreshButton = Array.from(container.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Actualizar ahora")
+    ) as HTMLButtonElement;
+
+    await act(async () => {
+      refreshButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(container.textContent).toContain("No se pudo actualizar. Intenta nuevamente.");
+    expect(container.textContent).toContain(formatDateTime(initialSnapshot.generatedAt));
+  });
+
+  it("dispara auto-refresh una sola vez por ventana y reinicia tras exito", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-15T12:16:00.000Z"));
+
+    fetchSnapshotMock.mockResolvedValue(
+      createAppData(
+        createSnapshot({
+          generatedAt: "2026-04-15T12:00:00.000Z",
+          sourceLastUpdatedAt: "2026-04-15T11:58:00.000Z"
+        }),
+        {
+          lastSuccessAt: "2026-04-15T12:00:00.000Z"
+        }
+      )
+    );
+    refreshSnapshotMock.mockResolvedValue(
+      createAppData(
+        createSnapshot({
+          generatedAt: "2026-04-15T12:16:00.000Z",
+          sourceLastUpdatedAt: "2026-04-15T12:15:00.000Z"
+        }),
+        {
+          lastSuccessAt: "2026-04-15T12:16:00.000Z"
+        }
+      )
+    );
+
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(refreshSnapshotMock).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      vi.advanceTimersByTime(30_000);
+      await Promise.resolve();
+    });
+
+    expect(refreshSnapshotMock).toHaveBeenCalledTimes(1);
+    expect(container.textContent).toContain("hace 1 minuto");
   });
 
   it("aplica defaults globales y permite cambiar a candidato específico", async () => {
@@ -854,8 +1018,8 @@ describe("App hero clarity and first action", () => {
     };
     snapshotWithoutRank3.featuredCandidateCodes = ["8", "10"];
 
-    fetchSnapshotMock.mockResolvedValue(snapshotWithoutRank3);
-    refreshSnapshotMock.mockResolvedValue(snapshotWithoutRank3);
+    fetchSnapshotMock.mockResolvedValue(createAppData(snapshotWithoutRank3));
+    refreshSnapshotMock.mockResolvedValue(createAppData(snapshotWithoutRank3));
 
     await act(async () => {
       root.render(<App />);
@@ -897,8 +1061,8 @@ describe("App hero clarity and first action", () => {
     };
     snapshotWithoutRank3.featuredCandidateCodes = ["8", "10"];
 
-    fetchSnapshotMock.mockResolvedValue(snapshotWithoutRank3);
-    refreshSnapshotMock.mockResolvedValue(snapshotWithoutRank3);
+    fetchSnapshotMock.mockResolvedValue(createAppData(snapshotWithoutRank3));
+    refreshSnapshotMock.mockResolvedValue(createAppData(snapshotWithoutRank3));
 
     await act(async () => {
       root.render(<App />);
@@ -1180,8 +1344,8 @@ describe("App hero clarity and first action", () => {
       continents: []
     });
 
-    fetchSnapshotMock.mockResolvedValue(thresholdSnapshot);
-    refreshSnapshotMock.mockResolvedValue(thresholdSnapshot);
+    fetchSnapshotMock.mockResolvedValue(createAppData(thresholdSnapshot));
+    refreshSnapshotMock.mockResolvedValue(createAppData(thresholdSnapshot));
 
     await act(async () => {
       root.render(<App />);
@@ -1234,8 +1398,8 @@ describe("App hero clarity and first action", () => {
     ];
     mixedSnapshot.foreign.candidates = [];
 
-    fetchSnapshotMock.mockResolvedValue(mixedSnapshot);
-    refreshSnapshotMock.mockResolvedValue(mixedSnapshot);
+    fetchSnapshotMock.mockResolvedValue(createAppData(mixedSnapshot));
+    refreshSnapshotMock.mockResolvedValue(createAppData(mixedSnapshot));
 
     await act(async () => {
       root.render(<App />);
@@ -1329,8 +1493,8 @@ describe("App hero clarity and first action", () => {
       })
     ];
 
-    fetchSnapshotMock.mockResolvedValue(fallbackSnapshot);
-    refreshSnapshotMock.mockResolvedValue(fallbackSnapshot);
+    fetchSnapshotMock.mockResolvedValue(createAppData(fallbackSnapshot));
+    refreshSnapshotMock.mockResolvedValue(createAppData(fallbackSnapshot));
 
     await act(async () => {
       root.render(<App />);
@@ -1417,8 +1581,8 @@ describe("App hero clarity and first action", () => {
       }
     };
 
-    fetchSnapshotMock.mockResolvedValue(fallbackSnapshot);
-    refreshSnapshotMock.mockResolvedValue(fallbackSnapshot);
+    fetchSnapshotMock.mockResolvedValue(createAppData(fallbackSnapshot));
+    refreshSnapshotMock.mockResolvedValue(createAppData(fallbackSnapshot));
 
     await act(async () => {
       root.render(<App />);
@@ -1468,8 +1632,8 @@ describe("App hero clarity and first action", () => {
     };
     snapshotWithoutRank3.featuredCandidateCodes = ["8", "10"];
 
-    fetchSnapshotMock.mockResolvedValue(snapshotWithoutRank3);
-    refreshSnapshotMock.mockResolvedValue(snapshotWithoutRank3);
+    fetchSnapshotMock.mockResolvedValue(createAppData(snapshotWithoutRank3));
+    refreshSnapshotMock.mockResolvedValue(createAppData(snapshotWithoutRank3));
 
     await act(async () => {
       root.render(<App />);
@@ -1500,8 +1664,8 @@ describe("App province drilldown", () => {
         IS_REACT_ACT_ENVIRONMENT?: boolean;
       }
     ).IS_REACT_ACT_ENVIRONMENT = true;
-    fetchSnapshotMock.mockResolvedValue(createSnapshot());
-    refreshSnapshotMock.mockResolvedValue(createSnapshot());
+    fetchSnapshotMock.mockResolvedValue(createAppData());
+    refreshSnapshotMock.mockResolvedValue(createAppData());
     initializeAnalyticsMock.mockReset();
     trackEventMock.mockReset();
     trackInitialPageViewMock.mockReset();
@@ -1599,8 +1763,8 @@ describe("App province drilldown", () => {
   });
 
   it("tolera snapshots legacy sin continentes en extranjero", async () => {
-    fetchSnapshotMock.mockResolvedValue(createLegacySnapshot());
-    refreshSnapshotMock.mockResolvedValue(createLegacySnapshot());
+    fetchSnapshotMock.mockResolvedValue(createAppData(createLegacySnapshot()));
+    refreshSnapshotMock.mockResolvedValue(createAppData(createLegacySnapshot()));
 
     await act(async () => {
       root.render(<App />);

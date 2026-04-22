@@ -2,8 +2,8 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { refreshSnapshot } from "../src/lib/api";
-import type { ElectionSnapshot } from "../src/lib/types";
+import { fetchAppData, refreshAppData } from "../src/lib/api";
+import type { ElectionSnapshot, HealthStatus } from "../src/lib/types";
 
 function createSnapshot(overrides: Partial<ElectionSnapshot> = {}): ElectionSnapshot {
   const baseScope = {
@@ -57,7 +57,19 @@ function createSnapshot(overrides: Partial<ElectionSnapshot> = {}): ElectionSnap
   };
 }
 
-describe("refreshSnapshot", () => {
+function createHealth(overrides: Partial<HealthStatus> = {}): HealthStatus {
+  return {
+    status: "healthy",
+    source: "onpe",
+    lastSyncAt: "2026-04-21T12:01:00.000Z",
+    lastSuccessAt: "2026-04-21T12:01:00.000Z",
+    staleMinutes: 0,
+    lastError: null,
+    ...overrides
+  };
+}
+
+describe("api trust data", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn());
   });
@@ -67,13 +79,50 @@ describe("refreshSnapshot", () => {
     vi.restoreAllMocks();
   });
 
-  it("usa el snapshot devuelto por el sync sin hacer un segundo fetch", async () => {
+  it("combina snapshot y health en la carga inicial", async () => {
+    const snapshot = createSnapshot();
+    const health = createHealth({
+      lastSuccessAt: snapshot.generatedAt
+    });
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(snapshot), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json"
+          }
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(health), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json"
+          }
+        })
+      );
+
+    const result = await fetchAppData();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result).toEqual({
+      snapshot,
+      health
+    });
+  });
+
+  it("usa snapshot y health devueltos por sync sin hacer fetch redundante", async () => {
     const snapshot = createSnapshot({
       generatedAt: "2026-04-21T12:05:00.000Z"
     });
+    const health = createHealth({
+      lastSyncAt: snapshot.generatedAt,
+      lastSuccessAt: snapshot.generatedAt
+    });
     const fetchMock = vi.mocked(globalThis.fetch);
     fetchMock.mockResolvedValue(
-      new Response(JSON.stringify({ ok: true, snapshot }), {
+      new Response(JSON.stringify({ ok: true, snapshot, health }), {
         status: 200,
         headers: {
           "Content-Type": "application/json"
@@ -81,9 +130,12 @@ describe("refreshSnapshot", () => {
       })
     );
 
-    const result = await refreshSnapshot();
+    const result = await refreshAppData();
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(result).toEqual(snapshot);
+    expect(result).toEqual({
+      snapshot,
+      health
+    });
   });
 });

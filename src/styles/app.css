@@ -182,6 +182,12 @@ select {
   text-align: right;
 }
 
+.status-card__meta {
+  display: block;
+  margin-top: 4px;
+  text-align: right;
+}
+
 .refresh-button {
   display: inline-flex;
   align-items: center;

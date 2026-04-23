@@ -1479,6 +1479,49 @@ describe("App hero clarity and first action", () => {
     expect(quickInsights.querySelectorAll(".quick-insight-kpi__delta-badge.is-negative").length).toBe(2);
   });
 
+  it("mantiene neutral el badge de delta cuando no hay datos para el par", async () => {
+    const emptyComparisonSnapshot = createSnapshot({
+      national: createScope({
+        candidates: [],
+        featuredCandidates: [],
+        projectedVotes: { otros: 300 },
+        totalVotosValidos: 0
+      }),
+      foreign: createForeign({
+        candidates: [],
+        featuredCandidates: [],
+        projectedVotes: { otros: 50 },
+        totalVotosValidos: 0,
+        continents: []
+      }),
+      projectedNational: {
+        totalElectores: 2200,
+        totalProjectedValidVotes: 350,
+        projectedVotes: { otros: 350 },
+        projectedPercentages: { otros: 100 }
+      },
+      featuredCandidateCodes: []
+    });
+
+    fetchSnapshotMock.mockResolvedValue(createAppData(emptyComparisonSnapshot));
+    refreshSnapshotMock.mockResolvedValue(createAppData(emptyComparisonSnapshot));
+
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const quickInsights = container.querySelector(".quick-insights") as HTMLElement;
+    const deltaBadges = quickInsights.querySelectorAll(".quick-insight-kpi__delta-badge");
+
+    expect(Array.from(deltaBadges).some((badge) => badge.textContent?.includes("Sin dato"))).toBe(true);
+    expect(quickInsights.querySelectorAll(".quick-insight-kpi__delta-badge.is-negative").length).toBe(0);
+    expect(quickInsights.querySelectorAll(".quick-insight-kpi__delta-badge.is-positive").length).toBe(0);
+  });
+
   it("actualiza el resumen rápido cuando cambia el par A/B", async () => {
     await act(async () => {
       root.render(<App />);

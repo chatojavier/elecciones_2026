@@ -94,6 +94,14 @@ function getQuickInsightGapStatusCopy(status: QuickInsightGapStatus) {
   }
 }
 
+function getQuickInsightDeltaBadgeClass(item: ComparisonItem | null) {
+  if (!item) {
+    return "quick-insight-kpi__delta-badge";
+  }
+
+  return `quick-insight-kpi__delta-badge ${item.deltaPercentage >= 0 ? "is-positive" : "is-negative"}`;
+}
+
 function FeaturedBar({
   item
 }: {
@@ -1609,13 +1617,7 @@ export default function App() {
                   />
                   {candidateALabel}
                 </p>
-                <span
-                  className={`quick-insight-kpi__delta-badge ${
-                    candidateAItem && candidateAItem.deltaPercentage >= 0
-                      ? "is-positive"
-                      : "is-negative"
-                  }`}
-                >
+                <span className={getQuickInsightDeltaBadgeClass(candidateAItem)}>
                   {candidateADeltaPpValue ?? "Sin dato"}
                 </span>
               </div>
@@ -1631,13 +1633,7 @@ export default function App() {
                   />
                   {candidateBLabel}
                 </p>
-                <span
-                  className={`quick-insight-kpi__delta-badge ${
-                    candidateBItem && candidateBItem.deltaPercentage >= 0
-                      ? "is-positive"
-                      : "is-negative"
-                  }`}
-                >
+                <span className={getQuickInsightDeltaBadgeClass(candidateBItem)}>
                   {candidateBDeltaPpValue ?? "Sin dato"}
                 </span>
               </div>

@@ -184,6 +184,37 @@ describe("api trust data", () => {
     });
   });
 
+  it("acepta respuestas 200 legacy del refresh sin state", async () => {
+    const snapshot = createSnapshot({
+      generatedAt: "2026-04-21T12:05:00.000Z"
+    });
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ ok: true, snapshot }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json"
+        }
+      })
+    );
+
+    const result = await refreshAppData();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({
+      snapshot,
+      health: {
+        status: "healthy",
+        source: "onpe",
+        lastSyncAt: snapshot.generatedAt,
+        lastSuccessAt: snapshot.generatedAt,
+        staleMinutes: null,
+        lastError: null
+      },
+      refreshState: "synced"
+    });
+  });
+
   it("reusa el snapshot publico cuando el sync ya esta en curso", async () => {
     const snapshot = createSnapshot({
       generatedAt: "2026-04-21T12:05:00.000Z"

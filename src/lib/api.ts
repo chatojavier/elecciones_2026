@@ -102,17 +102,25 @@ async function parseSyncResponse(response: Response) {
     };
   }
 
-  if (!response.ok || !payload.ok || payload.state !== "synced") {
+  const isSuccessfulSyncPayload =
+    response.ok &&
+    payload.ok &&
+    payload.snapshot &&
+    (payload.state === undefined || payload.state === "synced");
+
+  if (!isSuccessfulSyncPayload) {
     throw new Error(`No se pudo sincronizar datos (${response.status}).`);
   }
 
-  if (!payload.snapshot) {
+  const snapshot = payload.snapshot;
+
+  if (!snapshot) {
     throw new Error("La sincronización no devolvió snapshot.");
   }
 
   return {
     refreshState: "synced" as const,
-    snapshot: normalizeElectionSnapshot(payload.snapshot),
+    snapshot: normalizeElectionSnapshot(snapshot),
     health: payload.health ?? null
   };
 }

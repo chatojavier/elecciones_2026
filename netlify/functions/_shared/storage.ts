@@ -5,8 +5,7 @@ import { getStore } from "@netlify/blobs";
 import {
   HEALTH_KEY,
   SNAPSHOT_KEY,
-  STORAGE_NAME,
-  SYNC_LOCK_KEY
+  STORAGE_NAME
 } from "./config";
 import {
   hydrateHealthFreshness,
@@ -18,14 +17,28 @@ import type { ElectionSnapshot, HealthStatus } from "../../../src/lib/types";
 export type SyncTrigger = "manual" | "scheduled" | "snapshot_fallback";
 
 export interface SyncLock {
+  key: string;
   token: string;
   trigger: SyncTrigger;
   startedAt: string;
   expiresAt: string;
 }
 
-function getStorageStore() {
-  return getStore(STORAGE_NAME);
+const SYNC_LOCK_PREFIX = "sync-locks/";
+
+function getStorageStore(consistency?: "eventual" | "strong") {
+  return getStore({
+    name: STORAGE_NAME,
+    consistency
+  });
+}
+
+function buildSyncLockKey(now: number, token: string) {
+  return `${SYNC_LOCK_PREFIX}${String(now).padStart(16, "0")}-${token}`;
+}
+
+function getSyncLockSortValue(key: string) {
+  return key.slice(SYNC_LOCK_PREFIX.length);
 }
 
 export async function readSnapshot() {
@@ -51,50 +64,67 @@ export async function writeHealth(health: HealthStatus) {
 }
 
 export async function readSyncLock(now = Date.now()) {
-  const store = getStorageStore();
-  const lock = (await store.get(SYNC_LOCK_KEY, { type: "json" })) as SyncLock | null;
+  const store = getStorageStore("strong");
+  const { blobs } = await store.list({
+    prefix: SYNC_LOCK_PREFIX
+  });
 
-  if (!lock) {
-    return null;
+  const activeLocks: SyncLock[] = [];
+
+  for (const blob of blobs) {
+    const lock = (await store.get(blob.key, {
+      type: "json",
+      consistency: "strong"
+    })) as SyncLock | null;
+
+    if (!lock) {
+      continue;
+    }
+
+    if (new Date(lock.expiresAt).getTime() <= now) {
+      await store.delete(blob.key);
+      continue;
+    }
+
+    activeLocks.push(lock);
   }
 
-  if (new Date(lock.expiresAt).getTime() <= now) {
-    await store.delete(SYNC_LOCK_KEY);
-    return null;
-  }
+  activeLocks.sort((left, right) => getSyncLockSortValue(left.key).localeCompare(getSyncLockSortValue(right.key)));
 
-  return lock;
+  return activeLocks[0] ?? null;
 }
 
 export async function acquireSyncLock(trigger: SyncTrigger, ttlSeconds: number, now = Date.now()) {
-  const store = getStorageStore();
-  const activeLock = await readSyncLock(now);
-
-  if (activeLock) {
-    return null;
-  }
-
+  const store = getStorageStore("strong");
   const startedAt = new Date(now).toISOString();
   const expiresAt = new Date(now + ttlSeconds * 1000).toISOString();
+  const token = randomUUID();
   const candidateLock: SyncLock = {
-    token: randomUUID(),
+    key: buildSyncLockKey(now, token),
+    token,
     trigger,
     startedAt,
     expiresAt
   };
 
-  await store.setJSON(SYNC_LOCK_KEY, candidateLock);
+  await store.setJSON(candidateLock.key, candidateLock);
 
-  const persistedLock = (await store.get(SYNC_LOCK_KEY, { type: "json" })) as SyncLock | null;
+  const activeLock = await readSyncLock(now);
 
-  return persistedLock?.token === candidateLock.token ? candidateLock : null;
+  if (activeLock?.key === candidateLock.key) {
+    return candidateLock;
+  }
+
+  await store.delete(candidateLock.key);
+
+  return null;
 }
 
 export async function releaseSyncLock(token: string) {
-  const store = getStorageStore();
-  const lock = (await store.get(SYNC_LOCK_KEY, { type: "json" })) as SyncLock | null;
+  const store = getStorageStore("strong");
+  const activeLock = await readSyncLock();
 
-  if (lock?.token === token) {
-    await store.delete(SYNC_LOCK_KEY);
+  if (activeLock?.token === token) {
+    await store.delete(activeLock.key);
   }
 }

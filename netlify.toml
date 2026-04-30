@@ -3,6 +3,9 @@
   publish = "dist"
   functions = "netlify/functions"
 
+[functions."scheduled-sync"]
+  schedule = "*/15 * * * *"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"

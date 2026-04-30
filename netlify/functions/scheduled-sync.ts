@@ -61,7 +61,8 @@ export const handler: Handler = async (event) => {
       snapshot: result.snapshot,
       health: result.health
     });
-  } catch {
+  } catch (error) {
+    console.error("[scheduled-sync] scheduled sync failed", error);
     return jsonResponse(
       {
         ok: false,

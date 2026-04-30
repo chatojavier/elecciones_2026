@@ -28,6 +28,8 @@ export interface SyncLock {
 }
 
 const SYNC_LOCK_PREFIX = "sync-locks/";
+const VALID_SYNC_TRIGGERS: SyncTrigger[] = ["manual", "scheduled", "snapshot_fallback"];
+let strongConsistencyAvailableForLocks = true;
 
 function getStorageStore(consistency?: "eventual" | "strong") {
   return getStore({
@@ -42,6 +44,57 @@ function buildSyncLockKey(now: number, token: string) {
 
 function getSyncLockSortValue(key: string) {
   return key.slice(SYNC_LOCK_PREFIX.length);
+}
+
+function isStrongConsistencyUnavailable(error: unknown) {
+  return (
+    error instanceof Error &&
+    error.name === "BlobsConsistencyError" &&
+    error.message.includes("uncachedEdgeURL")
+  );
+}
+
+function getPreferredLockConsistency(): "strong" | "eventual" {
+  return strongConsistencyAvailableForLocks ? "strong" : "eventual";
+}
+
+function disableStrongConsistencyForLocks() {
+  if (strongConsistencyAvailableForLocks) {
+    strongConsistencyAvailableForLocks = false;
+    console.warn(
+      "[storage] strong consistency is unavailable in this environment; falling back to eventual consistency for sync locks."
+    );
+  }
+}
+
+function isValidIsoDate(value: unknown) {
+  return typeof value === "string" && !Number.isNaN(Date.parse(value));
+}
+
+function parseSyncLock(value: unknown, blobKey: string): SyncLock | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  if (
+    record.key !== blobKey ||
+    typeof record.token !== "string" ||
+    !VALID_SYNC_TRIGGERS.includes(record.trigger as SyncTrigger) ||
+    !isValidIsoDate(record.startedAt) ||
+    !isValidIsoDate(record.expiresAt)
+  ) {
+    return null;
+  }
+
+  return {
+    key: record.key as string,
+    token: record.token as string,
+    trigger: record.trigger as SyncTrigger,
+    startedAt: record.startedAt as string,
+    expiresAt: record.expiresAt as string
+  };
 }
 
 export async function readSnapshot() {
@@ -69,7 +122,20 @@ export async function writeSnapshot(snapshot: ElectionSnapshot) {
 
 export async function readHealth(consistency?: "eventual" | "strong") {
   const store = getStorageStore(consistency);
-  const health = (await store.get(HEALTH_KEY, { type: "json" })) as unknown;
+  let health: unknown;
+
+  try {
+    health = (await store.get(HEALTH_KEY, { type: "json" })) as unknown;
+  } catch (error) {
+    if (consistency === "strong" && isStrongConsistencyUnavailable(error)) {
+      console.warn(
+        "[storage] strong consistency is unavailable in this environment; falling back to eventual consistency for health reads."
+      );
+      return readHealth("eventual");
+    }
+
+    throw error;
+  }
 
   if (health == null) {
     return null;
@@ -89,20 +155,47 @@ export async function writeHealth(health: HealthStatus) {
 }
 
 export async function readSyncLock(now = Date.now()) {
-  const store = getStorageStore("strong");
-  const { blobs } = await store.list({
-    prefix: SYNC_LOCK_PREFIX
-  });
+  const preferredConsistency = getPreferredLockConsistency();
+  const store = getStorageStore(preferredConsistency);
+  let blobs: Array<{ key: string }>;
+
+  try {
+    ({ blobs } = await store.list({
+      prefix: SYNC_LOCK_PREFIX
+    }));
+  } catch (error) {
+    if (preferredConsistency === "strong" && isStrongConsistencyUnavailable(error)) {
+      disableStrongConsistencyForLocks();
+      return readSyncLock(now);
+    }
+
+    throw error;
+  }
 
   const activeLocks: SyncLock[] = [];
 
   for (const blob of blobs) {
-    const lock = (await store.get(blob.key, {
-      type: "json",
-      consistency: "strong"
-    })) as SyncLock | null;
+    let rawLock: unknown;
+
+    try {
+      rawLock = await store.get(blob.key, {
+        type: "json",
+        consistency: preferredConsistency
+      });
+    } catch (error) {
+      if (preferredConsistency === "strong" && isStrongConsistencyUnavailable(error)) {
+        disableStrongConsistencyForLocks();
+        return readSyncLock(now);
+      }
+
+      throw error;
+    }
+
+    const lock = parseSyncLock(rawLock, blob.key);
 
     if (!lock) {
+      console.warn(`[storage] lock inválido ${blob.key}; eliminando blob.`);
+      await store.delete(blob.key);
       continue;
     }
 
@@ -120,7 +213,7 @@ export async function readSyncLock(now = Date.now()) {
 }
 
 export async function acquireSyncLock(trigger: SyncTrigger, ttlSeconds: number, now = Date.now()) {
-  const store = getStorageStore("strong");
+  const store = getStorageStore(getPreferredLockConsistency());
   const startedAt = new Date(now).toISOString();
   const expiresAt = new Date(now + ttlSeconds * 1000).toISOString();
   const token = randomUUID();
@@ -146,7 +239,7 @@ export async function acquireSyncLock(trigger: SyncTrigger, ttlSeconds: number, 
 }
 
 export async function releaseSyncLock(token: string) {
-  const store = getStorageStore("strong");
+  const store = getStorageStore(getPreferredLockConsistency());
   const activeLock = await readSyncLock();
 
   if (activeLock?.token === token) {

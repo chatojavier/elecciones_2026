@@ -5,8 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:netlify": "netlify dev",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
+    "netlify:status": "netlify status",
+    "netlify:invoke:scheduled-sync": "netlify functions:invoke scheduled-sync",
     "onpe:check": "node scripts/check-onpe-session.mjs",
     "snapshot:dev": "node scripts/generate-dev-snapshot.mjs",
     "test": "vitest run",
@@ -23,6 +26,7 @@
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
     "jsdom": "^24.1.0",
+    "netlify-cli": "^26.0.0",
     "typescript": "^5.5.4",
     "vite": "^5.3.4",
     "vitest": "^2.0.5"

@@ -53,6 +53,7 @@ export const handler: Handler = async (event) => {
       health: result.health
     });
   } catch (error) {
+    console.error("[sync] manual sync failed", error);
     return jsonResponse(
       {
         ok: false,

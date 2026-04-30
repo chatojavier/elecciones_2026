@@ -119,6 +119,31 @@ describe("storage sync lock election", () => {
     expect(blobs.has(existingLock.key)).toBe(true);
   });
 
+  it("ignora y limpia locks corruptos antes de elegir un lock activo", async () => {
+    const now = Date.parse("2026-04-30T01:50:00.000Z");
+    const validLock = createLock({
+      key: buildLockKey(Date.parse("2026-04-30T01:45:00.000Z"), "valid"),
+      token: "valid",
+      startedAt: "2026-04-30T01:45:00.000Z",
+      expiresAt: "2026-04-30T01:55:00.000Z"
+    });
+
+    blobs.set("sync-locks/corrupt", {
+      key: "sync-locks/other-key",
+      token: "bad",
+      trigger: "manual",
+      startedAt: "not-a-date",
+      expiresAt: "also-not-a-date"
+    });
+    blobs.set(validLock.key, validLock);
+
+    const result = await readSyncLock(now);
+
+    expect(result).toEqual(validLock);
+    expect(deletedKeys).toContain("sync-locks/corrupt");
+    expect(blobs.has("sync-locks/corrupt")).toBe(false);
+  });
+
   it("gana la eleccion cuando es el contender mas antiguo y luego libera su lock", async () => {
     const now = Date.parse("2026-04-30T01:50:00.000Z");
     randomUUIDMock.mockReturnValue("candidate");
@@ -138,5 +163,53 @@ describe("storage sync lock election", () => {
 
     expect(blobs.size).toBe(0);
     expect(deletedKeys).toContain(buildLockKey(now, "candidate"));
+  });
+
+  it("degrada a eventual consistency cuando strong no esta disponible en local", async () => {
+    const now = Date.parse("2026-04-30T01:50:00.000Z");
+    const validLock = createLock({
+      key: buildLockKey(Date.parse("2026-04-30T01:45:00.000Z"), "valid"),
+      token: "valid",
+      startedAt: "2026-04-30T01:45:00.000Z",
+      expiresAt: "2026-04-30T01:55:00.000Z"
+    });
+    blobs.set(validLock.key, validLock);
+
+    getStoreMock.mockImplementation(({ consistency }: { consistency?: "eventual" | "strong" }) => ({
+      async get(key: string) {
+        return blobs.get(key) ?? null;
+      },
+      async setJSON(key: string, value: unknown) {
+        blobs.set(key, value);
+      },
+      async delete(key: string) {
+        blobs.delete(key);
+        deletedKeys.push(key);
+      },
+      async list({ prefix }: { prefix?: string } = {}) {
+        if (consistency === "strong") {
+          const error = new Error(
+            "Netlify Blobs has failed to perform a read using strong consistency because the environment has not been configured with a 'uncachedEdgeURL' property"
+          );
+          error.name = "BlobsConsistencyError";
+          throw error;
+        }
+
+        return {
+          blobs: [...blobs.keys()]
+            .filter((key) => (prefix ? key.startsWith(prefix) : true))
+            .sort()
+            .map((key) => ({
+              key,
+              etag: key
+            })),
+          directories: []
+        };
+      }
+    }));
+
+    const result = await readSyncLock(now);
+
+    expect(result).toEqual(validLock);
   });
 });

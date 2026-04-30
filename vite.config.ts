@@ -34,7 +34,7 @@ export default defineConfig({
 
             res.statusCode = 200;
             res.setHeader("Content-Type", "application/json");
-            res.end(JSON.stringify({ ok: true, snapshot }));
+            res.end(JSON.stringify({ ok: true, state: "synced", snapshot }));
           } catch (error) {
             res.statusCode = 500;
             res.setHeader("Content-Type", "application/json");

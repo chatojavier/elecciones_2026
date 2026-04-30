@@ -2,7 +2,7 @@ import { connectLambda } from "@netlify/blobs";
 import type { Handler } from "@netlify/functions";
 
 import { jsonResponse } from "./_shared/http";
-import { runSync } from "./_shared/snapshot";
+import { runSyncFlow } from "./_shared/sync";
 import { readSnapshot } from "./_shared/storage";
 
 export const handler: Handler = async (event) => {
@@ -12,17 +12,28 @@ export const handler: Handler = async (event) => {
 
   if (!snapshot) {
     try {
-      const result = await runSync();
-      snapshot = result.snapshot;
-    } catch (error) {
+      const result = await runSyncFlow("snapshot_fallback");
+
+      if (result.state === "synced") {
+        snapshot = result.snapshot;
+      }
+    } catch {
       return jsonResponse(
         {
-          error: "snapshot_unavailable",
-          message: (error as Error).message
+          error: "snapshot_unavailable"
         },
         503
       );
     }
+  }
+
+  if (!snapshot) {
+    return jsonResponse(
+      {
+        error: "snapshot_unavailable"
+      },
+      503
+    );
   }
 
   return jsonResponse(snapshot);

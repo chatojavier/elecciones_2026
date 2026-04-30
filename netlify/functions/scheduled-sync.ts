@@ -4,24 +4,29 @@ import type { Handler } from "@netlify/functions";
 import { jsonResponse } from "./_shared/http";
 import { runSyncFlow } from "./_shared/sync";
 
+export const config = {
+  schedule: "*/15 * * * *"
+};
+
+function isScheduledInvocation(event: Parameters<Handler>[0]) {
+  return event.headers["x-nf-event"] === "schedule";
+}
+
 export const handler: Handler = async (event) => {
   connectLambda(event as unknown as Parameters<typeof connectLambda>[0]);
 
-  if (event.httpMethod !== "POST") {
+  if (!isScheduledInvocation(event)) {
     return jsonResponse(
       {
         ok: false,
-        error: "invalid_method"
+        error: "unauthorized"
       },
-      405,
-      {
-        allow: "POST"
-      }
+      401
     );
   }
 
   try {
-    const result = await runSyncFlow("manual");
+    const result = await runSyncFlow("scheduled");
 
     if (result.state === "in_progress") {
       return jsonResponse(
@@ -52,7 +57,7 @@ export const handler: Handler = async (event) => {
       snapshot: result.snapshot,
       health: result.health
     });
-  } catch (error) {
+  } catch {
     return jsonResponse(
       {
         ok: false,

@@ -12,6 +12,12 @@ export interface AppData {
   health: HealthStatus;
 }
 
+export type RefreshState = "synced" | "in_progress" | "recent";
+
+export interface RefreshAppDataResult extends AppData {
+  refreshState: RefreshState;
+}
+
 const DEV_SNAPSHOT_ENDPOINT = "/dev-snapshot.json";
 
 function getSnapshotCandidates() {
@@ -72,10 +78,6 @@ function getUsableHealth(health: HealthStatus | null, snapshot: ElectionSnapshot
 async function parseSyncResponse(response: Response) {
   const contentType = response.headers.get("content-type") ?? "";
 
-  if (!response.ok) {
-    throw new Error(`No se pudo sincronizar datos (${response.status}).`);
-  }
-
   if (!contentType.includes("application/json")) {
     throw new Error("El endpoint de sincronización no respondió JSON.");
   }
@@ -83,20 +85,36 @@ async function parseSyncResponse(response: Response) {
   const payload = (await response.json()) as {
     ok?: boolean;
     error?: string;
+    state?: RefreshState;
     snapshot?: ElectionSnapshot;
     health?: HealthStatus;
   };
 
-  if (!payload.ok) {
-    throw new Error(payload.error ?? "La sincronización de datos falló.");
+  if (response.status === 202 && payload.ok && payload.state === "in_progress") {
+    return {
+      refreshState: "in_progress" as const
+    };
   }
 
-  return payload.snapshot
-    ? {
-        snapshot: normalizeElectionSnapshot(payload.snapshot),
-        health: payload.health ?? null
-      }
-    : null;
+  if (response.status === 429 && payload.ok && payload.state === "recent") {
+    return {
+      refreshState: "recent" as const
+    };
+  }
+
+  if (!response.ok || !payload.ok || payload.state !== "synced") {
+    throw new Error(`No se pudo sincronizar datos (${response.status}).`);
+  }
+
+  if (!payload.snapshot) {
+    throw new Error("La sincronización no devolvió snapshot.");
+  }
+
+  return {
+    refreshState: "synced" as const,
+    snapshot: normalizeElectionSnapshot(payload.snapshot),
+    health: payload.health ?? null
+  };
 }
 
 function buildRequestUrl(endpoint: string) {
@@ -152,7 +170,7 @@ export async function refreshSnapshot() {
   return data.snapshot;
 }
 
-export async function refreshAppData(): Promise<AppData> {
+export async function refreshAppData(): Promise<RefreshAppDataResult> {
   const syncEndpoint = import.meta.env.DEV ? DEV_REFRESH_ENDPOINT : SYNC_ENDPOINT;
   const syncResponse = await fetch(buildRequestUrl(syncEndpoint), {
     method: "POST",
@@ -160,12 +178,18 @@ export async function refreshAppData(): Promise<AppData> {
   });
   const syncedSnapshot = await parseSyncResponse(syncResponse);
 
-  if (syncedSnapshot) {
+  if (syncedSnapshot.refreshState === "synced") {
     return {
       snapshot: syncedSnapshot.snapshot,
-      health: getUsableHealth(syncedSnapshot.health, syncedSnapshot.snapshot)
+      health: getUsableHealth(syncedSnapshot.health, syncedSnapshot.snapshot),
+      refreshState: "synced"
     };
   }
 
-  return await fetchAppData();
+  const appData = await fetchAppData();
+
+  return {
+    ...appData,
+    refreshState: syncedSnapshot.refreshState
+  };
 }

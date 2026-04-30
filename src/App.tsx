@@ -476,7 +476,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshFeedback, setRefreshFeedback] = useState<{
-    kind: "success" | "error";
+    kind: "success" | "info" | "error";
     message: string;
   } | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>(DEFAULT_REGION_SORT);
@@ -531,7 +531,33 @@ export default function App() {
         setRefreshFeedback(null);
       }
 
-      if (trigger === "manual") {
+      if (background && trigger === "manual") {
+        const refreshState = "refreshState" in data ? data.refreshState : "synced";
+
+        if (refreshState === "in_progress") {
+          setRefreshFeedback({
+            kind: "info",
+            message: "Ya hay una actualización en curso."
+          });
+          trackEvent("refresh_manual_skipped", {
+            reason: "in_progress",
+            ...appFreshnessPayload
+          });
+          return;
+        }
+
+        if (refreshState === "recent") {
+          setRefreshFeedback({
+            kind: "info",
+            message: "La app ya se actualizó hace poco."
+          });
+          trackEvent("refresh_manual_skipped", {
+            reason: "recent",
+            ...appFreshnessPayload
+          });
+          return;
+        }
+
         const sourceHasNewCut = getSourceHasNewCut(
           data.snapshot.sourceLastUpdatedAt,
           data.health.lastSuccessAt,
@@ -683,6 +709,8 @@ export default function App() {
     : true;
   const statusNote = refreshFeedback?.kind === "error"
     ? refreshFeedback.message
+    : refreshFeedback?.kind === "info"
+      ? refreshFeedback.message
     : refreshFeedback?.kind === "success" && appFreshnessStatus === "Al día"
       ? refreshFeedback.message
       : appFreshnessStatus === "Desactualizado"

@@ -47,7 +47,7 @@ export async function runSyncFlow(
   }
 
   if (trigger === "manual") {
-    const currentHealth = await readHealth();
+    const currentHealth = await readHealth("strong");
 
     if (currentHealth?.lastSuccessAt) {
       const elapsedSeconds = getElapsedSeconds(currentHealth.lastSuccessAt, now);

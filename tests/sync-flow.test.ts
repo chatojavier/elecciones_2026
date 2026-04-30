@@ -84,6 +84,7 @@ describe("runSyncFlow", () => {
       statusCode: 429,
       retryAfterSeconds: 120
     });
+    expect(readHealthMock).toHaveBeenCalledWith("strong");
     expect(acquireSyncLockMock).not.toHaveBeenCalled();
     expect(runSyncMock).not.toHaveBeenCalled();
   });

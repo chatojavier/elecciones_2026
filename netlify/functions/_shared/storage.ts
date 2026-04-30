@@ -52,8 +52,8 @@ export async function writeSnapshot(snapshot: ElectionSnapshot) {
   await store.setJSON(SNAPSHOT_KEY, snapshot);
 }
 
-export async function readHealth() {
-  const store = getStorageStore();
+export async function readHealth(consistency?: "eventual" | "strong") {
+  const store = getStorageStore(consistency);
   const health = (await store.get(HEALTH_KEY, { type: "json" })) as HealthStatus | null;
   return health ? hydrateHealthFreshness(health) : null;
 }

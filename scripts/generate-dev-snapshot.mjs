@@ -14,7 +14,10 @@ const DEFAULT_USER_AGENT =
 const DEFAULT_ACCEPT_LANGUAGE = "en-GB,en-US;q=0.9,en;q=0.8";
 const DEFAULT_ELECTION_ID = "10";
 const DEFAULT_OUTPUT_PATH = resolve(process.cwd(), "public", "dev-snapshot.json");
-const PROVINCE_REQUEST_CONCURRENCY = 6;
+const DEFAULT_ONPE_REQUEST_CONCURRENCY = 6;
+const DEFAULT_ONPE_REQUEST_TIMEOUT_MS = 8000;
+let activeOnpeRequests = 0;
+const onpeRequestQueue = [];
 
 function round(value, digits = 3) {
   return Number(value.toFixed(digits));
@@ -71,6 +74,11 @@ function parseDotEnv(contents) {
   return parsed;
 }
 
+function parsePositiveInteger(value, fallback) {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 async function readOptionalText(path) {
   try {
     return await readFile(path, "utf8");
@@ -103,6 +111,14 @@ async function loadConfig() {
       fileEnv.ONPE_ACCEPT_LANGUAGE ??
       DEFAULT_ACCEPT_LANGUAGE,
     electionId: process.env.ONPE_ELECTION_ID ?? fileEnv.ONPE_ELECTION_ID ?? DEFAULT_ELECTION_ID,
+    requestConcurrency: parsePositiveInteger(
+      process.env.ONPE_REQUEST_CONCURRENCY ?? fileEnv.ONPE_REQUEST_CONCURRENCY,
+      DEFAULT_ONPE_REQUEST_CONCURRENCY
+    ),
+    requestTimeoutMs: parsePositiveInteger(
+      process.env.ONPE_REQUEST_TIMEOUT_MS ?? fileEnv.ONPE_REQUEST_TIMEOUT_MS,
+      DEFAULT_ONPE_REQUEST_TIMEOUT_MS
+    ),
     outputPath: process.env.DEV_SNAPSHOT_OUTPUT_PATH ?? DEFAULT_OUTPUT_PATH
   };
 }
@@ -117,61 +133,114 @@ function buildUrl(baseUrl, path, params) {
   return url.toString();
 }
 
-async function fetchOnpeJson(config, path, params) {
-  const url = buildUrl(config.baseUrl, path, params);
-  const args = [
-    "-sS",
-    "--compressed",
-    "--max-time",
-    "30",
-    url,
-    "-H",
-    "Accept: */*",
-    "-H",
-    "Content-Type: application/json",
-    "-H",
-    `Cookie: ${config.cookie}`,
-    "-H",
-    `Referer: ${config.referer}`,
-    "-H",
-    `User-Agent: ${config.userAgent}`,
-    "-H",
-    `Accept-Language: ${config.acceptLanguage}`,
-    "-H",
-    "Sec-Fetch-Site: same-origin",
-    "-H",
-    "Sec-Fetch-Mode: cors",
-    "-H",
-    "Sec-Fetch-Dest: empty",
-    "-H",
-    "Priority: u=3, i"
-  ];
-  const { stdout } = await execFileAsync("curl", args, {
-    maxBuffer: 20 * 1024 * 1024
+function pumpOnpeQueue(config) {
+  while (
+    activeOnpeRequests < config.requestConcurrency &&
+    onpeRequestQueue.length > 0
+  ) {
+    activeOnpeRequests += 1;
+    onpeRequestQueue.shift()?.();
+  }
+}
+
+async function acquireOnpeRequestSlot(config) {
+  if (
+    activeOnpeRequests < config.requestConcurrency &&
+    onpeRequestQueue.length === 0
+  ) {
+    activeOnpeRequests += 1;
+    return;
+  }
+
+  await new Promise((resolve) => {
+    onpeRequestQueue.push(resolve);
   });
-  const trimmed = stdout.trim();
+}
 
-  if (!trimmed) {
-    throw new Error(`ONPE devolvió una respuesta vacía para ${url}`);
-  }
+function releaseOnpeRequestSlot(config) {
+  activeOnpeRequests = Math.max(0, activeOnpeRequests - 1);
+  pumpOnpeQueue(config);
+}
 
-  if (trimmed.startsWith("<")) {
-    throw new Error(`ONPE devolvió HTML para ${url}`);
-  }
+function isAbortError(error) {
+  return error instanceof Error && (error.name === "AbortError" || error.code === "ABORT_ERR");
+}
 
-  let payload;
+async function fetchOnpeJson(config, path, params) {
+  await acquireOnpeRequestSlot(config);
+
+  const url = buildUrl(config.baseUrl, path, params);
+  const maxTimeSeconds = Math.max(1, Math.ceil(config.requestTimeoutMs / 1000));
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, config.requestTimeoutMs);
 
   try {
-    payload = JSON.parse(trimmed);
-  } catch (error) {
-    throw new Error(`ONPE devolvió JSON inválido para ${url}: ${error.message}`);
-  }
+    const args = [
+      "-sS",
+      "--compressed",
+      "--max-time",
+      String(maxTimeSeconds),
+      url,
+      "-H",
+      "Accept: */*",
+      "-H",
+      "Content-Type: application/json",
+      "-H",
+      `Cookie: ${config.cookie}`,
+      "-H",
+      `Referer: ${config.referer}`,
+      "-H",
+      `User-Agent: ${config.userAgent}`,
+      "-H",
+      `Accept-Language: ${config.acceptLanguage}`,
+      "-H",
+      "Sec-Fetch-Site: same-origin",
+      "-H",
+      "Sec-Fetch-Mode: cors",
+      "-H",
+      "Sec-Fetch-Dest: empty",
+      "-H",
+      "Priority: u=3, i"
+    ];
+    const { stdout } = await execFileAsync("curl", args, {
+      maxBuffer: 20 * 1024 * 1024,
+      signal: controller.signal
+    }).catch((error) => {
+      if (isAbortError(error)) {
+        throw new Error(`ONPE timeout después de ${config.requestTimeoutMs}ms para ${path}`);
+      }
 
-  if (!payload.success || payload.data == null) {
-    throw new Error(`ONPE devolvió success=false para ${url}`);
-  }
+      throw error;
+    });
+    const trimmed = stdout.trim();
 
-  return payload.data;
+    if (!trimmed) {
+      throw new Error(`ONPE devolvió una respuesta vacía para ${path}`);
+    }
+
+    if (trimmed.startsWith("<")) {
+      throw new Error(`ONPE devolvió HTML para ${path}`);
+    }
+
+    let payload;
+
+    try {
+      payload = JSON.parse(trimmed);
+    } catch (error) {
+      throw new Error(`ONPE devolvió JSON inválido para ${path}: ${error.message}`);
+    }
+
+    if (!payload.success || payload.data == null) {
+      throw new Error(`ONPE devolvió success=false para ${path}`);
+    }
+
+    return payload.data;
+  } finally {
+    clearTimeout(timeoutId);
+    releaseOnpeRequestSlot(config);
+  }
 }
 
 function buildCandidateCatalog(participants) {
@@ -383,25 +452,6 @@ function computeIsStale(sourceLastUpdatedAt) {
   return minutes > STALE_AFTER_MINUTES;
 }
 
-async function mapWithConcurrency(items, concurrency, mapper) {
-  const results = new Array(items.length);
-  let nextIndex = 0;
-
-  async function worker() {
-    while (nextIndex < items.length) {
-      const currentIndex = nextIndex;
-      nextIndex += 1;
-      results[currentIndex] = await mapper(items[currentIndex], currentIndex);
-    }
-  }
-
-  await Promise.all(
-    Array.from({ length: Math.min(concurrency, items.length) }, () => worker())
-  );
-
-  return results;
-}
-
 async function loadScopesMeta() {
   return JSON.parse(await readFile(resolve(process.cwd(), "data", "scopes.meta.json"), "utf8"));
 }
@@ -512,10 +562,8 @@ async function buildElectionSnapshot(config) {
         ]);
 
         const provinces = (
-          await mapWithConcurrency(
-            provinceCatalog,
-            PROVINCE_REQUEST_CONCURRENCY,
-            async (province) => {
+          await Promise.all(
+            provinceCatalog.map(async (province) => {
               const [provinceTotals, provinceParticipants] = await Promise.all([
                 fetchOnpeJson(config, "resumen-general/totales", {
                   idEleccion: config.electionId,
@@ -542,7 +590,7 @@ async function buildElectionSnapshot(config) {
                 candidateCatalog,
                 featuredCodes: featuredCandidateCodes
               });
-            }
+            })
           )
         ).sort((left, right) => left.label.localeCompare(right.label, "es"));
 
@@ -589,10 +637,8 @@ async function buildElectionSnapshot(config) {
         ]);
 
         const countries = (
-          await mapWithConcurrency(
-            countryCatalog,
-            PROVINCE_REQUEST_CONCURRENCY,
-            async (country) => {
+          await Promise.all(
+            countryCatalog.map(async (country) => {
               const [countryTotals, countryParticipants] = await Promise.all([
                 fetchOnpeJson(config, "resumen-general/totales", {
                   idEleccion: config.electionId,
@@ -619,7 +665,7 @@ async function buildElectionSnapshot(config) {
                 candidateCatalog,
                 featuredCodes: featuredCandidateCodes
               });
-            }
+            })
           )
         ).sort((left, right) => left.label.localeCompare(right.label, "es"));
 

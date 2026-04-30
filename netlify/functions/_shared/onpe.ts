@@ -1,11 +1,4 @@
 import {
-  parseOnpeDepartments,
-  parseOnpeEnvelope,
-  parseOnpeParticipants,
-  parseOnpeProvinces,
-  parseOnpeTotals
-} from "../../../src/lib/contracts";
-import {
   ONPE_ACCEPT_LANGUAGE,
   ONPE_BASE_URL,
   ONPE_COOKIE,
@@ -17,6 +10,7 @@ import {
 } from "./config";
 import type {
   OnpeDepartment,
+  OnpeEnvelope,
   OnpeParticipant,
   OnpeProvince,
   OnpeTotals
@@ -84,12 +78,9 @@ function isAbortError(error: unknown) {
   );
 }
 
-async function fetchOnpe<T>(
-  path: string,
-  params: Record<string, string | number>,
-  parseData: (value: unknown, source?: string, path?: string) => T
-) {
+async function fetchOnpe<T>(path: string, params: Record<string, string | number>) {
   await acquireOnpeRequestSlot();
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => {
     controller.abort();
@@ -122,21 +113,21 @@ async function fetchOnpe<T>(
       throw new Error(`ONPE devolvió HTML para ${path}`);
     }
 
-    let payload: unknown;
+    let payload: OnpeEnvelope<T>;
 
     try {
-      payload = JSON.parse(trimmed);
+      payload = JSON.parse(trimmed) as OnpeEnvelope<T>;
     } catch (error) {
       throw new Error(
         `ONPE devolvió JSON inválido para ${path}: ${(error as Error).message}`
       );
     }
 
-    try {
-      return parseOnpeEnvelope(payload, parseData, `onpe:${path}`, "$").data;
-    } catch (error) {
-      throw new Error((error as Error).message);
+    if (!payload.success || payload.data == null) {
+      throw new Error(`ONPE devolvió success=false para ${path}`);
     }
+
+    return payload.data;
   } finally {
     clearTimeout(timeoutId);
     releaseOnpeRequestSlot();
@@ -144,203 +135,139 @@ async function fetchOnpe<T>(
 }
 
 export function fetchDepartments() {
-  return fetchOnpe<OnpeDepartment[]>(
-    "/ubigeos/departamentos",
-    {
-      idEleccion: ONPE_ELECTION_ID,
-      idAmbitoGeografico: 1
-    },
-    parseOnpeDepartments
-  );
+  return fetchOnpe<OnpeDepartment[]>("/ubigeos/departamentos", {
+    idEleccion: ONPE_ELECTION_ID,
+    idAmbitoGeografico: 1
+  });
 }
 
 export function fetchForeignContinents() {
-  return fetchOnpe<OnpeDepartment[]>(
-    "/ubigeos/departamentos",
-    {
-      idEleccion: ONPE_ELECTION_ID,
-      idAmbitoGeografico: 2
-    },
-    parseOnpeDepartments
-  );
+  return fetchOnpe<OnpeDepartment[]>("/ubigeos/departamentos", {
+    idEleccion: ONPE_ELECTION_ID,
+    idAmbitoGeografico: 2
+  });
 }
 
 export function fetchNationalTotals() {
-  return fetchOnpe<OnpeTotals>(
-    "/resumen-general/totales",
-    {
-      idEleccion: ONPE_ELECTION_ID,
-      tipoFiltro: "ambito_geografico",
-      idAmbitoGeografico: 1
-    },
-    parseOnpeTotals
-  );
+  return fetchOnpe<OnpeTotals>("/resumen-general/totales", {
+    idEleccion: ONPE_ELECTION_ID,
+    tipoFiltro: "ambito_geografico",
+    idAmbitoGeografico: 1
+  });
 }
 
 export function fetchNationalParticipants() {
-  return fetchOnpe<OnpeParticipant[]>(
-    "/resumen-general/participantes",
-    {
-      idEleccion: ONPE_ELECTION_ID,
-      tipoFiltro: "ambito_geografico",
-      idAmbitoGeografico: 1
-    },
-    parseOnpeParticipants
-  );
+  return fetchOnpe<OnpeParticipant[]>("/resumen-general/participantes", {
+    idEleccion: ONPE_ELECTION_ID,
+    tipoFiltro: "ambito_geografico",
+    idAmbitoGeografico: 1
+  });
 }
 
 export function fetchForeignTotals() {
-  return fetchOnpe<OnpeTotals>(
-    "/resumen-general/totales",
-    {
-      idEleccion: ONPE_ELECTION_ID,
-      tipoFiltro: "ambito_geografico",
-      idAmbitoGeografico: 2
-    },
-    parseOnpeTotals
-  );
+  return fetchOnpe<OnpeTotals>("/resumen-general/totales", {
+    idEleccion: ONPE_ELECTION_ID,
+    tipoFiltro: "ambito_geografico",
+    idAmbitoGeografico: 2
+  });
 }
 
 export function fetchForeignParticipants() {
-  return fetchOnpe<OnpeParticipant[]>(
-    "/resumen-general/participantes",
-    {
-      idEleccion: ONPE_ELECTION_ID,
-      tipoFiltro: "ambito_geografico",
-      idAmbitoGeografico: 2
-    },
-    parseOnpeParticipants
-  );
+  return fetchOnpe<OnpeParticipant[]>("/resumen-general/participantes", {
+    idEleccion: ONPE_ELECTION_ID,
+    tipoFiltro: "ambito_geografico",
+    idAmbitoGeografico: 2
+  });
 }
 
 export function fetchRegionTotals(departmentUbigeo: string) {
-  return fetchOnpe<OnpeTotals>(
-    "/resumen-general/totales",
-    {
-      idEleccion: ONPE_ELECTION_ID,
-      tipoFiltro: "ubigeo_nivel_01",
-      idAmbitoGeografico: 1,
-      idUbigeoDepartamento: departmentUbigeo
-    },
-    parseOnpeTotals
-  );
+  return fetchOnpe<OnpeTotals>("/resumen-general/totales", {
+    idEleccion: ONPE_ELECTION_ID,
+    tipoFiltro: "ubigeo_nivel_01",
+    idAmbitoGeografico: 1,
+    idUbigeoDepartamento: departmentUbigeo
+  });
 }
 
 export function fetchRegionParticipants(departmentUbigeo: string) {
-  return fetchOnpe<OnpeParticipant[]>(
-    "/resumen-general/participantes",
-    {
-      idEleccion: ONPE_ELECTION_ID,
-      tipoFiltro: "ubigeo_nivel_01",
-      idAmbitoGeografico: 1,
-      idUbigeoDepartamento: departmentUbigeo
-    },
-    parseOnpeParticipants
-  );
+  return fetchOnpe<OnpeParticipant[]>("/resumen-general/participantes", {
+    idEleccion: ONPE_ELECTION_ID,
+    tipoFiltro: "ubigeo_nivel_01",
+    idAmbitoGeografico: 1,
+    idUbigeoDepartamento: departmentUbigeo
+  });
 }
 
 export function fetchForeignContinentTotals(continentUbigeo: string) {
-  return fetchOnpe<OnpeTotals>(
-    "/resumen-general/totales",
-    {
-      idEleccion: ONPE_ELECTION_ID,
-      tipoFiltro: "ubigeo_nivel_01",
-      idAmbitoGeografico: 2,
-      idUbigeoDepartamento: continentUbigeo
-    },
-    parseOnpeTotals
-  );
+  return fetchOnpe<OnpeTotals>("/resumen-general/totales", {
+    idEleccion: ONPE_ELECTION_ID,
+    tipoFiltro: "ubigeo_nivel_01",
+    idAmbitoGeografico: 2,
+    idUbigeoDepartamento: continentUbigeo
+  });
 }
 
 export function fetchForeignContinentParticipants(continentUbigeo: string) {
-  return fetchOnpe<OnpeParticipant[]>(
-    "/resumen-general/participantes",
-    {
-      idEleccion: ONPE_ELECTION_ID,
-      tipoFiltro: "ubigeo_nivel_01",
-      idAmbitoGeografico: 2,
-      idUbigeoDepartamento: continentUbigeo
-    },
-    parseOnpeParticipants
-  );
+  return fetchOnpe<OnpeParticipant[]>("/resumen-general/participantes", {
+    idEleccion: ONPE_ELECTION_ID,
+    tipoFiltro: "ubigeo_nivel_01",
+    idAmbitoGeografico: 2,
+    idUbigeoDepartamento: continentUbigeo
+  });
 }
 
 export function fetchProvinces(departmentUbigeo: string) {
-  return fetchOnpe<OnpeProvince[]>(
-    "/ubigeos/provincias",
-    {
-      idEleccion: ONPE_ELECTION_ID,
-      idAmbitoGeografico: 1,
-      idUbigeoDepartamento: departmentUbigeo
-    },
-    parseOnpeProvinces
-  );
+  return fetchOnpe<OnpeProvince[]>("/ubigeos/provincias", {
+    idEleccion: ONPE_ELECTION_ID,
+    idAmbitoGeografico: 1,
+    idUbigeoDepartamento: departmentUbigeo
+  });
 }
 
 export function fetchForeignCountries(continentUbigeo: string) {
-  return fetchOnpe<OnpeProvince[]>(
-    "/ubigeos/provincias",
-    {
-      idEleccion: ONPE_ELECTION_ID,
-      idAmbitoGeografico: 2,
-      idUbigeoDepartamento: continentUbigeo
-    },
-    parseOnpeProvinces
-  );
+  return fetchOnpe<OnpeProvince[]>("/ubigeos/provincias", {
+    idEleccion: ONPE_ELECTION_ID,
+    idAmbitoGeografico: 2,
+    idUbigeoDepartamento: continentUbigeo
+  });
 }
 
 export function fetchProvinceTotals(departmentUbigeo: string, provinceUbigeo: string) {
-  return fetchOnpe<OnpeTotals>(
-    "/resumen-general/totales",
-    {
-      idEleccion: ONPE_ELECTION_ID,
-      tipoFiltro: "ubigeo_nivel_02",
-      idAmbitoGeografico: 1,
-      idUbigeoDepartamento: departmentUbigeo,
-      idUbigeoProvincia: provinceUbigeo
-    },
-    parseOnpeTotals
-  );
+  return fetchOnpe<OnpeTotals>("/resumen-general/totales", {
+    idEleccion: ONPE_ELECTION_ID,
+    tipoFiltro: "ubigeo_nivel_02",
+    idAmbitoGeografico: 1,
+    idUbigeoDepartamento: departmentUbigeo,
+    idUbigeoProvincia: provinceUbigeo
+  });
 }
 
 export function fetchProvinceParticipants(departmentUbigeo: string, provinceUbigeo: string) {
-  return fetchOnpe<OnpeParticipant[]>(
-    "/resumen-general/participantes",
-    {
-      idEleccion: ONPE_ELECTION_ID,
-      tipoFiltro: "ubigeo_nivel_02",
-      idAmbitoGeografico: 1,
-      idUbigeoDepartamento: departmentUbigeo,
-      idUbigeoProvincia: provinceUbigeo
-    },
-    parseOnpeParticipants
-  );
+  return fetchOnpe<OnpeParticipant[]>("/resumen-general/participantes", {
+    idEleccion: ONPE_ELECTION_ID,
+    tipoFiltro: "ubigeo_nivel_02",
+    idAmbitoGeografico: 1,
+    idUbigeoDepartamento: departmentUbigeo,
+    idUbigeoProvincia: provinceUbigeo
+  });
 }
 
 export function fetchForeignCountryTotals(continentUbigeo: string, countryUbigeo: string) {
-  return fetchOnpe<OnpeTotals>(
-    "/resumen-general/totales",
-    {
-      idEleccion: ONPE_ELECTION_ID,
-      tipoFiltro: "ubigeo_nivel_02",
-      idAmbitoGeografico: 2,
-      idUbigeoDepartamento: continentUbigeo,
-      idUbigeoProvincia: countryUbigeo
-    },
-    parseOnpeTotals
-  );
+  return fetchOnpe<OnpeTotals>("/resumen-general/totales", {
+    idEleccion: ONPE_ELECTION_ID,
+    tipoFiltro: "ubigeo_nivel_02",
+    idAmbitoGeografico: 2,
+    idUbigeoDepartamento: continentUbigeo,
+    idUbigeoProvincia: countryUbigeo
+  });
 }
 
 export function fetchForeignCountryParticipants(continentUbigeo: string, countryUbigeo: string) {
-  return fetchOnpe<OnpeParticipant[]>(
-    "/resumen-general/participantes",
-    {
-      idEleccion: ONPE_ELECTION_ID,
-      tipoFiltro: "ubigeo_nivel_02",
-      idAmbitoGeografico: 2,
-      idUbigeoDepartamento: continentUbigeo,
-      idUbigeoProvincia: countryUbigeo
-    },
-    parseOnpeParticipants
-  );
+  return fetchOnpe<OnpeParticipant[]>("/resumen-general/participantes", {
+    idEleccion: ONPE_ELECTION_ID,
+    tipoFiltro: "ubigeo_nivel_02",
+    idAmbitoGeografico: 2,
+    idUbigeoDepartamento: continentUbigeo,
+    idUbigeoProvincia: countryUbigeo
+  });
 }

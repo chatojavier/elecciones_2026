@@ -825,11 +825,10 @@ export function parseOnpeEnvelope<T>(
     source,
     joinPath(path, "success")
   );
-  const message = parseString(
-    readRequired(record, "message", source, path),
-    source,
-    joinPath(path, "message")
-  );
+  const message =
+    record.message === undefined
+      ? ""
+      : parseString(record.message, source, joinPath(path, "message"));
 
   if (!success) {
     fail(source, path, `ONPE devolvió success=false (${message})`);

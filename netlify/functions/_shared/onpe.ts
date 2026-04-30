@@ -10,16 +10,20 @@ import {
   ONPE_BASE_URL,
   ONPE_COOKIE,
   ONPE_ELECTION_ID,
+  ONPE_REQUEST_CONCURRENCY,
+  ONPE_REQUEST_TIMEOUT_MS,
   ONPE_REFERER,
   ONPE_USER_AGENT
 } from "./config";
 import type {
   OnpeDepartment,
-  OnpeEnvelope,
   OnpeParticipant,
   OnpeProvince,
   OnpeTotals
 } from "../../../src/lib/types";
+
+let activeOnpeRequests = 0;
+const onpeRequestQueue: Array<() => void> = [];
 
 function buildUrl(path: string, params: Record<string, string | number>) {
   const search = new URLSearchParams(
@@ -43,44 +47,99 @@ function buildOnpeHeaders() {
   };
 }
 
+function pumpOnpeQueue() {
+  while (
+    activeOnpeRequests < ONPE_REQUEST_CONCURRENCY &&
+    onpeRequestQueue.length > 0
+  ) {
+    activeOnpeRequests += 1;
+    onpeRequestQueue.shift()?.();
+  }
+}
+
+async function acquireOnpeRequestSlot() {
+  if (
+    activeOnpeRequests < ONPE_REQUEST_CONCURRENCY &&
+    onpeRequestQueue.length === 0
+  ) {
+    activeOnpeRequests += 1;
+    return;
+  }
+
+  await new Promise<void>((resolve) => {
+    onpeRequestQueue.push(resolve);
+  });
+}
+
+function releaseOnpeRequestSlot() {
+  activeOnpeRequests = Math.max(0, activeOnpeRequests - 1);
+  pumpOnpeQueue();
+}
+
+function isAbortError(error: unknown) {
+  return (
+    error instanceof Error &&
+    (error.name === "AbortError" ||
+      ("code" in error && error.code === "ABORT_ERR"))
+  );
+}
+
 async function fetchOnpe<T>(
   path: string,
   params: Record<string, string | number>,
   parseData: (value: unknown, source?: string, path?: string) => T
 ) {
-  const response = await fetch(buildUrl(path, params), {
-    headers: buildOnpeHeaders()
-  });
-
-  if (!response.ok) {
-    throw new Error(`ONPE respondió ${response.status} para ${path}`);
-  }
-
-  const text = await response.text();
-  const trimmed = text.trim();
-
-  if (!trimmed) {
-    throw new Error(`ONPE devolvió una respuesta vacía para ${path}`);
-  }
-
-  if (trimmed.startsWith("<")) {
-    throw new Error(`ONPE devolvió HTML para ${path}`);
-  }
-
-  let payload: unknown;
+  await acquireOnpeRequestSlot();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, ONPE_REQUEST_TIMEOUT_MS);
 
   try {
-    payload = JSON.parse(trimmed);
-  } catch (error) {
-    throw new Error(
-      `ONPE devolvió JSON inválido para ${path}: ${(error as Error).message}`
-    );
-  }
+    const response = await fetch(buildUrl(path, params), {
+      headers: buildOnpeHeaders(),
+      signal: controller.signal
+    }).catch((error) => {
+      if (isAbortError(error)) {
+        throw new Error(`ONPE timeout después de ${ONPE_REQUEST_TIMEOUT_MS}ms para ${path}`);
+      }
 
-  try {
-    return parseOnpeEnvelope(payload, parseData, `onpe:${path}`, "$").data;
-  } catch (error) {
-    throw new Error((error as Error).message);
+      throw error;
+    });
+
+    if (!response.ok) {
+      throw new Error(`ONPE respondió ${response.status} para ${path}`);
+    }
+
+    const text = await response.text();
+    const trimmed = text.trim();
+
+    if (!trimmed) {
+      throw new Error(`ONPE devolvió una respuesta vacía para ${path}`);
+    }
+
+    if (trimmed.startsWith("<")) {
+      throw new Error(`ONPE devolvió HTML para ${path}`);
+    }
+
+    let payload: unknown;
+
+    try {
+      payload = JSON.parse(trimmed);
+    } catch (error) {
+      throw new Error(
+        `ONPE devolvió JSON inválido para ${path}: ${(error as Error).message}`
+      );
+    }
+
+    try {
+      return parseOnpeEnvelope(payload, parseData, `onpe:${path}`, "$").data;
+    } catch (error) {
+      throw new Error((error as Error).message);
+    }
+  } finally {
+    clearTimeout(timeoutId);
+    releaseOnpeRequestSlot();
   }
 }
 

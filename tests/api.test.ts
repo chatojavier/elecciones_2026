@@ -156,6 +156,53 @@ describe("api trust data", () => {
     });
   });
 
+  it("ignora health inválido y usa fallback derivado del snapshot", async () => {
+    const snapshot = createSnapshot({
+      generatedAt: "2026-04-21T12:05:00.000Z"
+    });
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(snapshot), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json"
+          }
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            status: "healthy",
+            source: "onpe",
+            lastSyncAt: snapshot.generatedAt,
+            staleMinutes: 0,
+            lastError: null
+          }),
+          {
+            status: 200,
+            headers: {
+              "Content-Type": "application/json"
+            }
+          }
+        )
+      );
+
+    const result = await fetchAppData();
+
+    expect(result).toEqual({
+      snapshot,
+      health: {
+        status: "healthy",
+        source: "onpe",
+        lastSyncAt: snapshot.generatedAt,
+        lastSuccessAt: snapshot.generatedAt,
+        staleMinutes: null,
+        lastError: null
+      }
+    });
+  });
+
   it("usa snapshot y health devueltos por sync sin hacer fetch redundante", async () => {
     const snapshot = createSnapshot({
       generatedAt: "2026-04-21T12:05:00.000Z"
@@ -213,6 +260,29 @@ describe("api trust data", () => {
       },
       refreshState: "synced"
     });
+  });
+
+  it("falla de forma controlada si sync devuelve un snapshot inválido", async () => {
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          ok: true,
+          state: "synced",
+          snapshot: {
+            generatedAt: "2026-04-21T12:05:00.000Z"
+          }
+        }),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json"
+          }
+        }
+      )
+    );
+
+    await expect(refreshAppData()).rejects.toThrow(/snapshot\.sourceElectionId/);
   });
 
   it("reusa el snapshot publico cuando el sync ya esta en curso", async () => {

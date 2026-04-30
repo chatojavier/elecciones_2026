@@ -33,6 +33,41 @@ function createJsonResponse(data: unknown) {
   });
 }
 
+function createOnpePayloadForPath(pathname: string) {
+  if (pathname.includes("/ubigeos/")) {
+    return [
+      {
+        ubigeo: "01",
+        nombre: "LIMA"
+      }
+    ];
+  }
+
+  if (pathname.includes("/participantes")) {
+    return [];
+  }
+
+  return {
+    actasContabilizadas: 1,
+    contabilizadas: 1,
+    totalActas: 1,
+    participacionCiudadana: 1,
+    actasEnviadasJee: 0,
+    enviadasJee: 0,
+    actasPendientesJee: 0,
+    pendientesJee: 0,
+    fechaActualizacion: 20260429010101,
+    idUbigeoDepartamento: 0,
+    idUbigeoProvincia: 0,
+    idUbigeoDistrito: 0,
+    idUbigeoDistritoElectoral: 0,
+    totalVotosEmitidos: 1,
+    totalVotosValidos: 1,
+    porcentajeVotosEmitidos: 100,
+    porcentajeVotosValidos: 100
+  };
+}
+
 async function waitUntil(assertion: () => void, timeoutMs = 250) {
   const startedAt = Date.now();
 
@@ -93,7 +128,7 @@ describe("ONPE transport", () => {
 
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => {
+      vi.fn(async (input: string | URL) => {
         activeRequests += 1;
         maxActiveRequests = Math.max(maxActiveRequests, activeRequests);
 
@@ -102,7 +137,7 @@ describe("ONPE transport", () => {
         await gate.promise;
 
         activeRequests -= 1;
-        return createJsonResponse([]);
+        return createJsonResponse(createOnpePayloadForPath(new URL(String(input)).pathname));
       })
     );
 

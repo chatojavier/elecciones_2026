@@ -11,7 +11,10 @@ import {
   hydrateHealthFreshness,
   hydrateSnapshotFreshness
 } from "./freshness";
-import { normalizeElectionSnapshot } from "../../../src/lib/normalizeSnapshot";
+import {
+  parseElectionSnapshot,
+  parseHealthStatus
+} from "../../../src/lib/contracts";
 import type { ElectionSnapshot, HealthStatus } from "../../../src/lib/types";
 
 export type SyncTrigger = "manual" | "scheduled" | "snapshot_fallback";
@@ -43,8 +46,20 @@ function getSyncLockSortValue(key: string) {
 
 export async function readSnapshot() {
   const store = getStorageStore();
-  const snapshot = (await store.get(SNAPSHOT_KEY, { type: "json" })) as ElectionSnapshot | null;
-  return snapshot ? hydrateSnapshotFreshness(normalizeElectionSnapshot(snapshot)) : null;
+  const snapshot = (await store.get(SNAPSHOT_KEY, { type: "json" })) as unknown;
+
+  if (snapshot == null) {
+    return null;
+  }
+
+  try {
+    return hydrateSnapshotFreshness(
+      parseElectionSnapshot(snapshot, `blob:${SNAPSHOT_KEY}`, "$")
+    );
+  } catch (error) {
+    logInvalidBlob(SNAPSHOT_KEY, error);
+    return null;
+  }
 }
 
 export async function writeSnapshot(snapshot: ElectionSnapshot) {
@@ -54,8 +69,18 @@ export async function writeSnapshot(snapshot: ElectionSnapshot) {
 
 export async function readHealth(consistency?: "eventual" | "strong") {
   const store = getStorageStore(consistency);
-  const health = (await store.get(HEALTH_KEY, { type: "json" })) as HealthStatus | null;
-  return health ? hydrateHealthFreshness(health) : null;
+  const health = (await store.get(HEALTH_KEY, { type: "json" })) as unknown;
+
+  if (health == null) {
+    return null;
+  }
+
+  try {
+    return hydrateHealthFreshness(parseHealthStatus(health, `blob:${HEALTH_KEY}`, "$"));
+  } catch (error) {
+    logInvalidBlob(HEALTH_KEY, error);
+    return null;
+  }
 }
 
 export async function writeHealth(health: HealthStatus) {
@@ -127,4 +152,9 @@ export async function releaseSyncLock(token: string) {
   if (activeLock?.token === token) {
     await store.delete(activeLock.key);
   }
+}
+
+function logInvalidBlob(key: string, error: unknown) {
+  const message = error instanceof Error ? error.message : "error desconocido";
+  console.warn(`[storage] blob inválido ${key}: ${message}`);
 }

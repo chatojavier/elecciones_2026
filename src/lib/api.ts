@@ -4,7 +4,11 @@ import {
   SNAPSHOT_ENDPOINT,
   SYNC_ENDPOINT
 } from "./constants";
-import { normalizeElectionSnapshot } from "./normalizeSnapshot";
+import {
+  DataContractError,
+  parseElectionSnapshot,
+  parseHealthStatus
+} from "./contracts";
 import type { ElectionSnapshot, HealthStatus } from "./types";
 
 export interface AppData {
@@ -39,7 +43,11 @@ async function parseSnapshotResponse(endpoint: string, response: Response) {
     throw new Error(`${endpoint} no respondió JSON.`);
   }
 
-  return normalizeElectionSnapshot((await response.json()) as ElectionSnapshot);
+  return parseElectionSnapshot(
+    await response.json(),
+    `snapshot:${endpoint}`,
+    "$"
+  );
 }
 
 async function parseHealthResponse(response: Response) {
@@ -53,7 +61,7 @@ async function parseHealthResponse(response: Response) {
     throw new Error("El endpoint de health no respondió JSON.");
   }
 
-  return (await response.json()) as HealthStatus;
+  return parseHealthStatus(await response.json(), "health", "$");
 }
 
 function buildFallbackHealth(snapshot: ElectionSnapshot): HealthStatus {
@@ -82,13 +90,7 @@ async function parseSyncResponse(response: Response) {
     throw new Error("El endpoint de sincronización no respondió JSON.");
   }
 
-  const payload = (await response.json()) as {
-    ok?: boolean;
-    error?: string;
-    state?: RefreshState;
-    snapshot?: ElectionSnapshot;
-    health?: HealthStatus;
-  };
+  const payload = parseSyncPayload(await response.json());
 
   if (response.status === 202 && payload.ok && payload.state === "in_progress") {
     return {
@@ -120,8 +122,62 @@ async function parseSyncResponse(response: Response) {
 
   return {
     refreshState: "synced" as const,
-    snapshot: normalizeElectionSnapshot(snapshot),
+    snapshot,
     health: payload.health ?? null
+  };
+}
+
+function parseSyncPayload(value: unknown): {
+  ok: boolean;
+  error?: string;
+  state?: RefreshState;
+  snapshot?: ElectionSnapshot;
+  health?: HealthStatus | null;
+} {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new DataContractError("sync", "$", "se esperaba un objeto JSON");
+  }
+
+  const record = value as Record<string, unknown>;
+  const ok = record.ok;
+
+  if (typeof ok !== "boolean") {
+    throw new DataContractError("sync", "ok", "se esperaba boolean");
+  }
+
+  const state = record.state;
+
+  if (
+    state !== undefined &&
+    state !== "synced" &&
+    state !== "in_progress" &&
+    state !== "recent"
+  ) {
+    throw new DataContractError(
+      "sync",
+      "state",
+      "se esperaba synced, in_progress o recent"
+    );
+  }
+
+  const error = record.error;
+
+  if (error !== undefined && typeof error !== "string") {
+    throw new DataContractError("sync", "error", "se esperaba string");
+  }
+
+  return {
+    ok,
+    error,
+    state,
+    snapshot:
+      record.snapshot === undefined
+        ? undefined
+        : parseElectionSnapshot(record.snapshot, "sync", "snapshot"),
+    health:
+      record.health === undefined || record.health === null
+        ? record.health ?? undefined
+        : parseHealthStatus(record.health, "sync", "health")
   };
 }
 

@@ -12,14 +12,6 @@ export const ONPE_REFERER =
   process.env.ONPE_REFERER ??
   "https://resultadoelectoral.onpe.gob.pe/main/resumen";
 export const ONPE_COOKIE = process.env.ONPE_COOKIE ?? "";
-export const ONPE_REQUEST_CONCURRENCY = parsePositiveInteger(
-  process.env.ONPE_REQUEST_CONCURRENCY,
-  6
-);
-export const ONPE_REQUEST_TIMEOUT_MS = parsePositiveInteger(
-  process.env.ONPE_REQUEST_TIMEOUT_MS,
-  8000
-);
 
 function parsePositiveInteger(value: string | undefined, fallback: number) {
   const parsed = Number(value);

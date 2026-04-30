@@ -490,8 +490,7 @@ function createHealth(overrides: Partial<HealthStatus> = {}): HealthStatus {
 
 function createAppData(
   snapshot: ElectionSnapshot = createSnapshot(),
-  healthOverrides: Partial<HealthStatus> = {},
-  refreshState?: "synced" | "in_progress" | "recent"
+  healthOverrides: Partial<HealthStatus> = {}
 ) {
   return {
     snapshot,
@@ -499,8 +498,7 @@ function createAppData(
       lastSyncAt: snapshot.generatedAt,
       lastSuccessAt: snapshot.generatedAt,
       ...healthOverrides
-    }),
-    ...(refreshState ? { refreshState } : {})
+    })
   };
 }
 
@@ -752,62 +750,6 @@ describe("App hero clarity and first action", () => {
     });
 
     expect(container.textContent).toContain("No se pudo actualizar. Intenta nuevamente.");
-    expect(container.textContent).toContain(formatDateTime(initialSnapshot.generatedAt));
-  });
-
-  it("muestra un mensaje informativo cuando ya hay un refresh en curso", async () => {
-    const initialSnapshot = createSnapshot({
-      generatedAt: "2026-04-15T12:00:00.000Z"
-    });
-    fetchSnapshotMock.mockResolvedValue(createAppData(initialSnapshot));
-    refreshSnapshotMock.mockResolvedValue(createAppData(initialSnapshot, {}, "in_progress"));
-
-    await act(async () => {
-      root.render(<App />);
-    });
-
-    await act(async () => {
-      await Promise.resolve();
-    });
-
-    const refreshButton = Array.from(container.querySelectorAll("button")).find((button) =>
-      button.textContent?.includes("Actualizar ahora")
-    ) as HTMLButtonElement;
-
-    await act(async () => {
-      refreshButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-      await Promise.resolve();
-    });
-
-    expect(container.textContent).toContain("Ya hay una actualización en curso.");
-    expect(container.textContent).toContain(formatDateTime(initialSnapshot.generatedAt));
-  });
-
-  it("muestra un mensaje informativo cuando el refresh ya fue reciente", async () => {
-    const initialSnapshot = createSnapshot({
-      generatedAt: "2026-04-15T12:00:00.000Z"
-    });
-    fetchSnapshotMock.mockResolvedValue(createAppData(initialSnapshot));
-    refreshSnapshotMock.mockResolvedValue(createAppData(initialSnapshot, {}, "recent"));
-
-    await act(async () => {
-      root.render(<App />);
-    });
-
-    await act(async () => {
-      await Promise.resolve();
-    });
-
-    const refreshButton = Array.from(container.querySelectorAll("button")).find((button) =>
-      button.textContent?.includes("Actualizar ahora")
-    ) as HTMLButtonElement;
-
-    await act(async () => {
-      refreshButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-      await Promise.resolve();
-    });
-
-    expect(container.textContent).toContain("La app ya se actualizó hace poco.");
     expect(container.textContent).toContain(formatDateTime(initialSnapshot.generatedAt));
   });
 

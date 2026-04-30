@@ -1,5 +1,3 @@
-import { randomUUID } from "node:crypto";
-
 import { getStore } from "@netlify/blobs";
 
 import {
@@ -14,31 +12,8 @@ import {
 import { normalizeElectionSnapshot } from "../../../src/lib/normalizeSnapshot";
 import type { ElectionSnapshot, HealthStatus } from "../../../src/lib/types";
 
-export type SyncTrigger = "manual" | "scheduled" | "snapshot_fallback";
-
-export interface SyncLock {
-  key: string;
-  token: string;
-  trigger: SyncTrigger;
-  startedAt: string;
-  expiresAt: string;
-}
-
-const SYNC_LOCK_PREFIX = "sync-locks/";
-
-function getStorageStore(consistency?: "eventual" | "strong") {
-  return getStore({
-    name: STORAGE_NAME,
-    consistency
-  });
-}
-
-function buildSyncLockKey(now: number, token: string) {
-  return `${SYNC_LOCK_PREFIX}${String(now).padStart(16, "0")}-${token}`;
-}
-
-function getSyncLockSortValue(key: string) {
-  return key.slice(SYNC_LOCK_PREFIX.length);
+function getStorageStore() {
+  return getStore(STORAGE_NAME);
 }
 
 export async function readSnapshot() {
@@ -52,8 +27,8 @@ export async function writeSnapshot(snapshot: ElectionSnapshot) {
   await store.setJSON(SNAPSHOT_KEY, snapshot);
 }
 
-export async function readHealth(consistency?: "eventual" | "strong") {
-  const store = getStorageStore(consistency);
+export async function readHealth() {
+  const store = getStorageStore();
   const health = (await store.get(HEALTH_KEY, { type: "json" })) as HealthStatus | null;
   return health ? hydrateHealthFreshness(health) : null;
 }
@@ -61,70 +36,4 @@ export async function readHealth(consistency?: "eventual" | "strong") {
 export async function writeHealth(health: HealthStatus) {
   const store = getStorageStore();
   await store.setJSON(HEALTH_KEY, health);
-}
-
-export async function readSyncLock(now = Date.now()) {
-  const store = getStorageStore("strong");
-  const { blobs } = await store.list({
-    prefix: SYNC_LOCK_PREFIX
-  });
-
-  const activeLocks: SyncLock[] = [];
-
-  for (const blob of blobs) {
-    const lock = (await store.get(blob.key, {
-      type: "json",
-      consistency: "strong"
-    })) as SyncLock | null;
-
-    if (!lock) {
-      continue;
-    }
-
-    if (new Date(lock.expiresAt).getTime() <= now) {
-      await store.delete(blob.key);
-      continue;
-    }
-
-    activeLocks.push(lock);
-  }
-
-  activeLocks.sort((left, right) => getSyncLockSortValue(left.key).localeCompare(getSyncLockSortValue(right.key)));
-
-  return activeLocks[0] ?? null;
-}
-
-export async function acquireSyncLock(trigger: SyncTrigger, ttlSeconds: number, now = Date.now()) {
-  const store = getStorageStore("strong");
-  const startedAt = new Date(now).toISOString();
-  const expiresAt = new Date(now + ttlSeconds * 1000).toISOString();
-  const token = randomUUID();
-  const candidateLock: SyncLock = {
-    key: buildSyncLockKey(now, token),
-    token,
-    trigger,
-    startedAt,
-    expiresAt
-  };
-
-  await store.setJSON(candidateLock.key, candidateLock);
-
-  const activeLock = await readSyncLock(now);
-
-  if (activeLock?.key === candidateLock.key) {
-    return candidateLock;
-  }
-
-  await store.delete(candidateLock.key);
-
-  return null;
-}
-
-export async function releaseSyncLock(token: string) {
-  const store = getStorageStore("strong");
-  const activeLock = await readSyncLock();
-
-  if (activeLock?.token === token) {
-    await store.delete(activeLock.key);
-  }
 }

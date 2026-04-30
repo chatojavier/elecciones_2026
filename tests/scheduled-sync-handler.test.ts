@@ -63,4 +63,24 @@ describe("scheduled sync handler", () => {
     expect(response?.statusCode).toBe(202);
     expect(response?.body).toBe(JSON.stringify({ ok: true, state: "in_progress" }));
   });
+
+  it("acepta el header de schedule con casing distinto", async () => {
+    runSyncFlowMock.mockResolvedValue({
+      state: "in_progress",
+      statusCode: 202
+    });
+
+    const response = await handler(
+      createEvent({
+        headers: {
+          "X-NF-Event": "schedule"
+        }
+      }),
+      {} as never
+    );
+
+    expect(runSyncFlowMock).toHaveBeenCalledWith("scheduled");
+    expect(response?.statusCode).toBe(202);
+    expect(response?.body).toBe(JSON.stringify({ ok: true, state: "in_progress" }));
+  });
 });

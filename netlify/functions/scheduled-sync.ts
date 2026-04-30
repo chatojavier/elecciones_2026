@@ -9,7 +9,11 @@ export const config = {
 };
 
 function isScheduledInvocation(event: Parameters<Handler>[0]) {
-  return event.headers["x-nf-event"] === "schedule";
+  const scheduleHeader = Object.entries(event.headers).find(([headerName]) => {
+    return headerName.toLowerCase() === "x-nf-event";
+  });
+
+  return scheduleHeader?.[1] === "schedule";
 }
 
 export const handler: Handler = async (event) => {

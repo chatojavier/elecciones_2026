@@ -12,30 +12,7 @@ export const ONPE_REFERER =
   process.env.ONPE_REFERER ??
   "https://resultadoelectoral.onpe.gob.pe/main/resumen";
 export const ONPE_COOKIE = process.env.ONPE_COOKIE ?? "";
-export const ONPE_REQUEST_CONCURRENCY = parsePositiveInteger(
-  process.env.ONPE_REQUEST_CONCURRENCY,
-  6
-);
-export const ONPE_REQUEST_TIMEOUT_MS = parsePositiveInteger(
-  process.env.ONPE_REQUEST_TIMEOUT_MS,
-  8000
-);
-
-function parsePositiveInteger(value: string | undefined, fallback: number) {
-  const parsed = Number(value);
-
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
-}
 
 export const STORAGE_NAME = "onpe-results";
 export const SNAPSHOT_KEY = "snapshot";
 export const HEALTH_KEY = "health";
-export const SYNC_LOCK_KEY = "sync-lock";
-export const SYNC_MANUAL_COOLDOWN_SECONDS = parsePositiveInteger(
-  process.env.SYNC_MANUAL_COOLDOWN_SECONDS,
-  180
-);
-export const SYNC_LOCK_TTL_SECONDS = parsePositiveInteger(
-  process.env.SYNC_LOCK_TTL_SECONDS,
-  300
-);

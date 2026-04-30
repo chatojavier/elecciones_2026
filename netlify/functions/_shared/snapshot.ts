@@ -47,6 +47,7 @@ import {
 const scopesMeta = (scopesMetaJson.scopes as ScopeMeta[]).slice().sort((left, right) => {
   return left.displayOrder - right.displayOrder;
 });
+const PROVINCE_REQUEST_CONCURRENCY = 6;
 
 function getDepartmentMeta(scopeId: string) {
   const scope = scopesMeta.find(
@@ -68,6 +69,29 @@ function getForeignMeta() {
   }
 
   return scope;
+}
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  mapper: (item: T, index: number) => Promise<R>
+) {
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+
+  async function worker() {
+    while (nextIndex < items.length) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+      results[currentIndex] = await mapper(items[currentIndex], currentIndex);
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, items.length) }, () => worker())
+  );
+
+  return results;
 }
 
 export async function buildElectionSnapshot() {
@@ -120,8 +144,10 @@ export async function buildElectionSnapshot() {
         ]);
 
         const provinces = (
-          await Promise.all(
-            provinceCatalog.map(async (province) => {
+          await mapWithConcurrency(
+            provinceCatalog,
+            PROVINCE_REQUEST_CONCURRENCY,
+            async (province) => {
               const [provinceTotals, provinceParticipants] = await Promise.all([
                 fetchProvinceTotals(department.ubigeo, province.ubigeo),
                 fetchProvinceParticipants(department.ubigeo, province.ubigeo)
@@ -136,7 +162,7 @@ export async function buildElectionSnapshot() {
                 candidateCatalog,
                 featuredCodes: featuredCandidateCodes
               });
-            })
+            }
           )
         ).sort((left, right) => left.label.localeCompare(right.label, "es"));
 
@@ -170,8 +196,10 @@ export async function buildElectionSnapshot() {
         ]);
 
         const countries = (
-          await Promise.all(
-            countryCatalog.map(async (country) => {
+          await mapWithConcurrency(
+            countryCatalog,
+            PROVINCE_REQUEST_CONCURRENCY,
+            async (country) => {
               const [countryTotals, countryParticipants] = await Promise.all([
                 fetchForeignCountryTotals(continent.ubigeo, country.ubigeo),
                 fetchForeignCountryParticipants(continent.ubigeo, country.ubigeo)
@@ -186,7 +214,7 @@ export async function buildElectionSnapshot() {
                 candidateCatalog,
                 featuredCodes: featuredCandidateCodes
               });
-            })
+            }
           )
         ).sort((left, right) => left.label.localeCompare(right.label, "es"));
 

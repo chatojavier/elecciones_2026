@@ -156,53 +156,6 @@ describe("api trust data", () => {
     });
   });
 
-  it("ignora health inválido y usa fallback derivado del snapshot", async () => {
-    const snapshot = createSnapshot({
-      generatedAt: "2026-04-21T12:05:00.000Z"
-    });
-    const fetchMock = vi.mocked(globalThis.fetch);
-    fetchMock
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify(snapshot), {
-          status: 200,
-          headers: {
-            "Content-Type": "application/json"
-          }
-        })
-      )
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            status: "healthy",
-            source: "onpe",
-            lastSyncAt: snapshot.generatedAt,
-            staleMinutes: 0,
-            lastError: null
-          }),
-          {
-            status: 200,
-            headers: {
-              "Content-Type": "application/json"
-            }
-          }
-        )
-      );
-
-    const result = await fetchAppData();
-
-    expect(result).toEqual({
-      snapshot,
-      health: {
-        status: "healthy",
-        source: "onpe",
-        lastSyncAt: snapshot.generatedAt,
-        lastSuccessAt: snapshot.generatedAt,
-        staleMinutes: null,
-        lastError: null
-      }
-    });
-  });
-
   it("usa snapshot y health devueltos por sync sin hacer fetch redundante", async () => {
     const snapshot = createSnapshot({
       generatedAt: "2026-04-21T12:05:00.000Z"
@@ -213,7 +166,7 @@ describe("api trust data", () => {
     });
     const fetchMock = vi.mocked(globalThis.fetch);
     fetchMock.mockResolvedValue(
-      new Response(JSON.stringify({ ok: true, state: "synced", snapshot, health }), {
+      new Response(JSON.stringify({ ok: true, snapshot, health }), {
         status: 200,
         headers: {
           "Content-Type": "application/json"
@@ -226,152 +179,7 @@ describe("api trust data", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(result).toEqual({
       snapshot,
-      health,
-      refreshState: "synced"
-    });
-  });
-
-  it("acepta respuestas 200 legacy del refresh sin state", async () => {
-    const snapshot = createSnapshot({
-      generatedAt: "2026-04-21T12:05:00.000Z"
-    });
-    const fetchMock = vi.mocked(globalThis.fetch);
-    fetchMock.mockResolvedValue(
-      new Response(JSON.stringify({ ok: true, snapshot }), {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json"
-        }
-      })
-    );
-
-    const result = await refreshAppData();
-
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(result).toEqual({
-      snapshot,
-      health: {
-        status: "healthy",
-        source: "onpe",
-        lastSyncAt: snapshot.generatedAt,
-        lastSuccessAt: snapshot.generatedAt,
-        staleMinutes: null,
-        lastError: null
-      },
-      refreshState: "synced"
-    });
-  });
-
-  it("falla de forma controlada si sync devuelve un snapshot inválido", async () => {
-    const fetchMock = vi.mocked(globalThis.fetch);
-    fetchMock.mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          ok: true,
-          state: "synced",
-          snapshot: {
-            generatedAt: "2026-04-21T12:05:00.000Z"
-          }
-        }),
-        {
-          status: 200,
-          headers: {
-            "Content-Type": "application/json"
-          }
-        }
-      )
-    );
-
-    await expect(refreshAppData()).rejects.toThrow(/snapshot\.sourceElectionId/);
-  });
-
-  it("reusa el snapshot publico cuando el sync ya esta en curso", async () => {
-    const snapshot = createSnapshot({
-      generatedAt: "2026-04-21T12:05:00.000Z"
-    });
-    const health = createHealth({
-      lastSyncAt: snapshot.generatedAt,
-      lastSuccessAt: snapshot.generatedAt
-    });
-    const fetchMock = vi.mocked(globalThis.fetch);
-    fetchMock
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ ok: true, state: "in_progress" }), {
-          status: 202,
-          headers: {
-            "Content-Type": "application/json"
-          }
-        })
-      )
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify(snapshot), {
-          status: 200,
-          headers: {
-            "Content-Type": "application/json"
-          }
-        })
-      )
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify(health), {
-          status: 200,
-          headers: {
-            "Content-Type": "application/json"
-          }
-        })
-      );
-
-    const result = await refreshAppData();
-
-    expect(fetchMock).toHaveBeenCalledTimes(3);
-    expect(result).toEqual({
-      snapshot,
-      health,
-      refreshState: "in_progress"
-    });
-  });
-
-  it("reusa el snapshot publico cuando el sync manual fue reciente", async () => {
-    const snapshot = createSnapshot({
-      generatedAt: "2026-04-21T12:05:00.000Z"
-    });
-    const health = createHealth({
-      lastSyncAt: snapshot.generatedAt,
-      lastSuccessAt: snapshot.generatedAt
-    });
-    const fetchMock = vi.mocked(globalThis.fetch);
-    fetchMock
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ ok: true, state: "recent" }), {
-          status: 429,
-          headers: {
-            "Content-Type": "application/json"
-          }
-        })
-      )
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify(snapshot), {
-          status: 200,
-          headers: {
-            "Content-Type": "application/json"
-          }
-        })
-      )
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify(health), {
-          status: 200,
-          headers: {
-            "Content-Type": "application/json"
-          }
-        })
-      );
-
-    const result = await refreshAppData();
-
-    expect(fetchMock).toHaveBeenCalledTimes(3);
-    expect(result).toEqual({
-      snapshot,
-      health,
-      refreshState: "recent"
+      health
     });
   });
 });

@@ -5,8 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "dev:netlify": "netlify dev",
+    "build": "tsc -b && vite build && node scripts/write-redirects.mjs",
+    "netlify:build": "netlify build",
     "preview": "vite preview",
+    "functions:invoke:sync": "netlify functions:invoke sync",
     "onpe:check": "node scripts/check-onpe-session.mjs",
     "snapshot:dev": "node scripts/generate-dev-snapshot.mjs",
     "test": "vitest run",
@@ -23,6 +26,7 @@
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
     "jsdom": "^24.1.0",
+    "netlify-cli": "21.6.0",
     "typescript": "^5.5.4",
     "vite": "^5.3.4",
     "vitest": "^2.0.5"

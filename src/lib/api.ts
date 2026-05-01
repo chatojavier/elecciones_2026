@@ -14,8 +14,16 @@ export interface AppData {
 
 const DEV_SNAPSHOT_ENDPOINT = "/dev-snapshot.json";
 
+function useNetlifyFunctionsInDev() {
+  return import.meta.env.VITE_USE_NETLIFY_FUNCTIONS === "true";
+}
+
 function getSnapshotCandidates() {
   if (import.meta.env.DEV) {
+    if (useNetlifyFunctionsInDev()) {
+      return [SNAPSHOT_ENDPOINT];
+    }
+
     return [DEV_SNAPSHOT_ENDPOINT, SNAPSHOT_ENDPOINT];
   }
 
@@ -153,7 +161,8 @@ export async function refreshSnapshot() {
 }
 
 export async function refreshAppData(): Promise<AppData> {
-  const syncEndpoint = import.meta.env.DEV ? DEV_REFRESH_ENDPOINT : SYNC_ENDPOINT;
+  const syncEndpoint =
+    import.meta.env.DEV && !useNetlifyFunctionsInDev() ? DEV_REFRESH_ENDPOINT : SYNC_ENDPOINT;
   const syncResponse = await fetch(buildRequestUrl(syncEndpoint), {
     method: "POST",
     cache: "no-store"

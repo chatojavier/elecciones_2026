@@ -23,8 +23,8 @@ VITE_USE_NETLIFY_FUNCTIONS=true
 
 ## Comando único de desarrollo local
 
-```bashnpm install
-
+```bash
+npm install
 npm run dev:netlify
 ```
 

@@ -593,6 +593,10 @@ export default function App() {
     } catch (reason) {
       const message = (reason as Error).message;
 
+      if (background && trigger === "auto") {
+        lastAutoRefreshKeyRef.current = null;
+      }
+
       if (background && snapshot) {
         if (trigger === "manual") {
           setRefreshFeedback({
@@ -743,7 +747,7 @@ export default function App() {
       return;
     }
 
-    const refreshKey = `${appLastSuccessAt ?? "none"}:${snapshot.generatedAt}:${clockNow}`;
+    const refreshKey = `${appLastSuccessAt ?? "none"}:${snapshot.generatedAt}`;
 
     if (lastAutoRefreshKeyRef.current === refreshKey) {
       return;

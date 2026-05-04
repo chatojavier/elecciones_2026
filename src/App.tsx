@@ -62,6 +62,7 @@ type QuickInsightGapStatus = "stable" | "tight" | "very_tight" | "unknown";
 const DEFAULT_COMPARISON_MODE: ComparisonMode = "projected";
 const DEFAULT_SHOW_OTHERS = false;
 const DEFAULT_REGION_SORT: SortKey = "gap_2v3";
+const AUTO_REFRESH_FAILURE_RETRY_MS = 5 * 60 * 1000;
 
 function getQuickInsightGapStatus(gapPp: number | null): QuickInsightGapStatus {
   if (gapPp === null) {
@@ -536,6 +537,7 @@ export default function App() {
   const [clockNow, setClockNow] = useState(() => Date.now());
   const globalControlsRef = useRef<HTMLElement | null>(null);
   const lastAutoRefreshKeyRef = useRef<string | null>(null);
+  const autoRefreshRetryAfterRef = useRef<number | null>(null);
   const comparisonPairInitializationRef = useRef<string | null>(null);
   const quickInsightsImpressionRef = useRef<string | null>(null);
   const globalControlsImpressionRef = useRef<string | null>(null);
@@ -567,6 +569,7 @@ export default function App() {
       setSnapshot(data.snapshot);
       setHealth(data.health);
       setError(null);
+      autoRefreshRetryAfterRef.current = null;
       if (!background || trigger !== "manual") {
         setRefreshFeedback(null);
       }
@@ -592,6 +595,10 @@ export default function App() {
       }
     } catch (reason) {
       const message = (reason as Error).message;
+
+      if (background && trigger === "auto") {
+        autoRefreshRetryAfterRef.current = Date.now() + AUTO_REFRESH_FAILURE_RETRY_MS;
+      }
 
       if (background && snapshot) {
         if (trigger === "manual") {
@@ -743,13 +750,18 @@ export default function App() {
       return;
     }
 
-    const refreshKey = `${appLastSuccessAt ?? "none"}:${snapshot.generatedAt}:${clockNow}`;
+    const refreshKey = `${appLastSuccessAt ?? "none"}:${snapshot.generatedAt}`;
 
     if (lastAutoRefreshKeyRef.current === refreshKey) {
-      return;
+      const retryAfter = autoRefreshRetryAfterRef.current;
+
+      if (!retryAfter || clockNow < retryAfter) {
+        return;
+      }
     }
 
     lastAutoRefreshKeyRef.current = refreshKey;
+    autoRefreshRetryAfterRef.current = null;
     void loadAppData({
       background: true,
       trigger: "auto"

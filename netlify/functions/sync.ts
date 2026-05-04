@@ -3,7 +3,6 @@ import type { Handler } from "@netlify/functions";
 
 import {
   MANUAL_SYNC_MIN_INTERVAL_MS,
-  SYNC_BACKGROUND_SECRET,
   SYNC_LOCK_TTL_MS
 } from "./_shared/config";
 import { jsonResponse } from "./_shared/http";
@@ -26,18 +25,16 @@ function getHost(event: Parameters<Handler>[0]) {
 
 async function startBackgroundSync(event: Parameters<Handler>[0], lockId: string) {
   const host = getHost(event);
-  if (!host || !SYNC_BACKGROUND_SECRET) {
-    throw new Error("No se pudo iniciar sync-background: falta host o secreto interno");
+  if (!host) {
+    throw new Error("No se pudo iniciar sync-background: falta host");
   }
 
   const protocol = host.includes("localhost") || host.startsWith("127.0.0.1") ? "http" : "https";
-  const response = await fetch(`${protocol}://${host}/.netlify/functions/sync-background`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-sync-background-secret": SYNC_BACKGROUND_SECRET
-    },
-    body: JSON.stringify({ lockId })
+  const backgroundUrl = new URL(`${protocol}://${host}/.netlify/functions/sync-background`);
+  backgroundUrl.searchParams.set("lockId", lockId);
+
+  const response = await fetch(backgroundUrl, {
+    method: "POST"
   });
 
   if (!response.ok && response.status !== 202) {

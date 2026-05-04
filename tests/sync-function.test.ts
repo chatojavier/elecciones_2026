@@ -32,7 +32,6 @@ vi.mock("../netlify/functions/_shared/config", () => ({
   MANUAL_SYNC_MIN_INTERVAL_MS: 5 * 60 * 1000,
   SNAPSHOT_KEY: "snapshot",
   STORAGE_NAME: "onpe-results",
-  SYNC_BACKGROUND_SECRET: "internal-secret",
   SYNC_LOCK_KEY: "sync-lock",
   SYNC_LOCK_TTL_MS: 10 * 60 * 1000,
   SYNC_MANUAL_SECRET: ""
@@ -228,10 +227,9 @@ describe("sync function guards", () => {
 
     const response = await backgroundHandler(
       createEvent({
-        headers: {
-          "x-sync-background-secret": "internal-secret"
-        },
-        body: JSON.stringify({ lockId: "lock-background" })
+        queryStringParameters: {
+          lockId: "lock-background"
+        }
       }),
       {} as never,
       () => {}

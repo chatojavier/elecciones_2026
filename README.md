@@ -19,7 +19,6 @@ ONPE_COOKIE=
 SYNC_LOCK_TTL_MS=600000
 MANUAL_SYNC_MIN_INTERVAL_MS=300000
 SYNC_MANUAL_SECRET=
-SYNC_BACKGROUND_SECRET=
 VITE_USE_NETLIFY_FUNCTIONS=true
 ```
 
@@ -50,7 +49,7 @@ Comportamiento esperado de `sync`:
 - `GET /.netlify/functions/sync` retorna `405`.
 - `POST /.netlify/functions/sync` retorna `202` cuando inicia o detecta una sincronización en background, o `429` si ya existe un corte reciente.
 
-`sync.ts` adquiere el lock y dispara `sync-background.ts`; el trabajo pesado escribe `snapshot` y `health` en Netlify Blobs. Si `SYNC_BACKGROUND_SECRET` no está definido, la función usa `SITE_ID`/`NETLIFY_SITE_ID` como secreto interno.
+`sync.ts` adquiere el lock y dispara `sync-background.ts`; el trabajo pesado escribe `snapshot` y `health` en Netlify Blobs. El handoff interno pasa el `lockId` aleatorio por query string y `sync-background.ts` solo corre si ese id coincide con el lock activo.
 
 ## Invocación manual de la función programada
 

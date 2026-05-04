@@ -1,16 +1,11 @@
 import { connectLambda } from "@netlify/blobs";
 import type { Handler } from "@netlify/functions";
 
-import { SYNC_BACKGROUND_SECRET } from "./_shared/config";
 import { jsonResponse } from "./_shared/http";
 import { runSync } from "./_shared/snapshot";
 import { releaseSyncLock } from "./_shared/syncLock";
 import { getSyncLockState } from "./_shared/syncGuard";
 import { readSyncLock } from "./_shared/storage";
-
-function getHeader(headers: Record<string, string | undefined>, name: string) {
-  return headers[name] ?? headers[name.toLowerCase()] ?? headers[name.toUpperCase()];
-}
 
 function parseBody(body: string | null) {
   if (!body) {
@@ -22,6 +17,15 @@ function parseBody(body: string | null) {
   } catch {
     return null;
   }
+}
+
+function getLockId(event: Parameters<Handler>[0]) {
+  const queryLockId = event.queryStringParameters?.lockId;
+  if (typeof queryLockId === "string") {
+    return queryLockId;
+  }
+
+  return parseBody(event.body)?.lockId;
 }
 
 export const handler: Handler = async (event) => {
@@ -38,19 +42,7 @@ export const handler: Handler = async (event) => {
     );
   }
 
-  const providedSecret = getHeader(event.headers, "x-sync-background-secret");
-  if (!SYNC_BACKGROUND_SECRET || providedSecret !== SYNC_BACKGROUND_SECRET) {
-    return jsonResponse(
-      {
-        ok: false,
-        code: "unauthorized",
-        message: "No autorizado."
-      },
-      401
-    );
-  }
-
-  const lockId = parseBody(event.body)?.lockId;
+  const lockId = getLockId(event);
   if (typeof lockId !== "string") {
     return jsonResponse(
       {

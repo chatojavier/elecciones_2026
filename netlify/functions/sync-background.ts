@@ -1,37 +1,42 @@
-import { connectLambda } from "@netlify/blobs";
-import type { Handler } from "@netlify/functions";
-
-import { jsonResponse } from "./_shared/http";
 import { runSync } from "./_shared/snapshot";
 import { releaseSyncLock } from "./_shared/syncLock";
 import { getSyncLockState } from "./_shared/syncGuard";
 import { readSyncLock } from "./_shared/storage";
 
-function parseBody(body: string | null) {
-  if (!body) {
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store"
+    }
+  });
+}
+
+async function parseBody(request: Request) {
+  const text = await request.text();
+  if (!text) {
     return null;
   }
 
   try {
-    return JSON.parse(body) as { lockId?: unknown };
+    return JSON.parse(text) as { lockId?: unknown };
   } catch {
     return null;
   }
 }
 
-function getLockId(event: Parameters<Handler>[0]) {
-  const queryLockId = event.queryStringParameters?.lockId;
+async function getLockId(request: Request) {
+  const queryLockId = new URL(request.url).searchParams.get("lockId");
   if (typeof queryLockId === "string") {
     return queryLockId;
   }
 
-  return parseBody(event.body)?.lockId;
+  return (await parseBody(request))?.lockId;
 }
 
-export const handler: Handler = async (event) => {
-  connectLambda(event as unknown as Parameters<typeof connectLambda>[0]);
-
-  if (event.httpMethod !== "POST") {
+export default async (request: Request) => {
+  if (request.method !== "POST") {
     return jsonResponse(
       {
         ok: false,
@@ -42,7 +47,7 @@ export const handler: Handler = async (event) => {
     );
   }
 
-  const lockId = getLockId(event);
+  const lockId = await getLockId(request);
   if (typeof lockId !== "string") {
     return jsonResponse(
       {

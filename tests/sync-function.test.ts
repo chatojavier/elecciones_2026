@@ -38,7 +38,7 @@ vi.mock("../netlify/functions/_shared/config", () => ({
 }));
 
 import { handler } from "../netlify/functions/sync";
-import { handler as backgroundHandler } from "../netlify/functions/sync-background";
+import backgroundHandler from "../netlify/functions/sync-background";
 
 function createEvent(overrides: Partial<HandlerEvent> = {}): HandlerEvent {
   return {
@@ -226,16 +226,12 @@ describe("sync function guards", () => {
     } satisfies SyncLock);
 
     const response = await backgroundHandler(
-      createEvent({
-        queryStringParameters: {
-          lockId: "lock-background"
-        }
-      }),
-      {} as never,
-      () => {}
+      new Request("https://example.com/.netlify/functions/sync-background?lockId=lock-background", {
+        method: "POST"
+      })
     );
 
-    expect(response?.statusCode).toBe(200);
+    expect(response.status).toBe(200);
     expect(runSyncMock).toHaveBeenCalledTimes(1);
     expect(deleteSyncLockMock).toHaveBeenCalledTimes(1);
   });
@@ -251,13 +247,9 @@ describe("sync function guards", () => {
 
     await expect(
       backgroundHandler(
-        createEvent({
-          queryStringParameters: {
-            lockId: "lock-background"
-          }
-        }),
-        {} as never,
-        () => {}
+        new Request("https://example.com/.netlify/functions/sync-background?lockId=lock-background", {
+          method: "POST"
+        })
       )
     ).rejects.toThrow("ONPE timeout");
 

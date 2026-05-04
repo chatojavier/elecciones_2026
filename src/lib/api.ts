@@ -80,6 +80,29 @@ function getUsableHealth(health: HealthStatus | null, snapshot: ElectionSnapshot
 async function parseSyncResponse(response: Response) {
   const contentType = response.headers.get("content-type") ?? "";
 
+  if (response.status === 202 || response.status === 429) {
+    if (!contentType.includes("application/json")) {
+      return null;
+    }
+
+    const payload = (await response.json()) as {
+      code?: string;
+      retryAfterSeconds?: number;
+      health?: HealthStatus;
+    };
+
+    if (
+      payload.code === "sync_in_progress" ||
+      payload.code === "sync_too_recent" ||
+      typeof payload.retryAfterSeconds === "number" ||
+      payload.health
+    ) {
+      return null;
+    }
+
+    return null;
+  }
+
   if (!response.ok) {
     throw new Error(`No se pudo sincronizar datos (${response.status}).`);
   }

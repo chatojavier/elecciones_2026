@@ -16,6 +16,9 @@ ONPE_USER_AGENT=
 ONPE_ACCEPT_LANGUAGE=en-GB,en-US;q=0.9,en;q=0.8
 ONPE_REFERER=
 ONPE_COOKIE=
+SYNC_LOCK_TTL_MS=600000
+MANUAL_SYNC_MIN_INTERVAL_MS=300000
+SYNC_MANUAL_SECRET=
 VITE_USE_NETLIFY_FUNCTIONS=true
 ```
 
@@ -37,8 +40,14 @@ Con `npm run dev:netlify` activo:
 ```bash
 curl -i http://localhost:8888/.netlify/functions/health
 curl -i http://localhost:8888/.netlify/functions/snapshot
+curl -i http://localhost:8888/.netlify/functions/sync
 curl -i -X POST http://localhost:8888/.netlify/functions/sync
 ```
+
+Comportamiento esperado de `sync`:
+
+- `GET /.netlify/functions/sync` retorna `405`.
+- `POST /.netlify/functions/sync` retorna `200`, `202` (sync en curso) o `429` (corte reciente).
 
 ## Invocación manual de la función programada
 

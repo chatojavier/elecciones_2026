@@ -182,4 +182,116 @@ describe("api trust data", () => {
       health
     });
   });
+
+  it("cuando sync responde 202 hace fallback a snapshot+health una sola vez", async () => {
+    const snapshot = createSnapshot();
+    const health = createHealth();
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            ok: false,
+            code: "sync_in_progress",
+            retryAfterSeconds: 10
+          }),
+          {
+            status: 202,
+            headers: {
+              "Content-Type": "application/json"
+            }
+          }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(snapshot), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json"
+          }
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(health), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json"
+          }
+        })
+      );
+
+    const result = await refreshAppData();
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(result).toEqual({
+      snapshot,
+      health
+    });
+  });
+
+  it("cuando sync responde 429 hace fallback a snapshot+health", async () => {
+    const snapshot = createSnapshot();
+    const health = createHealth();
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            ok: false,
+            code: "sync_too_recent",
+            retryAfterSeconds: 60
+          }),
+          {
+            status: 429,
+            headers: {
+              "Content-Type": "application/json"
+            }
+          }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(snapshot), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json"
+          }
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(health), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json"
+          }
+        })
+      );
+
+    const result = await refreshAppData();
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(result).toEqual({
+      snapshot,
+      health
+    });
+  });
+
+  it("cuando sync responde 500 mantiene el error", async () => {
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          ok: false,
+          code: "sync_failed"
+        }),
+        {
+          status: 500,
+          headers: {
+            "Content-Type": "application/json"
+          }
+        }
+      )
+    );
+
+    await expect(refreshAppData()).rejects.toThrow("No se pudo sincronizar datos (500).");
+  });
 });

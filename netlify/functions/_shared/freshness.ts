@@ -12,7 +12,7 @@ export function hydrateSnapshotFreshness(snapshot: ElectionSnapshot, now = Date.
   };
 }
 
-export function hydrateHealthFreshness(health: HealthStatus, now = Date.now()) {
+export function hydrateHealthFreshness(health: HealthStatus, now = Date.now()): HealthStatus {
   if (!health.lastSuccessAt) {
     return health;
   }

@@ -16,3 +16,20 @@ export const ONPE_COOKIE = process.env.ONPE_COOKIE ?? "";
 export const STORAGE_NAME = "onpe-results";
 export const SNAPSHOT_KEY = "snapshot";
 export const HEALTH_KEY = "health";
+export const SYNC_LOCK_KEY = "sync-lock";
+
+function parseEnvMs(value: string | undefined, fallback: number) {
+  if (!value) {
+    return fallback;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+export const SYNC_LOCK_TTL_MS = parseEnvMs(process.env.SYNC_LOCK_TTL_MS, 10 * 60 * 1000);
+export const MANUAL_SYNC_MIN_INTERVAL_MS = parseEnvMs(
+  process.env.MANUAL_SYNC_MIN_INTERVAL_MS,
+  5 * 60 * 1000
+);
+export const SYNC_MANUAL_SECRET = process.env.SYNC_MANUAL_SECRET ?? "";

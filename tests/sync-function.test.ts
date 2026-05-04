@@ -240,7 +240,7 @@ describe("sync function guards", () => {
     expect(deleteSyncLockMock).toHaveBeenCalledTimes(1);
   });
 
-  it("background relanza errores de runSync y libera su lock", async () => {
+  it("background relanza errores de runSync y conserva lock para retry", async () => {
     readSyncLockMock.mockResolvedValue({
       id: "lock-background",
       kind: "manual",
@@ -261,6 +261,6 @@ describe("sync function guards", () => {
       )
     ).rejects.toThrow("ONPE timeout");
 
-    expect(deleteSyncLockMock).toHaveBeenCalledTimes(1);
+    expect(deleteSyncLockMock).not.toHaveBeenCalled();
   });
 });

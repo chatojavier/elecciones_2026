@@ -68,11 +68,10 @@ export const handler: Handler = async (event) => {
 
   try {
     await runSync();
+    await releaseSyncLock(lockId);
   } catch (error) {
     console.error("[sync-background] sync failed", error);
     throw error;
-  } finally {
-    await releaseSyncLock(lockId);
   }
 
   return jsonResponse({

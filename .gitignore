@@ -8,3 +8,4 @@ vite.config.js
 vite.config.d.ts
 *dev-snapshot.json
 docs/ux-phases
+docs/development-plans

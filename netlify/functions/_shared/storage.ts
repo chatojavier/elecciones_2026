@@ -3,6 +3,7 @@ import { getStore } from "@netlify/blobs";
 import {
   HEALTH_KEY,
   SNAPSHOT_KEY,
+  SYNC_LOCK_KEY,
   STORAGE_NAME
 } from "./config";
 import {
@@ -11,6 +12,13 @@ import {
 } from "./freshness";
 import { normalizeElectionSnapshot } from "../../../src/lib/normalizeSnapshot";
 import type { ElectionSnapshot, HealthStatus } from "../../../src/lib/types";
+
+export interface SyncLock {
+  id: string;
+  kind: "manual" | "scheduled";
+  createdAt: string;
+  expiresAt: string;
+}
 
 function getStorageStore() {
   return getStore(STORAGE_NAME);
@@ -36,4 +44,19 @@ export async function readHealth() {
 export async function writeHealth(health: HealthStatus) {
   const store = getStorageStore();
   await store.setJSON(HEALTH_KEY, health);
+}
+
+export async function readSyncLock() {
+  const store = getStorageStore();
+  return (await store.get(SYNC_LOCK_KEY, { type: "json" })) as unknown;
+}
+
+export async function writeSyncLock(lock: SyncLock) {
+  const store = getStorageStore();
+  await store.setJSON(SYNC_LOCK_KEY, lock);
+}
+
+export async function deleteSyncLock() {
+  const store = getStorageStore();
+  await store.delete(SYNC_LOCK_KEY);
 }

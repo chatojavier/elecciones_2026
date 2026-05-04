@@ -800,7 +800,7 @@ describe("App hero clarity and first action", () => {
     expect(container.textContent).toContain("hace 1 minuto");
   });
 
-  it("reintenta auto-refresh tras un fallo transitorio en segundo plano", async () => {
+  it("reintenta auto-refresh tras un fallo transitorio respetando cooldown", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-04-15T12:16:00.000Z"));
 
@@ -843,6 +843,15 @@ describe("App hero clarity and first action", () => {
 
     await act(async () => {
       vi.advanceTimersByTime(15_000);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(refreshSnapshotMock).toHaveBeenCalledTimes(1);
+    expect(container.textContent).toContain("Mostramos el último snapshot disponible.");
+
+    await act(async () => {
+      vi.advanceTimersByTime(285_000);
       await Promise.resolve();
       await Promise.resolve();
     });

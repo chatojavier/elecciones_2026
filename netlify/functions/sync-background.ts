@@ -70,6 +70,7 @@ export const handler: Handler = async (event) => {
     await runSync();
   } catch (error) {
     console.error("[sync-background] sync failed", error);
+    throw error;
   } finally {
     await releaseSyncLock(lockId);
   }

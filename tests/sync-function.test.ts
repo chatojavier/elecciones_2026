@@ -26,12 +26,24 @@ vi.mock("../netlify/functions/_shared/storage", () => ({
   deleteSyncLock: deleteSyncLockMock
 }));
 
+vi.mock("../netlify/functions/_shared/config", () => ({
+  HEALTH_KEY: "health",
+  MANUAL_SYNC_MIN_INTERVAL_MS: 5 * 60 * 1000,
+  SNAPSHOT_KEY: "snapshot",
+  STORAGE_NAME: "onpe-results",
+  SYNC_LOCK_KEY: "sync-lock",
+  SYNC_LOCK_TTL_MS: 10 * 60 * 1000,
+  SYNC_MANUAL_SECRET: ""
+}));
+
 import { handler } from "../netlify/functions/sync";
 
 function createEvent(overrides: Partial<HandlerEvent> = {}): HandlerEvent {
   return {
     httpMethod: "POST",
-    headers: {},
+    headers: {
+      host: "localhost:8888"
+    },
     multiValueHeaders: {},
     body: null,
     rawUrl: "http://localhost/.netlify/functions/sync",
@@ -62,7 +74,12 @@ function parseBody(response: { body: string }) {
 
 describe("sync function guards", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    connectLambdaMock.mockReset();
+    runSyncMock.mockReset();
+    readHealthMock.mockReset();
+    readSyncLockMock.mockReset();
+    writeSyncLockMock.mockReset();
+    deleteSyncLockMock.mockReset();
     readHealthMock.mockResolvedValue(null);
     readSyncLockMock.mockResolvedValue(null);
     writeSyncLockMock.mockResolvedValue(undefined);
@@ -132,7 +149,7 @@ describe("sync function guards", () => {
     expect(runSyncMock).toHaveBeenCalledTimes(1);
   });
 
-  it("limpia lock invalido sin devolver 500", async () => {
+  it("limpia lock invalido y sincroniza", async () => {
     readSyncLockMock
       .mockResolvedValueOnce({
         bogus: true
@@ -164,6 +181,7 @@ describe("sync function guards", () => {
     const response = await handler(createEvent(), {} as never, () => {});
     expect(response?.statusCode).toBe(200);
     expect(writeSyncLockMock).toHaveBeenCalledTimes(1);
+    expect(runSyncMock).toHaveBeenCalledTimes(1);
     expect(deleteSyncLockMock).toHaveBeenCalledTimes(1);
   });
 

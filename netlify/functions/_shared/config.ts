@@ -33,3 +33,8 @@ export const MANUAL_SYNC_MIN_INTERVAL_MS = parseEnvMs(
   5 * 60 * 1000
 );
 export const SYNC_MANUAL_SECRET = process.env.SYNC_MANUAL_SECRET ?? "";
+export const SYNC_BACKGROUND_SECRET =
+  process.env.SYNC_BACKGROUND_SECRET ??
+  process.env.SITE_ID ??
+  process.env.NETLIFY_SITE_ID ??
+  "";

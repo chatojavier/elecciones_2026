@@ -10,6 +10,7 @@ const readHealthMock = vi.hoisted(() => vi.fn());
 const readSyncLockMock = vi.hoisted(() => vi.fn());
 const writeSyncLockMock = vi.hoisted(() => vi.fn());
 const deleteSyncLockMock = vi.hoisted(() => vi.fn());
+const fetchMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@netlify/blobs", () => ({
   connectLambda: connectLambdaMock
@@ -26,12 +27,26 @@ vi.mock("../netlify/functions/_shared/storage", () => ({
   deleteSyncLock: deleteSyncLockMock
 }));
 
+vi.mock("../netlify/functions/_shared/config", () => ({
+  HEALTH_KEY: "health",
+  MANUAL_SYNC_MIN_INTERVAL_MS: 5 * 60 * 1000,
+  SNAPSHOT_KEY: "snapshot",
+  STORAGE_NAME: "onpe-results",
+  SYNC_BACKGROUND_SECRET: "internal-secret",
+  SYNC_LOCK_KEY: "sync-lock",
+  SYNC_LOCK_TTL_MS: 10 * 60 * 1000,
+  SYNC_MANUAL_SECRET: ""
+}));
+
 import { handler } from "../netlify/functions/sync";
+import { handler as backgroundHandler } from "../netlify/functions/sync-background";
 
 function createEvent(overrides: Partial<HandlerEvent> = {}): HandlerEvent {
   return {
     httpMethod: "POST",
-    headers: {},
+    headers: {
+      host: "localhost:8888"
+    },
     multiValueHeaders: {},
     body: null,
     rawUrl: "http://localhost/.netlify/functions/sync",
@@ -62,11 +77,19 @@ function parseBody(response: { body: string }) {
 
 describe("sync function guards", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    connectLambdaMock.mockReset();
+    runSyncMock.mockReset();
+    readHealthMock.mockReset();
+    readSyncLockMock.mockReset();
+    writeSyncLockMock.mockReset();
+    deleteSyncLockMock.mockReset();
+    fetchMock.mockReset();
     readHealthMock.mockResolvedValue(null);
     readSyncLockMock.mockResolvedValue(null);
     writeSyncLockMock.mockResolvedValue(undefined);
     deleteSyncLockMock.mockResolvedValue(undefined);
+    fetchMock.mockResolvedValue(new Response(null, { status: 202 }));
+    vi.stubGlobal("fetch", fetchMock);
     runSyncMock.mockResolvedValue({
       snapshot: {
         generatedAt: "2026-04-21T12:00:00.000Z"
@@ -77,6 +100,7 @@ describe("sync function guards", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllGlobals();
   });
 
   it("retorna 405 para metodo manual invalido", async () => {
@@ -112,7 +136,7 @@ describe("sync function guards", () => {
     expect(runSyncMock).not.toHaveBeenCalled();
   });
 
-  it("limpia lock expirado y sincroniza", async () => {
+  it("limpia lock expirado e inicia sync en background", async () => {
     readSyncLockMock
       .mockResolvedValueOnce({
         id: "lock-expired",
@@ -127,12 +151,14 @@ describe("sync function guards", () => {
       .mockResolvedValueOnce(null);
 
     const response = await handler(createEvent(), {} as never, () => {});
-    expect(response?.statusCode).toBe(200);
+    expect(response?.statusCode).toBe(202);
+    expect(parseBody(response as { body: string }).code).toBe("sync_started");
     expect(deleteSyncLockMock).toHaveBeenCalled();
-    expect(runSyncMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(runSyncMock).not.toHaveBeenCalled();
   });
 
-  it("limpia lock invalido sin devolver 500", async () => {
+  it("limpia lock invalido e inicia sync en background", async () => {
     readSyncLockMock
       .mockResolvedValueOnce({
         bogus: true
@@ -144,12 +170,14 @@ describe("sync function guards", () => {
       .mockResolvedValueOnce(null);
 
     const response = await handler(createEvent(), {} as never, () => {});
-    expect(response?.statusCode).toBe(200);
+    expect(response?.statusCode).toBe(202);
+    expect(parseBody(response as { body: string }).code).toBe("sync_started");
     expect(deleteSyncLockMock).toHaveBeenCalled();
-    expect(runSyncMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(runSyncMock).not.toHaveBeenCalled();
   });
 
-  it("escribe y libera lock en sync exitoso", async () => {
+  it("escribe lock e inicia sync en background", async () => {
     readSyncLockMock
       .mockResolvedValueOnce(null)
       .mockImplementationOnce(async () => {
@@ -162,12 +190,14 @@ describe("sync function guards", () => {
       });
 
     const response = await handler(createEvent(), {} as never, () => {});
-    expect(response?.statusCode).toBe(200);
+    expect(response?.statusCode).toBe(202);
+    expect(parseBody(response as { body: string }).code).toBe("sync_started");
     expect(writeSyncLockMock).toHaveBeenCalledTimes(1);
-    expect(deleteSyncLockMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(deleteSyncLockMock).not.toHaveBeenCalled();
   });
 
-  it("si runSync falla devuelve 500 generico y libera lock", async () => {
+  it("si no puede iniciar background devuelve 500 generico y libera lock", async () => {
     readSyncLockMock
       .mockResolvedValueOnce(null)
       .mockImplementationOnce(async () => {
@@ -178,13 +208,37 @@ describe("sync function guards", () => {
         const firstWrite = writeSyncLockMock.mock.calls[0]?.[0] as SyncLock;
         return firstWrite ?? null;
       });
-    runSyncMock.mockRejectedValue(new Error("ONPE timeout"));
+    fetchMock.mockResolvedValue(new Response(null, { status: 500 }));
 
     const response = await handler(createEvent(), {} as never, () => {});
     expect(response?.statusCode).toBe(500);
     const body = parseBody(response as { body: string });
     expect(body.code).toBe("sync_failed");
     expect(body.message).toBe("No se pudo completar la sincronizacion.");
+    expect(deleteSyncLockMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("background ejecuta runSync y libera su lock", async () => {
+    readSyncLockMock.mockResolvedValue({
+      id: "lock-background",
+      kind: "manual",
+      createdAt: "2026-04-21T12:00:00.000Z",
+      expiresAt: "3026-04-21T12:10:00.000Z"
+    } satisfies SyncLock);
+
+    const response = await backgroundHandler(
+      createEvent({
+        headers: {
+          "x-sync-background-secret": "internal-secret"
+        },
+        body: JSON.stringify({ lockId: "lock-background" })
+      }),
+      {} as never,
+      () => {}
+    );
+
+    expect(response?.statusCode).toBe(200);
+    expect(runSyncMock).toHaveBeenCalledTimes(1);
     expect(deleteSyncLockMock).toHaveBeenCalledTimes(1);
   });
 });

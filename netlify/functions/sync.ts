@@ -1,30 +1,49 @@
 import { connectLambda } from "@netlify/blobs";
 import type { Handler } from "@netlify/functions";
-import { randomUUID } from "node:crypto";
 
 import {
   MANUAL_SYNC_MIN_INTERVAL_MS,
+  SYNC_BACKGROUND_SECRET,
   SYNC_LOCK_TTL_MS
 } from "./_shared/config";
 import { jsonResponse } from "./_shared/http";
-import { runSync } from "./_shared/snapshot";
+import { acquireSyncLock, releaseSyncLock } from "./_shared/syncLock";
 import {
   getSyncInvocationKind,
-  getSyncLockState,
   isManualMethodAllowed,
   isManualSecretValid,
   isRecentManualSync
 } from "./_shared/syncGuard";
-import {
-  deleteSyncLock,
-  readHealth,
-  readSyncLock,
-  writeSyncLock
-} from "./_shared/storage";
+import { readHealth } from "./_shared/storage";
 
 export const config = {
   schedule: "*/15 * * * *"
 };
+
+function getHost(event: Parameters<Handler>[0]) {
+  return event.headers.host ?? event.headers.Host;
+}
+
+async function startBackgroundSync(event: Parameters<Handler>[0], lockId: string) {
+  const host = getHost(event);
+  if (!host || !SYNC_BACKGROUND_SECRET) {
+    throw new Error("No se pudo iniciar sync-background: falta host o secreto interno");
+  }
+
+  const protocol = host.includes("localhost") || host.startsWith("127.0.0.1") ? "http" : "https";
+  const response = await fetch(`${protocol}://${host}/.netlify/functions/sync-background`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-sync-background-secret": SYNC_BACKGROUND_SECRET
+    },
+    body: JSON.stringify({ lockId })
+  });
+
+  if (!response.ok && response.status !== 202) {
+    throw new Error(`sync-background respondio ${response.status}`);
+  }
+}
 
 export const handler: Handler = async (event) => {
   connectLambda(event as unknown as Parameters<typeof connectLambda>[0]);
@@ -70,57 +89,45 @@ export const handler: Handler = async (event) => {
     }
   }
 
-  const now = Date.now();
-  const currentLockState = getSyncLockState(await readSyncLock(), now);
-  if (currentLockState.state === "active") {
+  const lockResult = await acquireSyncLock(invocationKind);
+  if (lockResult.state === "active") {
     return jsonResponse(
       {
         ok: false,
         code: "sync_in_progress",
         message: "Ya hay una actualizacion en curso.",
-        retryAfterSeconds: Math.ceil(SYNC_LOCK_TTL_MS / 1000)
-      },
-      202
-    );
-  }
-
-  if (currentLockState.state === "expired" || currentLockState.state === "invalid") {
-    await deleteSyncLock();
-  }
-
-  const lockId = randomUUID();
-  const createdAt = new Date(now).toISOString();
-  const expiresAt = new Date(now + SYNC_LOCK_TTL_MS).toISOString();
-  await writeSyncLock({
-    id: lockId,
-    kind: invocationKind,
-    createdAt,
-    expiresAt
-  });
-
-  const acquiredLockState = getSyncLockState(await readSyncLock());
-  if (acquiredLockState.state !== "active" || acquiredLockState.lock?.id !== lockId) {
-    return jsonResponse(
-      {
-        ok: false,
-        code: "sync_in_progress",
-        message: "Ya hay una actualizacion en curso.",
-        retryAfterSeconds: Math.ceil(SYNC_LOCK_TTL_MS / 1000)
+        retryAfterSeconds: Math.ceil(
+          Math.max(0, new Date(lockResult.lock.expiresAt).getTime() - Date.now()) / 1000
+        ),
+        lock: {
+          kind: lockResult.lock.kind,
+          createdAt: lockResult.lock.createdAt,
+          expiresAt: lockResult.lock.expiresAt
+        }
       },
       202
     );
   }
 
   try {
-    const { snapshot, health } = await runSync();
-
-    return jsonResponse({
-      ok: true,
-      snapshot,
-      health
-    });
+    await startBackgroundSync(event, lockResult.lock.id);
+    return jsonResponse(
+      {
+        ok: true,
+        code: "sync_started",
+        message: "Sincronizacion iniciada.",
+        retryAfterSeconds: Math.ceil(SYNC_LOCK_TTL_MS / 1000),
+        lock: {
+          kind: lockResult.lock.kind,
+          createdAt: lockResult.lock.createdAt,
+          expiresAt: lockResult.lock.expiresAt
+        }
+      },
+      202
+    );
   } catch (error) {
     console.error("[sync] sync failed", error);
+    await releaseSyncLock(lockResult.lock.id);
     return jsonResponse(
       {
         ok: false,
@@ -129,10 +136,5 @@ export const handler: Handler = async (event) => {
       },
       500
     );
-  } finally {
-    const latestLockState = getSyncLockState(await readSyncLock());
-    if (latestLockState.lock?.id === lockId) {
-      await deleteSyncLock();
-    }
   }
 };

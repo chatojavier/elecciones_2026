@@ -21,7 +21,10 @@ export interface SyncLock {
 }
 
 function getStorageStore() {
-  return getStore(STORAGE_NAME);
+  return getStore({
+    name: STORAGE_NAME,
+    consistency: "strong"
+  });
 }
 
 export async function readSnapshot() {

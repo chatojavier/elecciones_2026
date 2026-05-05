@@ -203,19 +203,24 @@ describe("sync function guards", () => {
     expect(deleteSyncLockMock).not.toHaveBeenCalled();
   });
 
-  it("no borra un lock reemplazado al terminar una sincronizacion antigua", async () => {
+  it("no borra lock si la sincronizacion termina despues del TTL", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-21T12:00:00.000Z"));
     readSyncLockMock
       .mockResolvedValueOnce(null)
       .mockImplementationOnce(async () => {
         const firstWrite = writeSyncLockMock.mock.calls[0]?.[0] as SyncLock;
         return firstWrite ?? null;
-      })
-      .mockResolvedValueOnce({
-        id: "lock-newer",
-        kind: "scheduled",
-        createdAt: "2026-04-21T12:11:00.000Z",
-        expiresAt: "3026-04-21T12:21:00.000Z"
-      } satisfies SyncLock);
+      });
+    runSyncMock.mockImplementation(async () => {
+      vi.setSystemTime(new Date("2026-04-21T12:11:00.000Z"));
+      return {
+        snapshot: {
+          generatedAt: "2026-04-21T12:11:00.000Z"
+        },
+        health: createHealth({ lastSuccessAt: "2026-04-21T12:11:00.000Z" })
+      };
+    });
 
     const response = await handler(createEvent(), {} as never, () => {});
     expect(response?.statusCode).toBe(200);

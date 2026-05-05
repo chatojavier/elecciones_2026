@@ -74,9 +74,8 @@ export async function acquireSyncLock(kind: SyncInvocationKind, now = Date.now()
   } satisfies SyncLockAcquireResult;
 }
 
-export async function releaseSyncLock(lockId: string) {
-  const latestLockState = getSyncLockState(await readSyncLock());
-  if (latestLockState.lock?.id === lockId) {
+export async function releaseSyncLock(lock: SyncLock, now = Date.now()) {
+  if (now < new Date(lock.expiresAt).getTime()) {
     await deleteSyncLock();
   }
 }

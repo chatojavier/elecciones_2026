@@ -107,6 +107,6 @@ export const handler: Handler = async (event) => {
       500
     );
   } finally {
-    await releaseSyncLock(lockResult.lock.id);
+    await releaseSyncLock(lockResult.lock);
   }
 };

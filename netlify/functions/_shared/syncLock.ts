@@ -37,23 +37,12 @@ export async function acquireSyncLock(kind: SyncInvocationKind, now = Date.now()
 
   await writeSyncLock(lock);
 
-  const acquiredLockState = getSyncLockState(await readSyncLock());
-  if (acquiredLockState.state !== "active" || acquiredLockState.lock?.id !== lock.id) {
-    return {
-      state: "active",
-      lock: acquiredLockState.lock ?? lock
-    } satisfies SyncLockAcquireResult;
-  }
-
   return {
     state: "acquired",
     lock
   } satisfies SyncLockAcquireResult;
 }
 
-export async function releaseSyncLock(lockId: string) {
-  const latestLockState = getSyncLockState(await readSyncLock());
-  if (latestLockState.lock?.id === lockId) {
-    await deleteSyncLock();
-  }
+export async function releaseSyncLock(_lockId: string) {
+  await deleteSyncLock();
 }

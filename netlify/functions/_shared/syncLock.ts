@@ -14,6 +14,29 @@ export interface SyncLockAcquireResult {
   lock: SyncLock;
 }
 
+const LOCK_VISIBILITY_RETRY_DELAYS_MS = [50, 100, 200, 400];
+
+function sleep(ms: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+async function readVisibleLock(lock: SyncLock) {
+  for (const delay of [0, ...LOCK_VISIBILITY_RETRY_DELAYS_MS]) {
+    if (delay > 0) {
+      await sleep(delay);
+    }
+
+    const lockState = getSyncLockState(await readSyncLock());
+    if (lockState.state === "active" && lockState.lock) {
+      return lockState.lock;
+    }
+  }
+
+  return lock;
+}
+
 export async function acquireSyncLock(kind: SyncInvocationKind, now = Date.now()) {
   const currentLockState = getSyncLockState(await readSyncLock(), now);
 
@@ -37,12 +60,23 @@ export async function acquireSyncLock(kind: SyncInvocationKind, now = Date.now()
 
   await writeSyncLock(lock);
 
+  const visibleLock = await readVisibleLock(lock);
+  if (visibleLock.id !== lock.id) {
+    return {
+      state: "active",
+      lock: visibleLock
+    } satisfies SyncLockAcquireResult;
+  }
+
   return {
     state: "acquired",
     lock
   } satisfies SyncLockAcquireResult;
 }
 
-export async function releaseSyncLock(_lockId: string) {
-  await deleteSyncLock();
+export async function releaseSyncLock(lockId: string) {
+  const latestLockState = getSyncLockState(await readSyncLock());
+  if (latestLockState.lock?.id === lockId) {
+    await deleteSyncLock();
+  }
 }

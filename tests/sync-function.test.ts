@@ -185,6 +185,44 @@ describe("sync function guards", () => {
     expect(deleteSyncLockMock).toHaveBeenCalledTimes(1);
   });
 
+  it("no sincroniza si otra invocacion gana el lock despues del write", async () => {
+    readSyncLockMock
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        id: "lock-other",
+        kind: "scheduled",
+        createdAt: "2026-04-21T12:00:00.000Z",
+        expiresAt: "3026-04-21T12:10:00.000Z"
+      } satisfies SyncLock);
+
+    const response = await handler(createEvent(), {} as never, () => {});
+    expect(response?.statusCode).toBe(202);
+    expect(parseBody(response as { body: string }).code).toBe("sync_in_progress");
+    expect(writeSyncLockMock).toHaveBeenCalledTimes(1);
+    expect(runSyncMock).not.toHaveBeenCalled();
+    expect(deleteSyncLockMock).not.toHaveBeenCalled();
+  });
+
+  it("no borra un lock reemplazado al terminar una sincronizacion antigua", async () => {
+    readSyncLockMock
+      .mockResolvedValueOnce(null)
+      .mockImplementationOnce(async () => {
+        const firstWrite = writeSyncLockMock.mock.calls[0]?.[0] as SyncLock;
+        return firstWrite ?? null;
+      })
+      .mockResolvedValueOnce({
+        id: "lock-newer",
+        kind: "scheduled",
+        createdAt: "2026-04-21T12:11:00.000Z",
+        expiresAt: "3026-04-21T12:21:00.000Z"
+      } satisfies SyncLock);
+
+    const response = await handler(createEvent(), {} as never, () => {});
+    expect(response?.statusCode).toBe(200);
+    expect(runSyncMock).toHaveBeenCalledTimes(1);
+    expect(deleteSyncLockMock).not.toHaveBeenCalled();
+  });
+
   it("si runSync falla devuelve 500 generico y libera lock", async () => {
     readSyncLockMock
       .mockResolvedValueOnce(null)

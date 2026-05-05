@@ -47,7 +47,9 @@ curl -i -X POST http://localhost:8888/.netlify/functions/sync
 Comportamiento esperado de `sync`:
 
 - `GET /.netlify/functions/sync` retorna `405`.
-- `POST /.netlify/functions/sync` retorna `200`, `202` (sync en curso) o `429` (corte reciente).
+- `POST /.netlify/functions/sync` retorna `200` cuando la sincronizacion termina y escribe un nuevo snapshot, `202` si ya hay una sincronizacion en curso, o `429` si ya existe un corte reciente.
+
+`sync.ts` adquiere el lock, ejecuta el trabajo de sincronizacion, escribe `snapshot` y `health` en Netlify Blobs, y libera el lock en `finally`. Si otra invocacion encuentra el lock activo, responde `sync_in_progress` con `retryAfterSeconds`.
 
 ## Invocación manual de la función programada
 

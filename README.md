@@ -16,11 +16,15 @@ ONPE_USER_AGENT=
 ONPE_ACCEPT_LANGUAGE=en-GB,en-US;q=0.9,en;q=0.8
 ONPE_REFERER=
 ONPE_COOKIE=
+ONPE_REQUEST_CONCURRENCY=16
+ONPE_REQUEST_TIMEOUT_MS=10000
 SYNC_LOCK_TTL_MS=600000
 MANUAL_SYNC_MIN_INTERVAL_MS=300000
 SYNC_MANUAL_SECRET=
 VITE_USE_NETLIFY_FUNCTIONS=true
 ```
+
+`ONPE_REQUEST_CONCURRENCY` aplica como limite global de requests ONPE concurrentes por proceso de Function, para todas las llamadas ejecutadas durante un `sync`.
 
 `VITE_USE_NETLIFY_FUNCTIONS=true` fuerza al frontend a consumir `/.netlify/functions/*` durante desarrollo local.
 
@@ -48,6 +52,7 @@ Comportamiento esperado de `sync`:
 
 - `GET /.netlify/functions/sync` retorna `405`.
 - `POST /.netlify/functions/sync` retorna `200` cuando la sincronizacion termina y escribe un nuevo snapshot, `202` si ya hay una sincronizacion en curso, o `429` si ya existe un corte reciente.
+- Mide la duracion total de `POST /.netlify/functions/sync` con los valores configurados y registra si entra en el presupuesto de runtime de Netlify. Si queda al limite, probar `ONPE_REQUEST_CONCURRENCY=24` antes de cerrar el ticket.
 
 `sync.ts` adquiere el lock, ejecuta el trabajo de sincronizacion, escribe `snapshot` y `health` en Netlify Blobs, y libera el lock en `finally`. Si otra invocacion encuentra el lock activo, responde `sync_in_progress` con `retryAfterSeconds`.
 

@@ -27,9 +27,23 @@ function parseEnvMs(value: string | undefined, fallback: number) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+function parseEnvPositiveInt(value: string | undefined, fallback: number) {
+  if (!value) {
+    return fallback;
+  }
+
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 export const SYNC_LOCK_TTL_MS = parseEnvMs(process.env.SYNC_LOCK_TTL_MS, 10 * 60 * 1000);
 export const MANUAL_SYNC_MIN_INTERVAL_MS = parseEnvMs(
   process.env.MANUAL_SYNC_MIN_INTERVAL_MS,
   5 * 60 * 1000
 );
+export const ONPE_REQUEST_CONCURRENCY = parseEnvPositiveInt(
+  process.env.ONPE_REQUEST_CONCURRENCY,
+  16
+);
+export const ONPE_REQUEST_TIMEOUT_MS = parseEnvMs(process.env.ONPE_REQUEST_TIMEOUT_MS, 10_000);
 export const SYNC_MANUAL_SECRET = process.env.SYNC_MANUAL_SECRET ?? "";

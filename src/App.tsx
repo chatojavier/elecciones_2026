@@ -1,11 +1,12 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 
-import { fetchAppData, refreshAppData } from "./lib/api";
 import {
   initializeAnalytics,
   trackEvent,
   trackInitialPageView
 } from "./lib/analytics";
+import { useElectionData } from "./hooks/useElectionData";
+import { useFreshnessStatus } from "./hooks/useFreshnessStatus";
 import {
   buildComparisonCandidateOptions,
   buildNationalComparisonPairItems,
@@ -30,19 +31,12 @@ import {
   formatTitleCase
 } from "./lib/format";
 import {
-  deriveAppFreshnessStatus,
-  getAppFetchAgeMinutes,
-  getNextAutoRefreshInMinutes,
-  getSourceAgeMinutes,
-  getSourceHasNewCut,
   shouldAutoRefresh,
   type AppFreshnessStatus
 } from "./lib/trust";
 import type {
-  ElectionSnapshot,
   ForeignContinentResult,
   ForeignCountryResult,
-  HealthStatus,
   ProvinceResult,
   RegionResult,
   ScopeResult
@@ -62,7 +56,6 @@ type QuickInsightGapStatus = "stable" | "tight" | "very_tight" | "unknown";
 const DEFAULT_COMPARISON_MODE: ComparisonMode = "projected";
 const DEFAULT_SHOW_OTHERS = false;
 const DEFAULT_REGION_SORT: SortKey = "gap_2v3";
-const AUTO_REFRESH_FAILURE_RETRY_MS = 5 * 60 * 1000;
 
 function getQuickInsightGapStatus(gapPp: number | null): QuickInsightGapStatus {
   if (gapPp === null) {
@@ -511,15 +504,6 @@ function QuickInsightsSkeleton() {
 }
 
 export default function App() {
-  const [snapshot, setSnapshot] = useState<ElectionSnapshot | null>(null);
-  const [health, setHealth] = useState<HealthStatus | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [refreshFeedback, setRefreshFeedback] = useState<{
-    kind: "success" | "error";
-    message: string;
-  } | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>(DEFAULT_REGION_SORT);
   const [comparisonMode, setComparisonMode] = useState<ComparisonMode>(DEFAULT_COMPARISON_MODE);
   const [comparisonPair, setComparisonPair] = useState<ComparisonPair | null>(null);
@@ -535,9 +519,24 @@ export default function App() {
   const [isMobileControlsSticky, setIsMobileControlsSticky] = useState(false);
   const [isMobileControlsOverlayOpen, setIsMobileControlsOverlayOpen] = useState(false);
   const [clockNow, setClockNow] = useState(() => Date.now());
+  const {
+    data: { snapshot, health, error, loading, refreshing, refreshFeedback },
+    actions: { loadInitial, refreshManual, maybeRefreshAuto }
+  } = useElectionData({ clockNow });
+  const {
+    appLastSuccessAt,
+    appFreshnessStatus,
+    nextAutoRefreshInMinutes,
+    sourceHasNewCut,
+    statusNote,
+    trackingPayload: appFreshnessPayload
+  } = useFreshnessStatus({
+    snapshot,
+    health,
+    refreshFeedback,
+    clockNow
+  });
   const globalControlsRef = useRef<HTMLElement | null>(null);
-  const lastAutoRefreshKeyRef = useRef<string | null>(null);
-  const autoRefreshRetryAfterRef = useRef<number | null>(null);
   const comparisonPairInitializationRef = useRef<string | null>(null);
   const quickInsightsImpressionRef = useRef<string | null>(null);
   const globalControlsImpressionRef = useRef<string | null>(null);
@@ -547,98 +546,12 @@ export default function App() {
   const previousMobileStickyRef = useRef(false);
   const foreignContinents = snapshot?.foreign.continents ?? [];
 
-  async function loadAppData(
-    options: {
-      background?: boolean;
-      trigger?: "initial" | "manual" | "auto";
-    } = {}
-  ) {
-    const { background = false, trigger = "initial" } = options;
-
-    if (background) {
-      setRefreshing(true);
-      setRefreshFeedback(null);
-    } else {
-      setLoading(true);
-    }
-
-    try {
-      const previousSnapshot = snapshot;
-      const data = background ? await refreshAppData() : await fetchAppData();
-
-      setSnapshot(data.snapshot);
-      setHealth(data.health);
-      setError(null);
-      autoRefreshRetryAfterRef.current = null;
-      if (!background || trigger !== "manual") {
-        setRefreshFeedback(null);
-      }
-
-      if (trigger === "manual") {
-        const sourceHasNewCut = getSourceHasNewCut(
-          data.snapshot.sourceLastUpdatedAt,
-          data.health.lastSuccessAt,
-          previousSnapshot?.sourceLastUpdatedAt ?? null
-        );
-
-        setRefreshFeedback({
-          kind: "success",
-          message: "App actualizada correctamente."
-        });
-        trackEvent("refresh_manual_success", {
-          app_fetch_age_minutes: getAppFetchAgeMinutes(data.health.lastSuccessAt, clockNow) ?? undefined,
-          app_freshness_status: deriveAppFreshnessStatus(data.health.lastSuccessAt, clockNow),
-          source_age_minutes: getSourceAgeMinutes(data.snapshot.sourceLastUpdatedAt, clockNow),
-          source_has_new_cut: sourceHasNewCut,
-          snapshot_generated_at: data.snapshot.generatedAt
-        });
-      }
-    } catch (reason) {
-      const message = (reason as Error).message;
-
-      if (background && trigger === "auto") {
-        autoRefreshRetryAfterRef.current = Date.now() + AUTO_REFRESH_FAILURE_RETRY_MS;
-      }
-
-      if (background && snapshot) {
-        if (trigger === "manual") {
-          setRefreshFeedback({
-            kind: "error",
-            message: "No se pudo actualizar. Intenta nuevamente."
-          });
-          trackEvent("refresh_manual_error", {
-            app_fetch_age_minutes: getAppFetchAgeMinutes(health?.lastSuccessAt ?? null, clockNow) ?? undefined,
-            app_freshness_status: deriveAppFreshnessStatus(health?.lastSuccessAt ?? null, clockNow),
-            source_age_minutes: snapshot ? getSourceAgeMinutes(snapshot.sourceLastUpdatedAt, clockNow) : undefined,
-            source_has_new_cut: snapshot
-              ? getSourceHasNewCut(
-                  snapshot.sourceLastUpdatedAt,
-                  health?.lastSuccessAt ?? null,
-                  snapshot.sourceLastUpdatedAt
-                )
-              : undefined,
-            snapshot_generated_at: snapshot?.generatedAt,
-            error_message: message
-          });
-        }
-      } else {
-        setError(message);
-      }
-    } finally {
-      if (background) {
-        setRefreshing(false);
-      } else {
-        setLoading(false);
-      }
-    }
-  }
-
   useEffect(() => {
     initializeAnalytics();
     trackInitialPageView();
 
-    void loadAppData();
-  }, []);
+    void loadInitial();
+  }, [loadInitial]);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -720,53 +633,19 @@ export default function App() {
     });
   }, [foreignContinents, snapshot]);
 
-  const appLastSuccessAt = health?.lastSuccessAt ?? null;
-  const appFetchAgeMinutes = getAppFetchAgeMinutes(appLastSuccessAt, clockNow);
-  const sourceAgeMinutes = snapshot ? getSourceAgeMinutes(snapshot.sourceLastUpdatedAt, clockNow) : null;
-  const appFreshnessStatus = deriveAppFreshnessStatus(appLastSuccessAt, clockNow);
-  const nextAutoRefreshInMinutes = getNextAutoRefreshInMinutes(appLastSuccessAt, clockNow);
-  const sourceHasNewCut = snapshot
-    ? getSourceHasNewCut(snapshot.sourceLastUpdatedAt, appLastSuccessAt)
-    : true;
-  const statusNote = refreshFeedback?.kind === "error"
-    ? refreshFeedback.message
-    : refreshFeedback?.kind === "success" && appFreshnessStatus === "Al día"
-      ? refreshFeedback.message
-      : appFreshnessStatus === "Desactualizado"
-        ? "Mostramos el último snapshot disponible."
-        : !sourceHasNewCut
-          ? "ONPE aún no publica un corte más reciente."
-          : "La app está al día.";
-  const appFreshnessPayload = {
-    app_fetch_age_minutes: appFetchAgeMinutes ?? undefined,
-    app_freshness_status: appFreshnessStatus,
-    source_age_minutes: sourceAgeMinutes ?? undefined,
-    source_has_new_cut: sourceHasNewCut,
-    snapshot_generated_at: snapshot?.generatedAt ?? undefined
-  };
-
   useEffect(() => {
     if (!snapshot || loading || refreshing || !shouldAutoRefresh(appLastSuccessAt, clockNow)) {
       return;
     }
 
     const refreshKey = `${appLastSuccessAt ?? "none"}:${snapshot.generatedAt}`;
-
-    if (lastAutoRefreshKeyRef.current === refreshKey) {
-      const retryAfter = autoRefreshRetryAfterRef.current;
-
-      if (!retryAfter || clockNow < retryAfter) {
-        return;
-      }
-    }
-
-    lastAutoRefreshKeyRef.current = refreshKey;
-    autoRefreshRetryAfterRef.current = null;
-    void loadAppData({
-      background: true,
-      trigger: "auto"
+    void maybeRefreshAuto({
+      appLastSuccessAt,
+      shouldRefresh: true,
+      refreshKey,
+      now: clockNow
     });
-  }, [appLastSuccessAt, clockNow, loading, refreshing, snapshot]);
+  }, [appLastSuccessAt, clockNow, loading, maybeRefreshAuto, refreshing, snapshot]);
 
   const comparisonCandidateOptions = useMemo(() => {
     if (!snapshot) {
@@ -1041,10 +920,7 @@ export default function App() {
       ...appFreshnessPayload
     });
 
-    void loadAppData({
-      background: true,
-      trigger: "manual"
-    });
+    void refreshManual();
   }
 
   function handleSortChange(nextSortKey: SortKey) {

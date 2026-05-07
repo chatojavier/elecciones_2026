@@ -164,4 +164,104 @@ describe("onpe request limiter and timeout", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     await expect(second).resolves.toEqual([]);
   });
+
+  it("falla con mensaje controlado si ONPE devuelve JSON invalido", async () => {
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockResolvedValue(
+      new Response("{ bad json", {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json"
+        }
+      })
+    );
+
+    const onpe = await importOnpeWithEnv({
+      ONPE_REQUEST_CONCURRENCY: "1",
+      ONPE_REQUEST_TIMEOUT_MS: "10000"
+    });
+
+    await expect(onpe.fetchDepartments()).rejects.toThrow(
+      "ONPE devolvió JSON inválido para /ubigeos/departamentos"
+    );
+  });
+
+  it("falla con mensaje controlado si success=false", async () => {
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ success: false, data: [] }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json"
+        }
+      })
+    );
+
+    const onpe = await importOnpeWithEnv({
+      ONPE_REQUEST_CONCURRENCY: "1",
+      ONPE_REQUEST_TIMEOUT_MS: "10000"
+    });
+
+    await expect(onpe.fetchDepartments()).rejects.toThrow(
+      "Contrato ONPE invalido para /ubigeos/departamentos invalido en success: se esperaba true"
+    );
+  });
+
+  it("falla con mensaje controlado si data es null", async () => {
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ success: true, data: null }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json"
+        }
+      })
+    );
+
+    const onpe = await importOnpeWithEnv({
+      ONPE_REQUEST_CONCURRENCY: "1",
+      ONPE_REQUEST_TIMEOUT_MS: "10000"
+    });
+
+    await expect(onpe.fetchDepartments()).rejects.toThrow(
+      "Contrato ONPE invalido para /ubigeos/departamentos invalido en data: se esperaba valor no nulo"
+    );
+  });
+
+  it("falla cuando totales no cumple contrato", async () => {
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockResolvedValue(
+      successResponse({
+        fechaActualizacion: "bad-date"
+      })
+    );
+
+    const onpe = await importOnpeWithEnv({
+      ONPE_REQUEST_CONCURRENCY: "1",
+      ONPE_REQUEST_TIMEOUT_MS: "10000"
+    });
+
+    await expect(onpe.fetchNationalTotals()).rejects.toThrow("data.actasContabilizadas");
+  });
+
+  it("falla cuando participantes no cumple contrato", async () => {
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockResolvedValue(
+      successResponse([
+        {
+          nombreAgrupacionPolitica: "PARTIDO",
+          codigoAgrupacionPolitica: "4"
+        }
+      ])
+    );
+
+    const onpe = await importOnpeWithEnv({
+      ONPE_REQUEST_CONCURRENCY: "1",
+      ONPE_REQUEST_TIMEOUT_MS: "10000"
+    });
+
+    await expect(onpe.fetchNationalParticipants()).rejects.toThrow(
+      "data[0].nombreCandidato"
+    );
+  });
 });

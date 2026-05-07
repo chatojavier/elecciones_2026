@@ -294,4 +294,94 @@ describe("api trust data", () => {
 
     await expect(refreshAppData()).rejects.toThrow("No se pudo sincronizar datos (500).");
   });
+
+  it("falla si /snapshot responde contrato invalido", async () => {
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ generatedAt: "2026-04-21T12:01:00.000Z" }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json"
+        }
+      })
+    );
+
+    await expect(fetchAppData()).rejects.toThrow("Contrato ElectionSnapshot invalido");
+  });
+
+  it("si /health es invalido usa fallback derivado del snapshot", async () => {
+    const snapshot = createSnapshot();
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(snapshot), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json"
+          }
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ status: "healthy", source: "bad-source" }), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json"
+          }
+        })
+      );
+
+    const result = await fetchAppData();
+    expect(result.health).toEqual({
+      status: "healthy",
+      source: "onpe",
+      lastSyncAt: snapshot.generatedAt,
+      lastSuccessAt: snapshot.generatedAt,
+      staleMinutes: null,
+      lastError: null
+    });
+  });
+
+  it("si sync devuelve health invalido usa fallback con snapshot valido", async () => {
+    const snapshot = createSnapshot();
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          ok: true,
+          snapshot,
+          health: { status: "healthy", source: "otro" }
+        }),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json"
+          }
+        }
+      )
+    );
+
+    const result = await refreshAppData();
+    expect(result.snapshot).toEqual(snapshot);
+    expect(result.health.lastSuccessAt).toEqual(snapshot.generatedAt);
+  });
+
+  it("si sync devuelve snapshot invalido falla", async () => {
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          ok: true,
+          snapshot: { generatedAt: "2026-04-21T12:01:00.000Z" }
+        }),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json"
+          }
+        }
+      )
+    );
+
+    await expect(refreshAppData()).rejects.toThrow("Contrato ElectionSnapshot invalido");
+  });
 });

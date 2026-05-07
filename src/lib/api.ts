@@ -4,6 +4,7 @@ import {
   SNAPSHOT_ENDPOINT,
   SYNC_ENDPOINT
 } from "./constants";
+import { parseElectionSnapshot, parseHealthStatus } from "./contracts";
 import { normalizeElectionSnapshot } from "./normalizeSnapshot";
 import type { ElectionSnapshot, HealthStatus } from "./types";
 
@@ -41,7 +42,7 @@ async function parseSnapshotResponse(endpoint: string, response: Response) {
     throw new Error(`${endpoint} no respondió JSON.`);
   }
 
-  return normalizeElectionSnapshot((await response.json()) as ElectionSnapshot);
+  return normalizeElectionSnapshot(parseElectionSnapshot(await response.json()));
 }
 
 async function parseHealthResponse(response: Response) {
@@ -55,7 +56,7 @@ async function parseHealthResponse(response: Response) {
     throw new Error("El endpoint de health no respondió JSON.");
   }
 
-  return (await response.json()) as HealthStatus;
+  return parseHealthStatus(await response.json());
 }
 
 function buildFallbackHealth(snapshot: ElectionSnapshot): HealthStatus {
@@ -77,29 +78,12 @@ function getUsableHealth(health: HealthStatus | null, snapshot: ElectionSnapshot
   return health;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 async function parseSyncResponse(response: Response) {
-  const contentType = response.headers.get("content-type") ?? "";
-
   if (response.status === 202 || response.status === 429) {
-    if (!contentType.includes("application/json")) {
-      return null;
-    }
-
-    const payload = (await response.json()) as {
-      code?: string;
-      retryAfterSeconds?: number;
-      health?: HealthStatus;
-    };
-
-    if (
-      payload.code === "sync_in_progress" ||
-      payload.code === "sync_too_recent" ||
-      typeof payload.retryAfterSeconds === "number" ||
-      payload.health
-    ) {
-      return null;
-    }
-
     return null;
   }
 
@@ -107,27 +91,37 @@ async function parseSyncResponse(response: Response) {
     throw new Error(`No se pudo sincronizar datos (${response.status}).`);
   }
 
+  const contentType = response.headers.get("content-type") ?? "";
   if (!contentType.includes("application/json")) {
     throw new Error("El endpoint de sincronización no respondió JSON.");
   }
 
-  const payload = (await response.json()) as {
-    ok?: boolean;
-    error?: string;
-    snapshot?: ElectionSnapshot;
-    health?: HealthStatus;
-  };
-
-  if (!payload.ok) {
-    throw new Error(payload.error ?? "La sincronización de datos falló.");
+  const payload = await response.json();
+  if (!isRecord(payload)) {
+    throw new Error("Respuesta de sincronización inválida.");
   }
 
-  return payload.snapshot
-    ? {
-        snapshot: normalizeElectionSnapshot(payload.snapshot),
-        health: payload.health ?? null
-      }
-    : null;
+  if (!payload.ok) {
+    throw new Error(
+      typeof payload.error === "string" ? payload.error : "La sincronización de datos falló."
+    );
+  }
+
+  if (payload.snapshot == null) {
+    return null;
+  }
+
+  const snapshot = normalizeElectionSnapshot(parseElectionSnapshot(payload.snapshot));
+  let health: HealthStatus | null = null;
+  if (payload.health != null) {
+    try {
+      health = parseHealthStatus(payload.health);
+    } catch {
+      health = null;
+    }
+  }
+
+  return { snapshot, health };
 }
 
 function buildRequestUrl(endpoint: string) {
@@ -140,7 +134,7 @@ async function fetchSnapshotFromEndpoint(endpoint: string) {
   const response = await fetch(buildRequestUrl(endpoint), {
     cache: "no-store"
   });
-  return await parseSnapshotResponse(endpoint, response);
+  return parseSnapshotResponse(endpoint, response);
 }
 
 async function fetchHealth() {
@@ -148,7 +142,7 @@ async function fetchHealth() {
     cache: "no-store"
   });
 
-  return await parseHealthResponse(response);
+  return parseHealthResponse(response);
 }
 
 export async function fetchSnapshot() {
@@ -178,11 +172,6 @@ export async function fetchAppData(): Promise<AppData> {
   };
 }
 
-export async function refreshSnapshot() {
-  const data = await refreshAppData();
-  return data.snapshot;
-}
-
 export async function refreshAppData(): Promise<AppData> {
   const syncEndpoint =
     import.meta.env.DEV && !useNetlifyFunctionsInDev() ? DEV_REFRESH_ENDPOINT : SYNC_ENDPOINT;
@@ -199,5 +188,5 @@ export async function refreshAppData(): Promise<AppData> {
     };
   }
 
-  return await fetchAppData();
+  return fetchAppData();
 }

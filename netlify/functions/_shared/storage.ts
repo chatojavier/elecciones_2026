@@ -7,6 +7,10 @@ import {
   STORAGE_NAME
 } from "./config";
 import {
+  parseElectionSnapshot,
+  parseHealthStatus
+} from "../../../src/lib/contracts";
+import {
   hydrateHealthFreshness,
   hydrateSnapshotFreshness
 } from "./freshness";
@@ -26,8 +30,16 @@ function getStorageStore() {
 
 export async function readSnapshot() {
   const store = getStorageStore();
-  const snapshot = (await store.get(SNAPSHOT_KEY, { type: "json" })) as ElectionSnapshot | null;
-  return snapshot ? hydrateSnapshotFreshness(normalizeElectionSnapshot(snapshot)) : null;
+  const snapshot = (await store.get(SNAPSHOT_KEY, { type: "json" })) as unknown;
+  if (snapshot == null) {
+    return null;
+  }
+  try {
+    return hydrateSnapshotFreshness(normalizeElectionSnapshot(parseElectionSnapshot(snapshot)));
+  } catch (error) {
+    console.warn(`[storage] invalid snapshot blob ignored: ${(error as Error).message}`);
+    return null;
+  }
 }
 
 export async function writeSnapshot(snapshot: ElectionSnapshot) {
@@ -37,8 +49,16 @@ export async function writeSnapshot(snapshot: ElectionSnapshot) {
 
 export async function readHealth() {
   const store = getStorageStore();
-  const health = (await store.get(HEALTH_KEY, { type: "json" })) as HealthStatus | null;
-  return health ? hydrateHealthFreshness(health) : null;
+  const health = (await store.get(HEALTH_KEY, { type: "json" })) as unknown;
+  if (health == null) {
+    return null;
+  }
+  try {
+    return hydrateHealthFreshness(parseHealthStatus(health));
+  } catch (error) {
+    console.warn(`[storage] invalid health blob ignored: ${(error as Error).message}`);
+    return null;
+  }
 }
 
 export async function writeHealth(health: HealthStatus) {

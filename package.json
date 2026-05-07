@@ -7,7 +7,7 @@
     "dev": "vite",
     "dev:netlify": "netlify dev",
     "build": "tsc -b && vite build && node scripts/write-redirects.mjs",
-    "build:netlify": "netlify build",
+    "netlify:build": "netlify build",
     "preview": "vite preview",
     "functions:invoke:sync": "netlify functions:invoke sync",
     "onpe:check": "node scripts/check-onpe-session.mjs",

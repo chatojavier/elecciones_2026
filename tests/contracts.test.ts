@@ -104,6 +104,59 @@ describe("contracts", () => {
     expect(normalized.foreign.continents[0]?.countries).toEqual([]);
   });
 
+  it("acepta provincias y paises extranjeros sin electores ni padronShare", () => {
+    const snapshot = createSnapshot();
+    const { electores: _electores, padronShare: _padronShare, ...childCore } = snapshot.national;
+    const province = {
+      ...childCore,
+      scopeId: "0101",
+      parentScopeId: "01",
+      kind: "province",
+      label: "CHACHAPOYAS"
+    };
+    const country = {
+      ...childCore,
+      scopeId: "920001",
+      parentScopeId: "920000",
+      kind: "foreign_country",
+      label: "ESPANA"
+    };
+
+    const parsed = parseElectionSnapshot({
+      ...snapshot,
+      regions: [
+        {
+          ...snapshot.national,
+          scopeId: "01",
+          kind: "department",
+          label: "AMAZONAS",
+          provinces: [province]
+        }
+      ],
+      foreign: {
+        ...snapshot.foreign,
+        continents: [
+          {
+            ...snapshot.foreign,
+            scopeId: "920000",
+            kind: "foreign_continent",
+            label: "EUROPA",
+            countries: [country]
+          }
+        ]
+      }
+    });
+
+    expect(parsed.regions[0]?.provinces[0]).toMatchObject({
+      scopeId: "0101",
+      kind: "province"
+    });
+    expect(parsed.foreign.continents[0]?.countries[0]).toMatchObject({
+      scopeId: "920001",
+      kind: "foreign_country"
+    });
+  });
+
   it("parseHealthStatus valida enums y fechas", () => {
     expect(() => parseHealthStatus({ status: "bad" })).toThrow("status");
     expect(() =>

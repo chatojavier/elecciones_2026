@@ -9,6 +9,7 @@ import type {
   OnpeParticipant,
   OnpeProvince,
   OnpeTotals,
+  ProvinceResult,
   ProjectedNationalSummary,
   RegionResult,
   ScopeResult
@@ -127,15 +128,13 @@ function parseProjectedVotes(value: unknown, path: string) {
   return parsed;
 }
 
-function parseScopeCore(value: unknown, path: string) {
+function parseResultCore(value: unknown, path: string) {
   const contract = "ElectionSnapshot";
   const record = asRecord(value, contract, path);
 
   return {
     scopeId: requireString(record.scopeId, contract, `${path}.scopeId`),
     label: requireString(record.label, contract, `${path}.label`),
-    electores: requireFiniteNumber(record.electores, contract, `${path}.electores`),
-    padronShare: requireFiniteNumber(record.padronShare, contract, `${path}.padronShare`),
     actasContabilizadasPct: requireFiniteNumber(
       record.actasContabilizadasPct,
       contract,
@@ -189,7 +188,9 @@ function parseScopeResult(value: unknown, path: string, expectedKind?: ScopeResu
     );
   }
   return {
-    ...parseScopeCore(record, path),
+    ...parseResultCore(record, path),
+    electores: requireFiniteNumber(record.electores, contract, `${path}.electores`),
+    padronShare: requireFiniteNumber(record.padronShare, contract, `${path}.padronShare`),
     kind: kind as ScopeResult["kind"]
   };
 }
@@ -208,7 +209,7 @@ function parseRegionResult(value: unknown, path: string): RegionResult {
   };
 }
 
-function parseProvince(value: unknown, path: string) {
+function parseProvince(value: unknown, path: string): ProvinceResult {
   const contract = "ElectionSnapshot";
   const record = asRecord(value, contract, path);
   const kind = requireString(record.kind, contract, `${path}.kind`);
@@ -216,7 +217,7 @@ function parseProvince(value: unknown, path: string) {
     fail(contract, `${path}.kind`, "se esperaba 'province'");
   }
   return {
-    ...parseScopeCore(record, path),
+    ...parseResultCore(record, path),
     parentScopeId: requireString(record.parentScopeId, contract, `${path}.parentScopeId`),
     kind: "province" as const
   };
@@ -230,7 +231,7 @@ function parseForeignCountry(value: unknown, path: string): ForeignCountryResult
     fail(contract, `${path}.kind`, "se esperaba 'foreign_country'");
   }
   return {
-    ...parseScopeCore(record, path),
+    ...parseResultCore(record, path),
     parentScopeId: requireString(record.parentScopeId, contract, `${path}.parentScopeId`),
     kind: "foreign_country"
   };

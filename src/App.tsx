@@ -1,6 +1,11 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 
 import {
+  GlobalControls,
+  useComparisonControls,
+  useMobileGlobalControls
+} from "./components/global-controls";
+import {
   initializeAnalytics,
   trackEvent,
   trackInitialPageView
@@ -8,13 +13,9 @@ import {
 import { useElectionData } from "./hooks/useElectionData";
 import { useFreshnessStatus } from "./hooks/useFreshnessStatus";
 import {
-  buildComparisonCandidateOptions,
   buildNationalComparisonPairItems,
   buildScopeComparisonItem,
   getScopeComparisonGap,
-  reconcileComparisonPair,
-  resolveDefaultComparisonPair,
-  type ComparisonCandidateOption,
   type ComparisonItem,
   type ComparisonMode,
   type ComparisonPair
@@ -54,7 +55,6 @@ type ComparableScope = ScopeResult | ProvinceResult | ForeignCountryResult;
 type QuickInsightGapStatus = "stable" | "tight" | "very_tight" | "unknown";
 
 const DEFAULT_COMPARISON_MODE: ComparisonMode = "projected";
-const DEFAULT_SHOW_OTHERS = false;
 const DEFAULT_REGION_SORT: SortKey = "gap_2v3";
 
 function getQuickInsightGapStatus(gapPp: number | null): QuickInsightGapStatus {
@@ -203,10 +203,6 @@ function CandidateStack({
 
 function getComparisonColumnLabel(comparisonMode: ComparisonMode) {
   return `Brecha A vs B (${comparisonMode === "projected" ? "Proyectado" : "Actual ONPE"})`;
-}
-
-function getPairLabelByCode(options: ComparisonCandidateOption[]) {
-  return new Map(options.map((candidate) => [candidate.code, candidate.label]));
 }
 
 function getComparisonPairDetail(
@@ -505,19 +501,10 @@ function QuickInsightsSkeleton() {
 
 export default function App() {
   const [sortKey, setSortKey] = useState<SortKey>(DEFAULT_REGION_SORT);
-  const [comparisonMode, setComparisonMode] = useState<ComparisonMode>(DEFAULT_COMPARISON_MODE);
-  const [comparisonPair, setComparisonPair] = useState<ComparisonPair | null>(null);
-  const [comparisonValidationMessage, setComparisonValidationMessage] = useState<string | null>(null);
-  const [comparisonInvalidSelector, setComparisonInvalidSelector] = useState<"candidate_a" | "candidate_b" | null>(null);
-  const [comparisonAdjustmentMessage, setComparisonAdjustmentMessage] = useState<string | null>(null);
-  const [showOthers, setShowOthers] = useState(DEFAULT_SHOW_OTHERS);
   const [regionSearchQuery, setRegionSearchQuery] = useState("");
   const [foreignSearchQuery, setForeignSearchQuery] = useState("");
   const [expandedRegionId, setExpandedRegionId] = useState<string | null>(null);
   const [expandedContinentId, setExpandedContinentId] = useState<string | null>(null);
-  const [isMobileViewport, setIsMobileViewport] = useState(false);
-  const [isMobileControlsSticky, setIsMobileControlsSticky] = useState(false);
-  const [isMobileControlsOverlayOpen, setIsMobileControlsOverlayOpen] = useState(false);
   const [clockNow, setClockNow] = useState(() => Date.now());
   const {
     data: { snapshot, health, error, loading, refreshing, refreshFeedback },
@@ -537,14 +524,36 @@ export default function App() {
     clockNow
   });
   const globalControlsRef = useRef<HTMLElement | null>(null);
-  const comparisonPairInitializationRef = useRef<string | null>(null);
   const quickInsightsImpressionRef = useRef<string | null>(null);
-  const globalControlsImpressionRef = useRef<string | null>(null);
   const freshnessStatusShownRef = useRef<string | null>(null);
   const previousFreshnessStatusRef = useRef<AppFreshnessStatus | null>(null);
   const sourceWithoutNewCutRef = useRef<string | null>(null);
-  const previousMobileStickyRef = useRef(false);
   const foreignContinents = snapshot?.foreign.continents ?? [];
+  const {
+    comparisonMode,
+    comparisonPair,
+    comparisonCandidateOptions,
+    comparisonOptionLabels,
+    comparisonInvalidSelector,
+    comparisonNotice,
+    comparisonNoticeClassName,
+    showOthers,
+    mobileSummary,
+    handleComparisonCandidateChange,
+    handleComparisonModeChange,
+    handleShowOthersToggle,
+    handleGlobalReset
+  } = useComparisonControls(snapshot, {
+    onResetSort: () => setSortKey(DEFAULT_REGION_SORT)
+  });
+  const {
+    isMobileControlsSticky,
+    isMobileControlsOverlayOpen,
+    showMobileControlsSummary,
+    showMobileControlsOverlay,
+    showInlineGlobalControlsRow,
+    handleMobileControlsToggle
+  } = useMobileGlobalControls(globalControlsRef);
 
   useEffect(() => {
     initializeAnalytics();
@@ -560,47 +569,6 @@ export default function App() {
 
     return () => window.clearInterval(intervalId);
   }, []);
-
-  useEffect(() => {
-    function syncMobileControlsState() {
-      const isMobile = window.innerWidth <= 640;
-      const isSticky =
-        isMobile && globalControlsRef.current
-          ? globalControlsRef.current.getBoundingClientRect().top <= 8
-          : false;
-
-      setIsMobileViewport(isMobile);
-      setIsMobileControlsSticky(isSticky);
-
-      if (!isMobile) {
-        setIsMobileControlsOverlayOpen(false);
-      }
-
-      previousMobileStickyRef.current = isSticky;
-    }
-
-    syncMobileControlsState();
-    window.addEventListener("scroll", syncMobileControlsState, { passive: true });
-    window.addEventListener("resize", syncMobileControlsState);
-
-    return () => {
-      window.removeEventListener("scroll", syncMobileControlsState);
-      window.removeEventListener("resize", syncMobileControlsState);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!(isMobileViewport && isMobileControlsOverlayOpen)) {
-      return;
-    }
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [isMobileControlsOverlayOpen, isMobileViewport]);
 
   useEffect(() => {
     if (!snapshot) {
@@ -646,68 +614,6 @@ export default function App() {
       now: clockNow
     });
   }, [appLastSuccessAt, clockNow, loading, maybeRefreshAuto, refreshing, snapshot]);
-
-  const comparisonCandidateOptions = useMemo(() => {
-    if (!snapshot) {
-      return [];
-    }
-
-    return buildComparisonCandidateOptions(snapshot);
-  }, [snapshot]);
-  const comparisonOptionLabels = useMemo(
-    () => getPairLabelByCode(comparisonCandidateOptions),
-    [comparisonCandidateOptions]
-  );
-
-  useEffect(() => {
-    if (!snapshot) {
-      return;
-    }
-
-    const resolution = comparisonPair
-      ? reconcileComparisonPair(snapshot, comparisonPair)
-      : resolveDefaultComparisonPair(snapshot);
-    const nextPair = resolution.pair;
-    const pairChanged =
-      comparisonPair?.candidateACode !== nextPair.candidateACode ||
-      comparisonPair?.candidateBCode !== nextPair.candidateBCode;
-    const initializationKey = `${snapshot.generatedAt}:${nextPair.candidateACode}:${nextPair.candidateBCode}`;
-
-    if (!comparisonPair || pairChanged) {
-      setComparisonPair(nextPair);
-    }
-
-    setComparisonValidationMessage(null);
-    setComparisonInvalidSelector(null);
-
-    if (!comparisonPair || (resolution.status === "reassigned" && pairChanged)) {
-      if (comparisonPairInitializationRef.current !== initializationKey) {
-        trackEvent("comparison_pair_initialized", {
-          candidate_a_code: nextPair.candidateACode || undefined,
-          candidate_b_code: nextPair.candidateBCode || undefined,
-          init_source: resolution.initSource,
-          snapshot_generated_at: snapshot.generatedAt
-        });
-        comparisonPairInitializationRef.current = initializationKey;
-      }
-    }
-
-    if (!comparisonPair) {
-      setComparisonAdjustmentMessage(
-        resolution.initSource === "fallback"
-          ? "Ajustamos la comparación al mejor par disponible."
-          : null
-      );
-      return;
-    }
-
-    if (resolution.status === "reassigned" && pairChanged) {
-      setComparisonAdjustmentMessage("Actualizamos la comparación con el mejor candidato disponible.");
-      return;
-    }
-
-    setComparisonAdjustmentMessage(null);
-  }, [snapshot]);
 
   const sortedRegions = useMemo(() => {
     if (!snapshot || !comparisonPair) {
@@ -875,44 +781,6 @@ export default function App() {
     sourceWithoutNewCutRef.current = contextKey;
   }, [appFreshnessPayload, snapshot, sourceHasNewCut]);
 
-  useEffect(() => {
-    if (!snapshot || !comparisonPair) {
-      return;
-    }
-
-    if (globalControlsImpressionRef.current === snapshot.generatedAt) {
-      return;
-    }
-
-    trackEvent("global_controls_impression", {
-      candidate_a_code: comparisonPair.candidateACode,
-      candidate_b_code: comparisonPair.candidateBCode,
-      comparison_mode: comparisonMode,
-      show_others: showOthers,
-      snapshot_generated_at: snapshot.generatedAt
-    });
-    globalControlsImpressionRef.current = snapshot.generatedAt;
-  }, [comparisonMode, comparisonPair, showOthers, snapshot]);
-
-  function trackGlobalControlChange(
-    controlName: "comparison_mode" | "show_others" | "reset",
-    previousValue: string | boolean,
-    nextValue: string | boolean,
-    source: "global_bar" | "quick_insight_cta" = "global_bar"
-  ) {
-    if (previousValue === nextValue) {
-      return;
-    }
-
-    trackEvent("global_control_change", {
-      control_name: controlName,
-      previous_value: previousValue,
-      next_value: nextValue,
-      source,
-      snapshot_generated_at: snapshot?.generatedAt
-    });
-  }
-
   function handleRefreshClick() {
     trackEvent("refresh_manual_click", appFreshnessPayload);
     trackEvent("refresh_snapshot", {
@@ -930,88 +798,6 @@ export default function App() {
     });
   }
 
-  function handleComparisonCandidateChange(
-    selector: "candidate_a" | "candidate_b",
-    nextCode: string
-  ) {
-    if (!comparisonPair) {
-      return;
-    }
-
-    const nextPair =
-      selector === "candidate_a"
-        ? {
-          candidateACode: nextCode,
-          candidateBCode: comparisonPair.candidateBCode
-        }
-        : {
-          candidateACode: comparisonPair.candidateACode,
-          candidateBCode: nextCode
-        };
-
-    if (nextPair.candidateACode === nextPair.candidateBCode) {
-      setComparisonInvalidSelector(selector);
-      setComparisonValidationMessage("Selecciona dos candidatos distintos.");
-      trackEvent("comparison_validation_error", {
-        candidate_a_code: nextPair.candidateACode,
-        candidate_b_code: nextPair.candidateBCode,
-        snapshot_generated_at: snapshot?.generatedAt
-      });
-      return;
-    }
-
-    setComparisonPair(nextPair);
-    setComparisonInvalidSelector(null);
-    setComparisonValidationMessage(null);
-    setComparisonAdjustmentMessage(null);
-    trackEvent("comparison_candidate_change", {
-      candidate_a_code: nextPair.candidateACode,
-      candidate_b_code: nextPair.candidateBCode,
-      snapshot_generated_at: snapshot?.generatedAt
-    });
-  }
-
-  function handleComparisonModeChange(
-    nextMode: ComparisonMode,
-    source: "global_bar" | "quick_insight_cta" = "global_bar"
-  ) {
-    setComparisonMode((currentMode) => {
-      trackGlobalControlChange("comparison_mode", currentMode, nextMode, source);
-      return nextMode;
-    });
-  }
-
-  function handleShowOthersToggle() {
-    setShowOthers((currentValue) => {
-      const nextValue = !currentValue;
-      trackGlobalControlChange("show_others", currentValue, nextValue);
-
-      return nextValue;
-    });
-  }
-
-  function handleGlobalReset() {
-    if (!snapshot) {
-      return;
-    }
-
-    const defaultPairResolution = resolveDefaultComparisonPair(snapshot);
-    trackGlobalControlChange("reset", "custom_state", "editorial_defaults");
-    trackGlobalControlChange("comparison_mode", comparisonMode, DEFAULT_COMPARISON_MODE);
-    trackGlobalControlChange("show_others", showOthers, DEFAULT_SHOW_OTHERS);
-    setComparisonPair(defaultPairResolution.pair);
-    setComparisonMode(DEFAULT_COMPARISON_MODE);
-    setShowOthers(DEFAULT_SHOW_OTHERS);
-    setSortKey(DEFAULT_REGION_SORT);
-    setComparisonInvalidSelector(null);
-    setComparisonValidationMessage(null);
-    setComparisonAdjustmentMessage(
-      defaultPairResolution.initSource === "fallback"
-        ? "Ajustamos la comparación al mejor par disponible."
-        : null
-    );
-  }
-
   function handleQuickInsightDetailClick() {
     handleComparisonModeChange("projected", "quick_insight_cta");
     trackEvent("quick_insight_detail_cta_click", {
@@ -1019,10 +805,6 @@ export default function App() {
       section_target: "comparativa-central",
       target_mode: "comparison_pair"
     });
-  }
-
-  function handleMobileControlsToggle() {
-    setIsMobileControlsOverlayOpen((currentValue) => !currentValue);
   }
 
   function handleRegionToggle(regionId: string) {
@@ -1156,107 +938,6 @@ export default function App() {
     (snapshot?.projectedNational.totalProjectedValidVotes ?? 0) -
       ((snapshot?.national.totalVotosValidos ?? 0) + (snapshot?.foreign.totalVotosValidos ?? 0))
   );
-  const mobileCandidateASummary = comparisonPair
-    ? `A: ${formatTitleCase(comparisonOptionLabels.get(comparisonPair.candidateACode) ?? "Sin dato")}`
-    : "A: Sin dato";
-  const mobileCandidateBSummary = comparisonPair
-    ? `B: ${formatTitleCase(comparisonOptionLabels.get(comparisonPair.candidateBCode) ?? "Sin dato")}`
-    : "B: Sin dato";
-  const mobileComparisonSummary = comparisonMode === "projected" ? "Proyectado" : "Actual ONPE";
-  const mobileOthersSummary = showOthers ? "Otros On" : "Otros Off";
-  const comparisonNotice = comparisonValidationMessage ?? comparisonAdjustmentMessage;
-  const comparisonNoticeClassName = comparisonValidationMessage
-    ? "global-controls__notice global-controls__notice--error"
-    : "global-controls__notice";
-  const showMobileControlsSummary = isMobileViewport;
-  const showMobileControlsOverlay = isMobileViewport && isMobileControlsOverlayOpen;
-  const showInlineGlobalControlsRow = !isMobileViewport;
-  const globalControlsRow = (
-    <div className="global-controls__row">
-      <div className="control control--candidate-pair">
-        <div className="global-controls__pair">
-          <label className="control control--candidate">
-            <span>Candidato A</span>
-            <select
-              className="global-controls__select"
-              aria-label="Candidato A"
-              aria-invalid={comparisonInvalidSelector === "candidate_a"}
-              value={comparisonPair?.candidateACode ?? ""}
-              onChange={(event) => handleComparisonCandidateChange("candidate_a", event.target.value)}
-            >
-              {comparisonCandidateOptions.map((candidate) => (
-                <option key={`candidate-a-${candidate.code}`} value={candidate.code}>
-                  {formatTitleCase(candidate.label)}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="control control--candidate">
-            <span>Candidato B</span>
-            <select
-              className="global-controls__select"
-              aria-label="Candidato B"
-              aria-invalid={comparisonInvalidSelector === "candidate_b"}
-              value={comparisonPair?.candidateBCode ?? ""}
-              onChange={(event) => handleComparisonCandidateChange("candidate_b", event.target.value)}
-            >
-              {comparisonCandidateOptions.map((candidate) => (
-                <option key={`candidate-b-${candidate.code}`} value={candidate.code}>
-                  {formatTitleCase(candidate.label)}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        {comparisonNotice ? (
-          <small className={comparisonNoticeClassName} aria-live="polite">
-            {comparisonNotice}
-          </small>
-        ) : null}
-      </div>
-
-      <div className="control">
-        <span>Comparar</span>
-        <select
-          className="global-controls__select"
-          aria-label="Comparar"
-          value={comparisonMode}
-          onChange={(event) => handleComparisonModeChange(event.target.value as ComparisonMode)}
-        >
-          <option value="projected">Proyectado</option>
-          <option value="current">Actual ONPE</option>
-        </select>
-      </div>
-
-      <div className="control control--compact">
-        <span>Otros</span>
-        <button
-          className={`toggle-button ${showOthers ? "is-active" : ""}`}
-          type="button"
-          aria-pressed={showOthers}
-          onClick={handleShowOthersToggle}
-        >
-          {showOthers ? "On" : "Off"}
-        </button>
-      </div>
-
-      <div className="control control--compact">
-        <span>Reset</span>
-        <button className="toggle-button" type="button" onClick={handleGlobalReset}>
-          Reset
-        </button>
-      </div>
-
-      <div className="global-controls__meta">
-        <nav className="global-controls__quick-nav" aria-label="Navegación rápida">
-          <a href="#lectura-regional">Regiones</a>
-          <a href="#lectura-exterior">Exterior</a>
-        </nav>
-      </div>
-    </div>
-  );
-
   if (loading) {
     return (
       <main className="page-shell">
@@ -1373,42 +1054,27 @@ export default function App() {
         </div>
       </section>
 
-      <section
+      <GlobalControls
         ref={globalControlsRef}
-        className={`global-controls ${isMobileControlsSticky ? "is-mobile-sticky" : ""} ${showMobileControlsOverlay ? "is-overlay-open" : ""}`}
-        aria-label="Controles globales"
-      >
-        {showMobileControlsSummary ? (
-          <div className="global-controls__mobile-summary">
-            <div className="global-controls__mobile-summary-text">
-              <span>{mobileCandidateASummary}</span>
-              <span>{mobileCandidateBSummary}</span>
-              <span>{mobileComparisonSummary}</span>
-              <span>{mobileOthersSummary}</span>
-            </div>
-            <button
-              className="global-controls__mobile-toggle"
-              type="button"
-              aria-expanded={isMobileControlsOverlayOpen}
-              aria-label={isMobileControlsOverlayOpen ? "Ocultar filtros" : "Abrir filtros"}
-              onClick={handleMobileControlsToggle}
-            >
-              <span
-                className={`global-controls__mobile-toggle-icon ${isMobileControlsOverlayOpen ? "" : "is-collapsed"}`}
-                aria-hidden="true"
-              />
-            </button>
-          </div>
-        ) : null}
-
-        {showInlineGlobalControlsRow ? globalControlsRow : null}
-
-        {showMobileControlsOverlay ? (
-          <div className="global-controls__mobile-overlay" role="dialog" aria-label="Filtros globales">
-            {globalControlsRow}
-          </div>
-        ) : null}
-      </section>
+        isMobileControlsSticky={isMobileControlsSticky}
+        showMobileControlsSummary={showMobileControlsSummary}
+        showInlineGlobalControlsRow={showInlineGlobalControlsRow}
+        showMobileControlsOverlay={showMobileControlsOverlay}
+        isMobileControlsOverlayOpen={isMobileControlsOverlayOpen}
+        mobileSummary={mobileSummary}
+        onMobileControlsToggle={handleMobileControlsToggle}
+        comparisonCandidateOptions={comparisonCandidateOptions}
+        comparisonPair={comparisonPair}
+        comparisonInvalidSelector={comparisonInvalidSelector}
+        comparisonNotice={comparisonNotice}
+        comparisonNoticeClassName={comparisonNoticeClassName}
+        onComparisonCandidateChange={handleComparisonCandidateChange}
+        comparisonMode={comparisonMode}
+        onComparisonModeChange={(nextMode) => handleComparisonModeChange(nextMode)}
+        showOthers={showOthers}
+        onShowOthersToggle={handleShowOthersToggle}
+        onGlobalReset={handleGlobalReset}
+      />
 
       <section className="quick-insights" aria-labelledby="quick-insights-title">
         <div className="quick-insights__header">

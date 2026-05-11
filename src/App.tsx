@@ -1,10 +1,20 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   GlobalControls,
   useComparisonControls,
   useMobileGlobalControls
 } from "./components/global-controls";
+import {
+  ErrorScreen,
+  FeaturedComparisonSection,
+  ForeignResultsTable,
+  HeroSection,
+  LoadingScreen,
+  MethodologySection,
+  QuickInsightsSection,
+  RegionalResultsTable
+} from "./components/sections";
 import {
   initializeAnalytics,
   trackEvent,
@@ -14,23 +24,24 @@ import { useElectionData } from "./hooks/useElectionData";
 import { useFreshnessStatus } from "./hooks/useFreshnessStatus";
 import {
   buildNationalComparisonPairItems,
-  buildScopeComparisonItem,
   getScopeComparisonGap,
   type ComparisonItem,
   type ComparisonMode,
   type ComparisonPair
 } from "./lib/comparison";
-import { getCandidateColor } from "./lib/constants";
+import { getComparisonColumnLabel, getComparisonPairDetail } from "./lib/comparisonDisplay";
 import {
-  formatDateTime,
   formatNumber,
   formatPercent,
-  formatRelativeMinutes,
   formatSignedDecimal,
   formatSignedNumber,
-  formatTime,
   formatTitleCase
 } from "./lib/format";
+import {
+  sortForeignContinents,
+  sortRegions,
+  type SortKey
+} from "./lib/scopeSorting";
 import {
   shouldAutoRefresh,
   type AppFreshnessStatus
@@ -43,461 +54,9 @@ import type {
   ScopeResult
 } from "./lib/types";
 
-type SortKey =
-  | "electores"
-  | "actas"
-  | "participacion"
-  | "candidate"
-  | "projection"
-  | "gap_2v3";
-type LeafScopeResult = ProvinceResult | ForeignCountryResult;
 type ComparableScope = ScopeResult | ProvinceResult | ForeignCountryResult;
-type QuickInsightGapStatus = "stable" | "tight" | "very_tight" | "unknown";
 
-const DEFAULT_COMPARISON_MODE: ComparisonMode = "projected";
 const DEFAULT_REGION_SORT: SortKey = "gap_2v3";
-
-function getQuickInsightGapStatus(gapPp: number | null): QuickInsightGapStatus {
-  if (gapPp === null) {
-    return "unknown";
-  }
-
-  const absoluteGap = Math.abs(gapPp);
-
-  if (absoluteGap < 0.5) {
-    return "very_tight";
-  }
-
-  if (absoluteGap < 1.5) {
-    return "tight";
-  }
-
-  return "stable";
-}
-
-function getQuickInsightGapStatusCopy(status: QuickInsightGapStatus) {
-  switch (status) {
-    case "stable":
-      return { label: "Estable", className: "quick-insights__status-badge is-stable" };
-    case "tight":
-      return { label: "Ajustado", className: "quick-insights__status-badge is-tight" };
-    case "very_tight":
-      return { label: "Muy ajustado", className: "quick-insights__status-badge is-very-tight" };
-    default:
-      return { label: "Sin dato", className: "quick-insights__status-badge" };
-  }
-}
-
-function getQuickInsightDeltaBadgeClass(item: ComparisonItem | null) {
-  if (!item) {
-    return "quick-insight-kpi__delta-badge";
-  }
-
-  return `quick-insight-kpi__delta-badge ${item.deltaPercentage >= 0 ? "is-positive" : "is-negative"}`;
-}
-
-function FeaturedBar({
-  item
-}: {
-  item: ComparisonItem;
-}) {
-  const color = getCandidateColor(item.code);
-
-  return (
-    <article className="featured-bar">
-      <div className="featured-bar__header">
-        <div>
-          <strong>{formatTitleCase(item.label)}</strong>
-          <small>Actual total ONPE vs Proyectado total</small>
-        </div>
-        <strong className="featured-bar__delta-badge">
-          {formatSignedDecimal(item.deltaPercentage, 2)} pp
-        </strong>
-      </div>
-
-      <div className="featured-bar__tracks">
-        <div className="featured-bar__track-meta">
-          <span>Actual total ONPE</span>
-          <strong>{formatPercent(item.actualPercentage, 2)}</strong>
-        </div>
-        <div className="featured-bar__track featured-bar__track--overlay">
-          <div
-            className="featured-bar__fill featured-bar__fill--actual"
-            style={{
-              width: `${Math.max(item.actualPercentage, 0.5)}%`,
-              background: color
-            }}
-          />
-          <div
-            className="featured-bar__fill featured-bar__fill--projected"
-            style={{
-              width: `${Math.max(item.projectedPercentage, 0.5)}%`,
-              background: color
-            }}
-          />
-        </div>
-        <div className="featured-bar__track-meta">
-          <span>Proyectado</span>
-          <strong>{formatPercent(item.projectedPercentage, 2)}</strong>
-        </div>
-      </div>
-
-      <div className="featured-bar__stats">
-        <div className="featured-bar__stat">
-          <span>Actual total ONPE</span>
-          <strong>{formatPercent(item.actualPercentage, 2)}</strong>
-          <small>{formatNumber(item.actualVotes)} votos</small>
-        </div>
-        <div className="featured-bar__stat">
-          <span>Proyectado</span>
-          <strong>{formatPercent(item.projectedPercentage, 2)}</strong>
-          <small>{formatNumber(item.projectedVotes)} votos</small>
-        </div>
-        <div className="featured-bar__stat featured-bar__stat--delta">
-          <span>Delta</span>
-          <strong>{formatSignedDecimal(item.deltaPercentage, 2)} pp</strong>
-          <small>{formatSignedNumber(item.deltaVotes)} votos</small>
-        </div>
-      </div>
-    </article>
-  );
-}
-
-function CandidateStack({
-  scope,
-  showOthers
-}: {
-  scope: ScopeResult | ProvinceResult | ForeignCountryResult;
-  showOthers: boolean;
-}) {
-  return (
-    <div className="mini-stack">
-      {scope.featuredCandidates.map((candidate) => (
-        <div key={candidate.code} className="mini-stack__row">
-          <span
-            className="mini-stack__swatch"
-            style={{
-              background: getCandidateColor(candidate.code)
-            }}
-          />
-          <span>{formatTitleCase(candidate.candidateName)}</span>
-          <strong>{formatPercent(candidate.pctValid, 2)}</strong>
-        </div>
-      ))}
-
-      {showOthers ? (
-        <div className="mini-stack__row">
-          <span
-            className="mini-stack__swatch"
-            style={{
-              background: getCandidateColor("otros")
-            }}
-          />
-          <span>Otros</span>
-          <strong>{formatPercent(scope.otros.pctValid, 2)}</strong>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function getComparisonColumnLabel(comparisonMode: ComparisonMode) {
-  return `Brecha A vs B (${comparisonMode === "projected" ? "Proyectado" : "Actual ONPE"})`;
-}
-
-function getComparisonPairDetail(
-  pair: ComparisonPair,
-  labelByCode: Map<string, string>,
-  comparisonMode: ComparisonMode
-) {
-  const labelA = formatTitleCase(labelByCode.get(pair.candidateACode) ?? "Sin dato");
-  const labelB = formatTitleCase(labelByCode.get(pair.candidateBCode) ?? "Sin dato");
-
-  return `${labelA} vs ${labelB} · ${comparisonMode === "projected" ? "Proyectado" : "Actual ONPE"}`;
-}
-
-function sortRegions(
-  regions: RegionResult[],
-  sortKey: SortKey,
-  comparisonMode: ComparisonMode,
-  comparisonPair: ComparisonPair
-) {
-  const sorted = [...regions];
-  const getGapSortValue = (scope: RegionResult) =>
-    getScopeComparisonGap(scope, comparisonPair, comparisonMode).gapVotes;
-
-  sorted.sort((left, right) => {
-    switch (sortKey) {
-      case "electores":
-        return right.electores - left.electores;
-      case "actas":
-        return right.actasContabilizadasPct - left.actasContabilizadasPct;
-      case "participacion":
-        return right.participacionCiudadanaPct - left.participacionCiudadanaPct;
-      case "candidate": {
-        const leftCandidate = buildScopeComparisonItem(left, comparisonPair.candidateACode);
-        const rightCandidate = buildScopeComparisonItem(right, comparisonPair.candidateACode);
-        if (rightCandidate.actualPercentage === leftCandidate.actualPercentage) {
-          return right.electores - left.electores;
-        }
-
-        return rightCandidate.actualPercentage - leftCandidate.actualPercentage;
-      }
-      case "projection": {
-        const leftCandidate = buildScopeComparisonItem(left, comparisonPair.candidateACode);
-        const rightCandidate = buildScopeComparisonItem(right, comparisonPair.candidateACode);
-        if (rightCandidate.projectedVotes === leftCandidate.projectedVotes) {
-          return right.electores - left.electores;
-        }
-
-        return rightCandidate.projectedVotes - leftCandidate.projectedVotes;
-      }
-      case "gap_2v3":
-      default: {
-        const leftGap = getGapSortValue(left);
-        const rightGap = getGapSortValue(right);
-
-        if (leftGap === rightGap) {
-          return right.electores - left.electores;
-        }
-
-        return leftGap - rightGap;
-      }
-    }
-  });
-
-  return sorted;
-}
-
-function sortLeafScopes(
-  scopes: LeafScopeResult[],
-  sortKey: SortKey,
-  comparisonMode: ComparisonMode,
-  comparisonPair: ComparisonPair
-) {
-  const sorted = [...scopes];
-
-  sorted.sort((left, right) => {
-    switch (sortKey) {
-      case "candidate": {
-        const leftCandidate = buildScopeComparisonItem(left, comparisonPair.candidateACode);
-        const rightCandidate = buildScopeComparisonItem(right, comparisonPair.candidateACode);
-
-        if (rightCandidate.actualPercentage === leftCandidate.actualPercentage) {
-          return right.totalVotosValidos - left.totalVotosValidos;
-        }
-
-        return rightCandidate.actualPercentage - leftCandidate.actualPercentage;
-      }
-      case "projection": {
-        const leftCandidate = buildScopeComparisonItem(left, comparisonPair.candidateACode);
-        const rightCandidate = buildScopeComparisonItem(right, comparisonPair.candidateACode);
-
-        if (rightCandidate.projectedVotes === leftCandidate.projectedVotes) {
-          return right.totalVotosValidos - left.totalVotosValidos;
-        }
-
-        return rightCandidate.projectedVotes - leftCandidate.projectedVotes;
-      }
-      case "actas":
-        return right.actasContabilizadasPct - left.actasContabilizadasPct;
-      case "participacion":
-        return right.participacionCiudadanaPct - left.participacionCiudadanaPct;
-      case "gap_2v3":
-      default: {
-        const leftGap = getScopeComparisonGap(left, comparisonPair, comparisonMode).gapVotes;
-        const rightGap = getScopeComparisonGap(right, comparisonPair, comparisonMode).gapVotes;
-
-        if (leftGap === rightGap) {
-          return right.totalVotosValidos - left.totalVotosValidos;
-        }
-
-        return leftGap - rightGap;
-      }
-    }
-  });
-
-  return sorted;
-}
-
-function sortForeignContinents(
-  continents: ForeignContinentResult[],
-  sortKey: SortKey,
-  comparisonMode: ComparisonMode,
-  comparisonPair: ComparisonPair
-) {
-  const sorted = [...continents];
-
-  sorted.sort((left, right) => {
-    switch (sortKey) {
-      case "electores":
-        return right.electores - left.electores;
-      case "candidate": {
-        const leftCandidate = buildScopeComparisonItem(left, comparisonPair.candidateACode);
-        const rightCandidate = buildScopeComparisonItem(right, comparisonPair.candidateACode);
-
-        if (rightCandidate.actualPercentage === leftCandidate.actualPercentage) {
-          return right.totalVotosValidos - left.totalVotosValidos;
-        }
-
-        return rightCandidate.actualPercentage - leftCandidate.actualPercentage;
-      }
-      case "projection": {
-        const leftCandidate = buildScopeComparisonItem(left, comparisonPair.candidateACode);
-        const rightCandidate = buildScopeComparisonItem(right, comparisonPair.candidateACode);
-
-        if (rightCandidate.projectedVotes === leftCandidate.projectedVotes) {
-          return right.totalVotosValidos - left.totalVotosValidos;
-        }
-
-        return rightCandidate.projectedVotes - leftCandidate.projectedVotes;
-      }
-      case "actas":
-        return right.actasContabilizadasPct - left.actasContabilizadasPct;
-      case "participacion":
-        return right.participacionCiudadanaPct - left.participacionCiudadanaPct;
-      case "gap_2v3":
-      default: {
-        const leftGap = getScopeComparisonGap(left, comparisonPair, comparisonMode).gapVotes;
-        const rightGap = getScopeComparisonGap(right, comparisonPair, comparisonMode).gapVotes;
-
-        if (leftGap === rightGap) {
-          return right.totalVotosValidos - left.totalVotosValidos;
-        }
-
-        return leftGap - rightGap;
-      }
-    }
-  });
-
-  return sorted;
-}
-
-function LeafScopeDrilldown({
-  titleEyebrow,
-  scopeLabel,
-  itemSingularLabel,
-  itemPluralLabel,
-  recompositionLabel,
-  scopes,
-  showOthers,
-  comparisonMode,
-  comparisonPair,
-  comparisonOptionLabels,
-  sortKey
-}: {
-  titleEyebrow: string;
-  scopeLabel: string;
-  itemSingularLabel: string;
-  itemPluralLabel: string;
-  recompositionLabel: string;
-  scopes: LeafScopeResult[];
-  showOthers: boolean;
-  comparisonMode: ComparisonMode;
-  comparisonPair: ComparisonPair;
-  comparisonOptionLabels: Map<string, string>;
-  sortKey: SortKey;
-}) {
-  const comparisonLabel = getComparisonColumnLabel(comparisonMode);
-  const sortedScopes = sortLeafScopes(scopes, sortKey, comparisonMode, comparisonPair);
-
-  return (
-    <section className="province-panel">
-      <div className="province-panel__header">
-        <div>
-          <p className="eyebrow">{titleEyebrow}</p>
-          <h3>{scopeLabel}</h3>
-        </div>
-        <div className="province-panel__meta">
-          <strong>
-            {scopes.length} {itemPluralLabel}
-          </strong>
-          <small>{recompositionLabel}</small>
-        </div>
-      </div>
-
-      <div className="province-grid province-grid--header" aria-hidden="true">
-        <span>{itemSingularLabel}</span>
-        <span>Actas</span>
-        <span>Participación</span>
-        <span>{showOthers ? "Candidatos destacados + Otros" : "Candidatos destacados"}</span>
-        <span>{comparisonLabel}</span>
-      </div>
-
-      <div className="province-list">
-        {sortedScopes.map((scope) => {
-          const comparisonGap = getScopeComparisonGap(scope, comparisonPair, comparisonMode);
-
-          return (
-            <article key={scope.scopeId} className="province-grid province-card">
-              <div className="province-card__cell" data-label={itemSingularLabel}>
-                <strong>{scope.label}</strong>
-              </div>
-              <div className="province-card__cell" data-label="Actas">
-                <strong>{formatPercent(scope.actasContabilizadasPct, 2)}</strong>
-              </div>
-              <div className="province-card__cell" data-label="Participación">
-                <strong>{formatPercent(scope.participacionCiudadanaPct, 2)}</strong>
-              </div>
-              <div
-                className="province-card__cell"
-                data-label={showOthers ? "Candidatos destacados + Otros" : "Candidatos destacados"}
-              >
-                <CandidateStack scope={scope} showOthers={showOthers} />
-              </div>
-              <div className="province-card__cell" data-label={comparisonLabel}>
-                <div className="comparison-cell">
-                  <strong>{formatSignedNumber(comparisonGap.gapVotes)}</strong>
-                  <span>{`${formatSignedDecimal(comparisonGap.gapPercentage, 2)} pp`}</span>
-                  <small>
-                    {getComparisonPairDetail(comparisonPair, comparisonOptionLabels, comparisonMode)}
-                  </small>
-                </div>
-              </div>
-            </article>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-function QuickInsightsSkeleton() {
-  return (
-    <section className="quick-insights quick-insights--loading" aria-label="Cargando resumen rápido">
-      <div className="quick-insights__header">
-        <div className="quick-insights__header-main">
-          <p className="eyebrow">Resumen rápido</p>
-          <h2>Comparativa rápida de candidatos</h2>
-        </div>
-        <div className="quick-insights__chips quick-insights__chips--header">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <span key={index} className="quick-insight-chip is-skeleton" />
-          ))}
-        </div>
-      </div>
-      <div className="quick-insights__matrix">
-        <div className="quick-insights__matrix-head">
-          <span className="quick-insight-kpi__skeleton quick-insight-kpi__skeleton--label" />
-          {Array.from({ length: 3 }).map((_, index) => (
-            <span key={index} className="quick-insight-kpi__skeleton quick-insight-kpi__skeleton--label" />
-          ))}
-        </div>
-        {Array.from({ length: 2 }).map((_, groupIndex) => (
-          <div key={groupIndex} className="quick-insights__matrix-row">
-            <p className="quick-insights__row-label is-skeleton">Resumen</p>
-            {Array.from({ length: 3 }).map((__, index) => (
-              <article key={`${groupIndex}-${index}`} className="quick-insight-kpi is-skeleton">
-                <span className="quick-insight-kpi__skeleton quick-insight-kpi__skeleton--label" />
-                <span className="quick-insight-kpi__skeleton quick-insight-kpi__skeleton--value" />
-              </article>
-            ))}
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
 
 export default function App() {
   const [sortKey, setSortKey] = useState<SortKey>(DEFAULT_REGION_SORT);
@@ -918,20 +477,6 @@ export default function App() {
     candidateBItem
       ? `${formatSignedDecimal(candidateBItem.deltaPercentage, 2)} pp`
       : null;
-  const currentGapStatusCopy = getQuickInsightGapStatusCopy(
-    getQuickInsightGapStatus(
-      candidateAItem && candidateBItem
-        ? candidateAItem.actualPercentage - candidateBItem.actualPercentage
-        : null
-    )
-  );
-  const projectedGapStatusCopy = getQuickInsightGapStatusCopy(
-    getQuickInsightGapStatus(
-      candidateAItem && candidateBItem
-        ? candidateAItem.projectedPercentage - candidateBItem.projectedPercentage
-        : null
-    )
-  );
   const actasPeruValue = formatPercent(snapshot?.national.actasContabilizadasPct ?? 0, 2);
   const actasExteriorValue = formatPercent(snapshot?.foreign.actasContabilizadasPct ?? 0, 2);
   const deltaProyeccionValue = formatSignedNumber(
@@ -939,120 +484,28 @@ export default function App() {
       ((snapshot?.national.totalVotosValidos ?? 0) + (snapshot?.foreign.totalVotosValidos ?? 0))
   );
   if (loading) {
-    return (
-      <main className="page-shell">
-        <section className="hero hero--loading">
-          <p className="eyebrow">Cargando snapshot</p>
-          <h1>Preparando resultados y proyección nacional…</h1>
-        </section>
-        <QuickInsightsSkeleton />
-      </main>
-    );
+    return <LoadingScreen />;
   }
 
   if (error || !snapshot) {
-    return (
-      <main className="page-shell">
-        <section className="hero hero--error">
-          <p className="eyebrow">Snapshot no disponible</p>
-          <h1>No se pudo cargar la publicación ONPE normalizada.</h1>
-          <p>{error ?? "Inténtalo nuevamente en unos minutos."}</p>
-        </section>
-      </main>
-    );
+    return <ErrorScreen error={error} />;
   }
 
   return (
     <main className="page-shell">
-      <section className="hero">
-        <div className="hero__copy">
-          <p className="eyebrow">Resultados presidenciales 2026</p>
-          <h1>Conteo de votos y proyección nacional</h1>
-          <p className="hero__lede">
-            Consulta resultados ONPE, compara candidatos y explora regiones y votos extranjeros con datos
-            actualizados.
-          </p>
-          <div className="hero__actions">
-            <a
-              className="hero__cta hero__cta--primary"
-              href="#lectura-regional"
-              onClick={handleHeroPrimaryCtaClick}
-            >
-              Explorar regiones
-            </a>
-            <a
-              className="hero__cta hero__cta--secondary"
-              href="#metodologia"
-              onClick={handleHeroSecondaryCtaClick}
-            >
-              Ver metodología
-            </a>
-          </div>
-          <p className="hero__microcopy">
-            Actualizamos esta vista con nuevos cortes oficiales de ONPE.
-          </p>
-        </div>
-
-        <div className="hero__status">
-          <div>
-            <span>Última actualización de esta app</span>
-            <strong>
-              {appLastSuccessAt
-                ? `${formatRelativeMinutes(appLastSuccessAt, clockNow)} (${formatTime(appLastSuccessAt)})`
-                : "Sin actualización exitosa reciente"}
-            </strong>
-          </div>
-          <div>
-            <span>Próxima revisión automática</span>
-            <strong>
-              {nextAutoRefreshInMinutes === null
-                ? "Pendiente"
-                : nextAutoRefreshInMinutes === 0
-                  ? "En curso"
-                  : `en ${nextAutoRefreshInMinutes} min`}
-            </strong>
-          </div>
-          <div>
-            <span>Última publicación ONPE</span>
-            <strong>
-              {`${formatRelativeMinutes(snapshot.sourceLastUpdatedAt, clockNow)} (${formatTime(
-                snapshot.sourceLastUpdatedAt
-              )})`}
-            </strong>
-          </div>
-          <div id="estado-actualizacion">
-            <div className="status-card__top">
-              <div>
-                <span>Estado de actualización</span>
-                <strong
-                  className={
-                    appFreshnessStatus === "Desactualizado"
-                      ? "status-badge is-stale"
-                      : "status-badge"
-                  }
-                >
-                  {appFreshnessStatus}
-                </strong>
-              </div>
-              <button
-                className={`refresh-button ${refreshing ? "is-loading" : ""}`}
-                type="button"
-                onClick={handleRefreshClick}
-                disabled={refreshing}
-              >
-                {refreshing ? <span className="refresh-button__spinner" aria-hidden="true" /> : null}
-                {refreshing ? "Actualizando datos..." : "Actualizar ahora"}
-              </button>
-            </div>
-            <small className="status-card__note">
-              {statusNote}
-            </small>
-            <small className="status-card__meta">
-              Snapshot visible: {formatDateTime(snapshot.generatedAt)}
-            </small>
-          </div>
-        </div>
-      </section>
+      <HeroSection
+        appLastSuccessAt={appLastSuccessAt}
+        clockNow={clockNow}
+        nextAutoRefreshInMinutes={nextAutoRefreshInMinutes}
+        sourceLastUpdatedAt={snapshot.sourceLastUpdatedAt}
+        appFreshnessStatus={appFreshnessStatus}
+        refreshing={refreshing}
+        statusNote={statusNote}
+        snapshotGeneratedAt={snapshot.generatedAt}
+        onRefreshClick={handleRefreshClick}
+        onPrimaryCtaClick={handleHeroPrimaryCtaClick}
+        onSecondaryCtaClick={handleHeroSecondaryCtaClick}
+      />
 
       <GlobalControls
         ref={globalControlsRef}
@@ -1076,424 +529,82 @@ export default function App() {
         onGlobalReset={handleGlobalReset}
       />
 
-      <section className="quick-insights" aria-labelledby="quick-insights-title">
-        <div className="quick-insights__header">
-          <div className="quick-insights__header-main">
-            <p className="eyebrow">Resumen rápido</p>
-            <h2 id="quick-insights-title">Comparativa rápida de candidatos</h2>
-            <p>
-              Contraste inmediato de {quickInsightsTitle} en el total de la elección, con corte actual y proyección.
-            </p>
-          </div>
-          <div
-            className="quick-insights__chips quick-insights__chips--header"
-            aria-label="Contexto de la comparativa rápida"
-          >
-            <span className="quick-insight-chip">Actas Perú: {actasPeruValue}</span>
-            <span className="quick-insight-chip">Actas exterior: {actasExteriorValue}</span>
-            <span className="quick-insight-chip">Delta proyección: {deltaProyeccionValue} votos</span>
-          </div>
-        </div>
-        <div className="quick-insights__actions">
-          <a
-            className="quick-insights__cta"
-            href="#comparativa-central"
-            onClick={handleQuickInsightDetailClick}
-          >
-            Ver comparativa personalizada
-          </a>
-        </div>
-
-        <div className="quick-insights__matrix" aria-label="Comparativa rápida actual y proyectada de los candidatos seleccionados">
-          <div className="quick-insights__matrix-head" aria-hidden="true">
-            <span />
-            <p className="quick-insights__candidate-heading">
-              <span
-                className="quick-insights__candidate-swatch"
-                style={{ background: getCandidateColor(comparisonPair?.candidateACode ?? "otros") }}
-              />
-              {candidateALabel}
-            </p>
-            <p className="quick-insights__candidate-heading">
-              <span
-                className="quick-insights__candidate-swatch"
-                style={{ background: getCandidateColor(comparisonPair?.candidateBCode ?? "otros") }}
-              />
-              {candidateBLabel}
-            </p>
-            <p>Brecha A vs B</p>
-          </div>
-
-          <div className="quick-insights__matrix-row">
-            <p className="quick-insights__row-label">Actual ONPE</p>
-            <article className="quick-insight-kpi">
-              <p className="quick-insight-kpi__mobile-label quick-insight-kpi__mobile-label--candidate">
-                <span
-                  className="quick-insights__candidate-swatch"
-                  style={{ background: getCandidateColor(comparisonPair?.candidateACode ?? "otros") }}
-                />
-                {candidateALabel}
-              </p>
-              <strong>{currentCandidateAPercentageValue ?? "Insight no disponible"}</strong>
-              <small>{currentCandidateAVotesValue ?? "Sin dato"}</small>
-            </article>
-            <article className="quick-insight-kpi">
-              <p className="quick-insight-kpi__mobile-label quick-insight-kpi__mobile-label--candidate">
-                <span
-                  className="quick-insights__candidate-swatch"
-                  style={{ background: getCandidateColor(comparisonPair?.candidateBCode ?? "otros") }}
-                />
-                {candidateBLabel}
-              </p>
-              <strong>{currentCandidateBPercentageValue ?? "Insight no disponible"}</strong>
-              <small>{currentCandidateBVotesValue ?? "Sin dato"}</small>
-            </article>
-            <article className="quick-insight-kpi quick-insight-kpi--has-floating-badge">
-              <div className="quick-insight-kpi__heading quick-insight-kpi__heading--floating">
-                <p className="quick-insight-kpi__mobile-label">Brecha A vs B</p>
-                <span className={currentGapStatusCopy.className}>
-                  {currentGapStatusCopy.label}
-                </span>
-              </div>
-              <strong>{currentGapPpValue ?? "Insight no disponible"}</strong>
-              <small>{currentGapVotesValue ?? "Sin dato"}</small>
-            </article>
-          </div>
-
-          <div className="quick-insights__matrix-row">
-            <p className="quick-insights__row-label">Proyección total</p>
-            <article className="quick-insight-kpi quick-insight-kpi--has-floating-badge">
-              <div className="quick-insight-kpi__heading quick-insight-kpi__heading--floating">
-                <p className="quick-insight-kpi__mobile-label quick-insight-kpi__mobile-label--candidate">
-                  <span
-                    className="quick-insights__candidate-swatch"
-                    style={{ background: getCandidateColor(comparisonPair?.candidateACode ?? "otros") }}
-                  />
-                  {candidateALabel}
-                </p>
-                <span className={getQuickInsightDeltaBadgeClass(candidateAItem)}>
-                  {candidateADeltaPpValue ?? "Sin dato"}
-                </span>
-              </div>
-              <strong>{projectedCandidateAPercentageValue ?? "Insight no disponible"}</strong>
-              <small>{projectedCandidateAVotesValue ?? "Sin dato"}</small>
-            </article>
-            <article className="quick-insight-kpi quick-insight-kpi--has-floating-badge">
-              <div className="quick-insight-kpi__heading quick-insight-kpi__heading--floating">
-                <p className="quick-insight-kpi__mobile-label quick-insight-kpi__mobile-label--candidate">
-                  <span
-                    className="quick-insights__candidate-swatch"
-                    style={{ background: getCandidateColor(comparisonPair?.candidateBCode ?? "otros") }}
-                  />
-                  {candidateBLabel}
-                </p>
-                <span className={getQuickInsightDeltaBadgeClass(candidateBItem)}>
-                  {candidateBDeltaPpValue ?? "Sin dato"}
-                </span>
-              </div>
-              <strong>{projectedCandidateBPercentageValue ?? "Insight no disponible"}</strong>
-              <small>{projectedCandidateBVotesValue ?? "Sin dato"}</small>
-            </article>
-            <article className="quick-insight-kpi quick-insight-kpi--has-floating-badge">
-              <div className="quick-insight-kpi__heading quick-insight-kpi__heading--floating">
-                <p className="quick-insight-kpi__mobile-label">Brecha A vs B</p>
-                <span className={projectedGapStatusCopy.className}>
-                  {projectedGapStatusCopy.label}
-                </span>
-              </div>
-              <strong>{projectedGapPpValue ?? "Insight no disponible"}</strong>
-              <small>{projectedGapVotesValue ?? "Sin dato"}</small>
-            </article>
-          </div>
-        </div>
-      </section>
+      <QuickInsightsSection
+        quickInsightsTitle={quickInsightsTitle}
+        actasPeruValue={actasPeruValue}
+        actasExteriorValue={actasExteriorValue}
+        deltaProyeccionValue={deltaProyeccionValue}
+        candidateA={{
+          label: candidateALabel,
+          code: comparisonPair?.candidateACode ?? "otros",
+          deltaValue: candidateADeltaPpValue,
+          item: candidateAItem
+        }}
+        candidateB={{
+          label: candidateBLabel,
+          code: comparisonPair?.candidateBCode ?? "otros",
+          deltaValue: candidateBDeltaPpValue,
+          item: candidateBItem
+        }}
+        current={{
+          candidateAPercentageValue: currentCandidateAPercentageValue,
+          candidateAVotesValue: currentCandidateAVotesValue,
+          candidateBPercentageValue: currentCandidateBPercentageValue,
+          candidateBVotesValue: currentCandidateBVotesValue,
+          gapPpValue: currentGapPpValue,
+          gapVotesValue: currentGapVotesValue,
+          gapRaw:
+            candidateAItem && candidateBItem
+              ? candidateAItem.actualPercentage - candidateBItem.actualPercentage
+              : null
+        }}
+        projected={{
+          candidateAPercentageValue: projectedCandidateAPercentageValue,
+          candidateAVotesValue: projectedCandidateAVotesValue,
+          candidateBPercentageValue: projectedCandidateBPercentageValue,
+          candidateBVotesValue: projectedCandidateBVotesValue,
+          gapPpValue: projectedGapPpValue,
+          gapVotesValue: projectedGapVotesValue,
+          gapRaw:
+            candidateAItem && candidateBItem
+              ? candidateAItem.projectedPercentage - candidateBItem.projectedPercentage
+              : null
+        }}
+        onDetailClick={handleQuickInsightDetailClick}
+      />
 
       <section className="content-grid">
-        <section className="panel" id="comparativa-central">
-          <div className="panel__header">
-            <div>
-              <p className="eyebrow">Comparativa central</p>
-              <h2>Candidatos seleccionados, total elección</h2>
-            </div>
-          </div>
-
-          <div className="featured-bars">
-            {featuredComparisonBars.map((item) => (
-              <FeaturedBar
-                key={item.code}
-                item={item}
-              />
-            ))}
-          </div>
-        </section>
-
-        <section className="panel" id="lectura-regional">
-          <div className="panel__header panel__header--stack">
-            <div>
-              <p className="eyebrow">Lectura regional</p>
-              <h2>Tabla de 25 regiones</h2>
-            </div>
-
-            <div className="controls">
-              <label className="control">
-                <span>Ordenar por</span>
-                <select
-                  value={sortKey}
-                  onChange={(event) => handleSortChange(event.target.value as SortKey)}
-                >
-                  <option value="gap_2v3">Brecha A vs B</option>
-                  <option value="electores">Electores</option>
-                  <option value="actas">Actas</option>
-                  <option value="participacion">Participación</option>
-                  <option value="projection">Proyección A</option>
-                  <option value="candidate">Candidato A</option>
-                </select>
-              </label>
-              <label className="control">
-                <span>Buscar región</span>
-                <input
-                  type="search"
-                  value={regionSearchQuery}
-                  onInput={(event) =>
-                    setRegionSearchQuery((event.target as HTMLInputElement).value)
-                  }
-                  placeholder="Ej. Arequipa"
-                />
-              </label>
-            </div>
-          </div>
-
-          <div className="table-shell">
-            <table className="results-table">
-              <thead>
-                <tr>
-                  <th>Región</th>
-                  <th>Electores</th>
-                  <th>% padrón</th>
-                  <th>Actas</th>
-                  <th>Participación</th>
-                  <th>{showOthers ? "Candidatos destacados + Otros" : "Candidatos destacados"}</th>
-                  <th>{selectedComparisonLabel}</th>
-                  <th>Provincias</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedRegions.map((region) => {
-                  const isExpanded = expandedRegionId === region.scopeId;
-                  const comparisonDisplay = getScopeComparisonDisplay(region);
-
-                  return (
-                    <Fragment key={region.scopeId}>
-                      <tr className={isExpanded ? "results-table__row is-expanded" : "results-table__row"}>
-                        <td data-label="Región">
-                          <strong>{region.label}</strong>
-                        </td>
-                        <td data-label="Electores">{formatNumber(region.electores)}</td>
-                        <td data-label="% padrón">{formatPercent(region.padronShare, 2)}</td>
-                        <td data-label="Actas">{formatPercent(region.actasContabilizadasPct, 2)}</td>
-                        <td data-label="Participación">
-                          {formatPercent(region.participacionCiudadanaPct, 2)}
-                        </td>
-                        <td
-                          data-label={
-                            showOthers ? "Candidatos destacados + Otros" : "Candidatos destacados"
-                          }
-                        >
-                          <CandidateStack scope={region} showOthers={showOthers} />
-                        </td>
-                        <td data-label={selectedComparisonLabel}>
-                          <div className="comparison-cell">
-                            <strong>{comparisonDisplay.votes}</strong>
-                            <span>{comparisonDisplay.percentage}</span>
-                            <small>
-                              {comparisonDisplay.detail}
-                            </small>
-                          </div>
-                        </td>
-                        <td data-label="Provincias">
-                          <button
-                            className={`region-row-toggle ${isExpanded ? "is-active" : ""}`}
-                            type="button"
-                            aria-expanded={isExpanded}
-                            aria-controls={`region-provinces-${region.scopeId}`}
-                            aria-label={isExpanded ? `Ocultar provincias de ${region.label}` : `Ver provincias de ${region.label}`}
-                            onClick={() => handleRegionToggle(region.scopeId)}
-                          >
-                            <span className="region-row-toggle__icon" aria-hidden="true">
-                              {isExpanded ? "−" : "+"}
-                            </span>
-                            <span className="region-row-toggle__label">
-                              {isExpanded ? "Ocultar provincias" : "Ver provincias"}
-                            </span>
-                          </button>
-                        </td>
-                      </tr>
-
-                      {isExpanded ? (
-                        <tr className="region-detail-row" id={`region-provinces-${region.scopeId}`}>
-                          <td colSpan={8}>
-                            <LeafScopeDrilldown
-                              titleEyebrow="Detalle provincial"
-                              scopeLabel={region.label}
-                              itemSingularLabel="Provincia"
-                              itemPluralLabel="provincias"
-                              recompositionLabel="La proyección regional se recompone desde sus provincias"
-                              scopes={region.provinces}
-                              showOthers={showOthers}
-                              comparisonMode={comparisonMode}
-                              comparisonPair={comparisonPair!}
-                              comparisonOptionLabels={comparisonOptionLabels}
-                              sortKey={sortKey}
-                            />
-                          </td>
-                        </tr>
-                      ) : null}
-                    </Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section className="panel" id="lectura-exterior">
-          <div className="panel__header panel__header--stack">
-            <div>
-              <p className="eyebrow">Lectura exterior</p>
-              <h2>Tabla de continentes y países</h2>
-            </div>
-
-            <div className="controls">
-              <label className="control">
-                <span>Buscar continente o país</span>
-                <input
-                  type="search"
-                  value={foreignSearchQuery}
-                  onInput={(event) =>
-                    setForeignSearchQuery((event.target as HTMLInputElement).value)
-                  }
-                  placeholder="Ej. Europa o España"
-                />
-              </label>
-            </div>
-          </div>
-
-          <div className="table-shell">
-            <table className="results-table">
-              <thead>
-                <tr>
-                  <th>Continente</th>
-                  <th>Actas</th>
-                  <th>Participación</th>
-                  <th>{showOthers ? "Candidatos destacados + Otros" : "Candidatos destacados"}</th>
-                  <th>{selectedComparisonLabel}</th>
-                  <th>Países</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedContinents.map((continent) => {
-                  const isExpanded = expandedContinentId === continent.scopeId;
-                  const comparisonDisplay = getScopeComparisonDisplay(continent);
-
-                  return (
-                    <Fragment key={continent.scopeId}>
-                      <tr className={isExpanded ? "results-table__row is-expanded" : "results-table__row"}>
-                        <td data-label="Continente">
-                          <strong>{continent.label}</strong>
-                        </td>
-                        <td data-label="Actas">
-                          {formatPercent(continent.actasContabilizadasPct, 2)}
-                        </td>
-                        <td data-label="Participación">
-                          {formatPercent(continent.participacionCiudadanaPct, 2)}
-                        </td>
-                        <td
-                          data-label={
-                            showOthers ? "Candidatos destacados + Otros" : "Candidatos destacados"
-                          }
-                        >
-                          <CandidateStack scope={continent} showOthers={showOthers} />
-                        </td>
-                        <td data-label={selectedComparisonLabel}>
-                          <div className="comparison-cell">
-                            <strong>{comparisonDisplay.votes}</strong>
-                            <span>{comparisonDisplay.percentage}</span>
-                            <small>
-                              {comparisonDisplay.detail}
-                            </small>
-                          </div>
-                        </td>
-                        <td data-label="Países">
-                          <button
-                            className={`region-row-toggle ${isExpanded ? "is-active" : ""}`}
-                            type="button"
-                            aria-expanded={isExpanded}
-                            aria-controls={`continent-countries-${continent.scopeId}`}
-                            aria-label={isExpanded ? `Ocultar países de ${continent.label}` : `Ver países de ${continent.label}`}
-                            onClick={() => handleContinentToggle(continent.scopeId)}
-                          >
-                            <span className="region-row-toggle__icon" aria-hidden="true">
-                              {isExpanded ? "−" : "+"}
-                            </span>
-                            <span className="region-row-toggle__label">
-                              {isExpanded ? "Ocultar países" : "Ver países"}
-                            </span>
-                          </button>
-                        </td>
-                      </tr>
-
-                      {isExpanded ? (
-                        <tr
-                          className="region-detail-row"
-                          id={`continent-countries-${continent.scopeId}`}
-                        >
-                          <td colSpan={6}>
-                            <LeafScopeDrilldown
-                              titleEyebrow="Detalle por país"
-                              scopeLabel={continent.label}
-                              itemSingularLabel="País"
-                              itemPluralLabel="países"
-                              recompositionLabel="La proyección continental se recompone desde sus países"
-                              scopes={continent.countries ?? []}
-                              showOthers={showOthers}
-                              comparisonMode={comparisonMode}
-                              comparisonPair={comparisonPair!}
-                              comparisonOptionLabels={comparisonOptionLabels}
-                              sortKey={sortKey}
-                            />
-                          </td>
-                        </tr>
-                      ) : null}
-                    </Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section className="panel methodology-panel" id="metodologia">
-          <div className="panel__header">
-            <div>
-              <p className="eyebrow">Metodología</p>
-              <h2>Cómo se calcula la proyección</h2>
-            </div>
-          </div>
-          <p>
-            Mostramos resultados oficiales de ONPE y una estimación nacional de votos de acuerdo al avance del escrutinio. La aplicación emplea un modelo de <strong>extrapolación lineal por actas contabilizadas</strong> (no actas procesadas):
-          </p>
-          <ul>
-            <li>
-              <strong>Extrapolación local:</strong> Al estimar las actas faltantes en una circunscripción, se asume matemáticamente que mantendrán la composición de los votos ya escrutados (<code>Votos Proyectados = Votos Actuales / % avance de actas contabilizadas</code>). En caso se tengan 0 actas contabilizadas, la proyección es cero.
-            </li>
-            <li>
-              <strong>Agregación bottom-up:</strong> Para mitigar inconsistencias de velocidades agregadas, la proyección total se calcula de forma descentralizada sumando de forma independiente la proyección de cada bloque geográfico mayor (las 25 regiones y el total consolidado de los peruanos en el extranjero).
-            </li>
-            <li>
-              <strong>Consideraciones clave:</strong> El modelo puede presentar variaciones con el avance del tiempo y no debe considerarse como dato definitivo. Esto ocurre porque el método no corrige por sesgo geográfico intrínseco: los votos remanentes (por ejemplo, actas rurales que tardan más en ser trasladadas a centros de cómputo) pueden exhibir un patrón estadísticamemte diferente frente al voto predominantemente urbano contado al inicio de la jornada.
-            </li>
-          </ul>
-        </section>
+        <FeaturedComparisonSection items={featuredComparisonBars} />
+        <RegionalResultsTable
+          regions={sortedRegions}
+          sortKey={sortKey}
+          regionSearchQuery={regionSearchQuery}
+          showOthers={showOthers}
+          selectedComparisonLabel={selectedComparisonLabel}
+          comparisonMode={comparisonMode}
+          comparisonPair={comparisonPair}
+          comparisonOptionLabels={comparisonOptionLabels}
+          expandedRegionId={expandedRegionId}
+          onSortChange={handleSortChange}
+          onSearchChange={setRegionSearchQuery}
+          onRegionToggle={handleRegionToggle}
+          getScopeComparisonDisplay={getScopeComparisonDisplay}
+        />
+        <ForeignResultsTable
+          continents={sortedContinents}
+          foreignSearchQuery={foreignSearchQuery}
+          showOthers={showOthers}
+          selectedComparisonLabel={selectedComparisonLabel}
+          comparisonMode={comparisonMode}
+          comparisonPair={comparisonPair}
+          comparisonOptionLabels={comparisonOptionLabels}
+          expandedContinentId={expandedContinentId}
+          onSearchChange={setForeignSearchQuery}
+          onContinentToggle={handleContinentToggle}
+          getScopeComparisonDisplay={getScopeComparisonDisplay}
+          sortKey={sortKey}
+        />
+        <MethodologySection />
       </section>
     </main>
   );

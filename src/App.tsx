@@ -47,14 +47,10 @@ import {
   type AppFreshnessStatus
 } from "./lib/trust";
 import type {
+  ComparableScope,
   ForeignContinentResult,
-  ForeignCountryResult,
-  ProvinceResult,
-  RegionResult,
-  ScopeResult
+  RegionResult
 } from "./lib/types";
-
-type ComparableScope = ScopeResult | ProvinceResult | ForeignCountryResult;
 
 const DEFAULT_REGION_SORT: SortKey = "gap_2v3";
 
@@ -214,10 +210,9 @@ export default function App() {
 
     return orderedContinents.flatMap((continent) => {
       const continentMatches = continent.label.toLowerCase().includes(normalizedSearch);
-      const matchingCountries =
-        continent.countries?.filter((country) =>
-          country.label.toLowerCase().includes(normalizedSearch)
-        ) ?? [];
+      const matchingCountries = continent.countries.filter((country) =>
+        country.label.toLowerCase().includes(normalizedSearch)
+      );
 
       if (!continentMatches && matchingCountries.length === 0) {
         return [];

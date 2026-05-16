@@ -4,21 +4,32 @@ import {
 } from "./constants";
 import type {
   AggregateResult,
+  AnyScopeResult,
+  BaseScopeResult,
   CandidateCatalogItem,
   CandidateResult,
   ElectionSnapshot,
+  ForeignContinentResult,
+  ForeignResult,
   ForeignCountryResult,
+  NationalResult,
   OnpeParticipant,
   OnpeTotals,
   ProvinceResult,
   ProjectedNationalSummary,
+  RegionResult,
   ScopeMeta,
-  ScopeResult
 } from "./types";
 
-type ScopeInput = {
+type ParentScopeKind =
+  | NationalResult["kind"]
+  | RegionResult["kind"]
+  | ForeignResult["kind"]
+  | ForeignContinentResult["kind"];
+
+type ScopeInput<TKind extends ParentScopeKind = ParentScopeKind> = {
   scopeId: string;
-  kind: ScopeResult["kind"];
+  kind: TKind;
   label: string;
   electores: number;
   padronShare: number;
@@ -48,15 +59,26 @@ type ForeignCountryInput = {
   featuredCodes: string[];
 };
 
-type ScopeResultBase = Omit<
-  ScopeResult,
-  "scopeId" | "kind" | "label" | "electores" | "padronShare"
->;
+type BuiltScopeCore = Omit<BaseScopeResult, "scopeId" | "kind" | "label">;
 
-type ChildScopeResultBase = Omit<
-  ProvinceResult,
-  "scopeId" | "parentScopeId" | "kind" | "label"
->;
+type BuiltElectorateScopeBase<TKind extends ParentScopeKind> = BuiltScopeCore & {
+  scopeId: string;
+  kind: TKind;
+  label: string;
+  electores: number;
+  padronShare: number;
+};
+
+type NationalInput = Omit<ScopeInput<"national">, "kind">;
+type RegionInput = Omit<ScopeInput<"department">, "kind"> & {
+  provinces: ProvinceResult[];
+};
+type ForeignContinentInput = Omit<ScopeInput<"foreign_continent">, "kind"> & {
+  countries: ForeignCountryResult[];
+};
+type ForeignInput = Omit<ScopeInput<"foreign_total">, "kind"> & {
+  continents: ForeignContinentResult[];
+};
 
 function round(value: number, digits = 3) {
   return Number(value.toFixed(digits));
@@ -152,7 +174,7 @@ function buildScopeResultBase(input: {
   participants: OnpeParticipant[];
   candidateCatalog: Map<string, CandidateCatalogItem>;
   featuredCodes?: string[];
-}): ScopeResultBase | ChildScopeResultBase {
+}): BuiltScopeCore {
   const candidates = input.participants
     .map((participant) => normalizeCandidate(participant, input.candidateCatalog))
     .sort(compareCandidatesByVotes);
@@ -201,7 +223,9 @@ function buildScopeResultBase(input: {
   };
 }
 
-export function buildScopeResult(input: ScopeInput): ScopeResult {
+function buildElectorateScopeBase<TKind extends ParentScopeKind>(
+  input: ScopeInput<TKind>
+): BuiltElectorateScopeBase<TKind> {
   return {
     scopeId: input.scopeId,
     kind: input.kind,
@@ -209,6 +233,51 @@ export function buildScopeResult(input: ScopeInput): ScopeResult {
     electores: input.electores,
     padronShare: input.padronShare,
     ...buildScopeResultBase(input)
+  };
+}
+
+export function buildNationalResult(input: NationalInput): NationalResult {
+  return {
+    ...buildElectorateScopeBase({
+      ...input,
+      kind: "national"
+    }),
+    kind: "national"
+  };
+}
+
+export function buildRegionResult(input: RegionInput): RegionResult {
+  return {
+    ...buildElectorateScopeBase({
+      ...input,
+      kind: "department"
+    }),
+    kind: "department",
+    provinces: input.provinces
+  };
+}
+
+export function buildForeignContinentResult(
+  input: ForeignContinentInput
+): ForeignContinentResult {
+  return {
+    ...buildElectorateScopeBase({
+      ...input,
+      kind: "foreign_continent"
+    }),
+    kind: "foreign_continent",
+    countries: input.countries
+  };
+}
+
+export function buildForeignResult(input: ForeignInput): ForeignResult {
+  return {
+    ...buildElectorateScopeBase({
+      ...input,
+      kind: "foreign_total"
+    }),
+    kind: "foreign_total",
+    continents: input.continents
   };
 }
 
@@ -235,11 +304,7 @@ export function buildForeignCountryResult(
 }
 
 export function sumProjectedVotes(
-  scopes: Array<
-    | Pick<ScopeResult, "projectedVotes">
-    | Pick<ProvinceResult, "projectedVotes">
-    | Pick<ForeignCountryResult, "projectedVotes">
-  >,
+  scopes: Array<Pick<AnyScopeResult, "projectedVotes">>,
   featuredCodes: string[]
 ) {
   return featuredCodes.reduce<Record<string, number>>(
@@ -254,8 +319,8 @@ export function sumProjectedVotes(
 }
 
 export function buildProjectedNationalSummary(
-  regions: ScopeResult[],
-  foreign: ScopeResult,
+  regions: RegionResult[],
+  foreign: ForeignResult,
   totalElectores: number,
   featuredCodes: string[]
 ): ProjectedNationalSummary {

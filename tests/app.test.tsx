@@ -9,8 +9,8 @@ import type {
   ElectionSnapshot,
   ForeignResult,
   HealthStatus,
+  NationalResult,
   RegionResult,
-  ScopeResult
 } from "../src/lib/types";
 
 const {
@@ -38,7 +38,7 @@ vi.mock("../src/lib/analytics", () => ({
   trackInitialPageView: trackInitialPageViewMock
 }));
 
-function createScope(overrides: Partial<ScopeResult> = {}): ScopeResult {
+function createScope(overrides: Partial<NationalResult> = {}): NationalResult {
   return {
     scopeId: "1",
     kind: "national",
@@ -102,7 +102,6 @@ function createRegion(overrides: Partial<RegionResult>): RegionResult {
   return {
     ...createScope({
       scopeId: "040000",
-      kind: "department",
       label: "AREQUIPA",
       electores: 1200,
       padronShare: 4.4,
@@ -218,7 +217,6 @@ function createForeign(overrides: Partial<ForeignResult> = {}): ForeignResult {
   return {
     ...createScope({
       scopeId: "2",
-      kind: "foreign_total",
       label: "EXTRANJERO",
       electores: 200,
       padronShare: 5,
@@ -235,7 +233,6 @@ function createForeign(overrides: Partial<ForeignResult> = {}): ForeignResult {
       {
         ...createScope({
           scopeId: "920000",
-          kind: "foreign_continent",
           label: "EUROPA",
           electores: 0,
           padronShare: 0,
@@ -301,7 +298,6 @@ function createForeign(overrides: Partial<ForeignResult> = {}): ForeignResult {
       {
         ...createScope({
           scopeId: "930000",
-          kind: "foreign_continent",
           label: "AMÉRICA",
           electores: 0,
           padronShare: 0,
@@ -465,14 +461,16 @@ function createSnapshot(overrides: Partial<ElectionSnapshot> = {}): ElectionSnap
 function createLegacySnapshot(): ElectionSnapshot {
   return {
     ...createSnapshot(),
-    foreign: createScope({
-      scopeId: "2",
-      kind: "foreign_total",
-      label: "EXTRANJERO",
-      electores: 200,
-      padronShare: 5,
-      totalVotosValidos: 150
-    }) as unknown as ElectionSnapshot["foreign"]
+    foreign: {
+      ...createScope({
+        scopeId: "2",
+        label: "EXTRANJERO",
+        electores: 200,
+        padronShare: 5,
+        totalVotosValidos: 150
+      }),
+      kind: "foreign_total"
+    } as unknown as ElectionSnapshot["foreign"]
   };
 }
 

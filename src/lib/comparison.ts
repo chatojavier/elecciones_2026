@@ -1,9 +1,7 @@
 import type {
   CandidateResult,
+  ComparableScope,
   ElectionSnapshot,
-  ForeignCountryResult,
-  ProvinceResult,
-  ScopeResult
 } from "./types";
 
 export type ComparisonMode = "current" | "projected";
@@ -62,8 +60,6 @@ export interface SecondRoundInsight {
   deltaProyeccionVotes: number;
   statusLevel: SecondRoundStatusLevel;
 }
-
-type ComparableScope = ScopeResult | ProvinceResult | ForeignCountryResult;
 
 function round(value: number, digits = 3) {
   return Number(value.toFixed(digits));

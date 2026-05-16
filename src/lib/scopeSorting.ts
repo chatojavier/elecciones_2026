@@ -6,8 +6,7 @@ import {
 } from "./comparison";
 import type {
   ForeignContinentResult,
-  ForeignCountryResult,
-  ProvinceResult,
+  LeafScopeResult,
   RegionResult
 } from "./types";
 
@@ -19,7 +18,7 @@ export type SortKey =
   | "projection"
   | "gap_2v3";
 
-export type LeafScopeResult = ProvinceResult | ForeignCountryResult;
+export type { LeafScopeResult } from "./types";
 
 type SortableScope = RegionResult | ForeignContinentResult | LeafScopeResult;
 

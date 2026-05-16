@@ -1,10 +1,13 @@
 import scopesMetaJson from "../../../data/scopes.meta.json";
 import {
   buildCandidateCatalog,
+  buildForeignContinentResult,
+  buildForeignResult,
   buildForeignCountryResult,
+  buildNationalResult,
   buildProjectedNationalSummary,
   buildProvinceResult,
-  buildScopeResult,
+  buildRegionResult,
   getScopeMetaTotals,
   sumProjectedVotes
 } from "../../../src/lib/domain";
@@ -13,9 +16,9 @@ import type {
   ForeignContinentResult,
   ForeignResult,
   HealthStatus,
+  NationalResult,
   RegionResult,
-  ScopeMeta,
-  ScopeResult
+  ScopeMeta
 } from "../../../src/lib/types";
 import { ONPE_ELECTION_ID } from "./config";
 import { getElapsedMinutes } from "./freshness";
@@ -121,9 +124,8 @@ export async function buildElectionSnapshot() {
   const candidateCatalog = buildCandidateCatalog(nationalParticipants);
   const { peruElectores, totalElectores } = getScopeMetaTotals(scopesMeta);
   const foreignMeta = getForeignMeta();
-  const national = buildScopeResult({
+  const national: NationalResult = buildNationalResult({
     scopeId: "1",
-    kind: "national",
     label: "PERÚ",
     electores: peruElectores,
     padronShare: Number(((peruElectores / totalElectores) * 100).toFixed(4)),
@@ -166,21 +168,17 @@ export async function buildElectionSnapshot() {
           )
         ).sort((left, right) => left.label.localeCompare(right.label, "es"));
 
-        const region: RegionResult = {
-          ...buildScopeResult({
-            scopeId: meta.scopeId,
-            kind: "department",
-            label: meta.label,
-            electores: meta.electores,
-            padronShare: meta.padronShare,
-            totals,
-            participants,
-            candidateCatalog,
-            featuredCodes: featuredCandidateCodes
-          }),
-          kind: "department",
+        const region: RegionResult = buildRegionResult({
+          scopeId: meta.scopeId,
+          label: meta.label,
+          electores: meta.electores,
+          padronShare: meta.padronShare,
+          totals,
+          participants,
+          candidateCatalog,
+          featuredCodes: featuredCandidateCodes,
           provinces
-        };
+        });
 
         region.projectedVotes = sumProjectedVotes(provinces, featuredCandidateCodes);
 
@@ -224,21 +222,17 @@ export async function buildElectionSnapshot() {
           );
         }
 
-        const foreignContinent: ForeignContinentResult = {
-          ...buildScopeResult({
-            scopeId: continent.ubigeo,
-            kind: "foreign_continent",
-            label: continent.nombre,
-            electores: 0,
-            padronShare: 0,
-            totals,
-            participants,
-            candidateCatalog,
-            featuredCodes: featuredCandidateCodes
-          }),
-          kind: "foreign_continent",
+        const foreignContinent: ForeignContinentResult = buildForeignContinentResult({
+          scopeId: continent.ubigeo,
+          label: continent.nombre,
+          electores: 0,
+          padronShare: 0,
+          totals,
+          participants,
+          candidateCatalog,
+          featuredCodes: featuredCandidateCodes,
           countries
-        };
+        });
 
         foreignContinent.projectedVotes = sumProjectedVotes(countries, featuredCandidateCodes);
 
@@ -254,21 +248,17 @@ export async function buildElectionSnapshot() {
 
   national.projectedVotes = sumProjectedVotes(regions, featuredCandidateCodes);
 
-  const foreign: ForeignResult = {
-    ...buildScopeResult({
-      scopeId: foreignMeta.scopeId,
-      kind: "foreign_total",
-      label: foreignMeta.label,
-      electores: foreignMeta.electores,
-      padronShare: foreignMeta.padronShare,
-      totals: foreignTotals,
-      participants: foreignParticipants,
-      candidateCatalog,
-      featuredCodes: featuredCandidateCodes
-    }),
-    kind: "foreign_total",
+  const foreign: ForeignResult = buildForeignResult({
+    scopeId: foreignMeta.scopeId,
+    label: foreignMeta.label,
+    electores: foreignMeta.electores,
+    padronShare: foreignMeta.padronShare,
+    totals: foreignTotals,
+    participants: foreignParticipants,
+    candidateCatalog,
+    featuredCodes: featuredCandidateCodes,
     continents
-  };
+  });
 
   foreign.projectedVotes = sumProjectedVotes(continents, featuredCandidateCodes);
 

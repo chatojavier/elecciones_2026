@@ -1,12 +1,12 @@
 import { getCandidateColor } from "../../lib/constants";
 import { formatPercent, formatTitleCase } from "../../lib/format";
-import type { ForeignCountryResult, ProvinceResult, ScopeResult } from "../../lib/types";
+import type { ComparableScope } from "../../lib/types";
 
 export function CandidateStack({
   scope,
   showOthers
 }: {
-  scope: ScopeResult | ProvinceResult | ForeignCountryResult;
+  scope: ComparableScope;
   showOthers: boolean;
 }) {
   return (

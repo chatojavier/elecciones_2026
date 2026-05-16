@@ -1,18 +1,20 @@
 import type {
+  BaseScopeResult,
   ElectionSnapshot,
   ForeignContinentResult,
   ForeignCountryResult,
+  ForeignResult,
   HealthStatus,
   HealthStatusKind,
+  NationalResult,
+  RegionResult,
   OnpeDepartment,
   OnpeEnvelope,
   OnpeParticipant,
   OnpeProvince,
   OnpeTotals,
   ProvinceResult,
-  ProjectedNationalSummary,
-  RegionResult,
-  ScopeResult
+  ProjectedNationalSummary
 } from "./types";
 
 export class ContractValidationError extends Error {
@@ -128,6 +130,17 @@ function parseProjectedVotes(value: unknown, path: string) {
   return parsed;
 }
 
+type ElectorateScopeKind =
+  | NationalResult["kind"]
+  | RegionResult["kind"]
+  | ForeignResult["kind"]
+  | ForeignContinentResult["kind"];
+
+type ParsedElectorateScopeBase<TKind extends ElectorateScopeKind> = BaseScopeResult<TKind> & {
+  electores: number;
+  padronShare: number;
+};
+
 function parseResultCore(value: unknown, path: string) {
   const contract = "ElectionSnapshot";
   const record = asRecord(value, contract, path);
@@ -173,32 +186,33 @@ function parseResultCore(value: unknown, path: string) {
   };
 }
 
-function parseScopeResult(value: unknown, path: string, expectedKind?: ScopeResult["kind"]): ScopeResult {
+function parseElectorateScopeBase<TKind extends ElectorateScopeKind>(
+  value: unknown,
+  path: string,
+  expectedKind: TKind
+): ParsedElectorateScopeBase<TKind> {
   const contract = "ElectionSnapshot";
   const record = asRecord(value, contract, path);
   const kind = requireString(record.kind, contract, `${path}.kind`);
-  if (expectedKind && kind !== expectedKind) {
+  if (kind !== expectedKind) {
     fail(contract, `${path}.kind`, `se esperaba '${expectedKind}'`);
-  }
-  if (!["national", "department", "foreign_total", "foreign_continent"].includes(kind)) {
-    fail(
-      contract,
-      `${path}.kind`,
-      "se esperaba uno de national|department|foreign_total|foreign_continent"
-    );
   }
   return {
     ...parseResultCore(record, path),
     electores: requireFiniteNumber(record.electores, contract, `${path}.electores`),
     padronShare: requireFiniteNumber(record.padronShare, contract, `${path}.padronShare`),
-    kind: kind as ScopeResult["kind"]
+    kind: expectedKind
   };
+}
+
+function parseNationalResult(value: unknown, path: string): NationalResult {
+  return parseElectorateScopeBase(value, path, "national");
 }
 
 function parseRegionResult(value: unknown, path: string): RegionResult {
   const contract = "ElectionSnapshot";
   const record = asRecord(value, contract, path);
-  const region = parseScopeResult(record, path, "department");
+  const region = parseElectorateScopeBase(record, path, "department");
   const provinces = requireArray(record.provinces, contract, `${path}.provinces`).map(
     (item, index) => parseProvince(item, `${path}.provinces[${index}]`)
   );
@@ -240,7 +254,7 @@ function parseForeignCountry(value: unknown, path: string): ForeignCountryResult
 function parseForeignContinent(value: unknown, path: string): ForeignContinentResult {
   const contract = "ElectionSnapshot";
   const record = asRecord(value, contract, path);
-  const continent = parseScopeResult(record, path, "foreign_continent");
+  const continent = parseElectorateScopeBase(record, path, "foreign_continent");
   const rawCountries = record.countries;
   const countries = rawCountries === undefined ? [] : requireArray(rawCountries, contract, `${path}.countries`);
   return {
@@ -250,10 +264,10 @@ function parseForeignContinent(value: unknown, path: string): ForeignContinentRe
   };
 }
 
-function parseForeignResult(value: unknown, path: string): ElectionSnapshot["foreign"] {
+function parseForeignResult(value: unknown, path: string): ForeignResult {
   const contract = "ElectionSnapshot";
   const record = asRecord(value, contract, path);
-  const foreign = parseScopeResult(record, path, "foreign_total");
+  const foreign = parseElectorateScopeBase(record, path, "foreign_total");
   const rawContinents = record.continents;
   const continents = rawContinents === undefined ? [] : requireArray(rawContinents, contract, `${path}.continents`);
   return {
@@ -292,7 +306,7 @@ export function parseElectionSnapshot(value: unknown): ElectionSnapshot {
       contract,
       "sourceLastUpdatedAt"
     ),
-    national: parseScopeResult(record.national, "national", "national"),
+    national: parseNationalResult(record.national, "national"),
     foreign: parseForeignResult(record.foreign, "foreign"),
     regions: requireArray(record.regions, contract, "regions").map((item, index) =>
       parseRegionResult(item, `regions[${index}]`)

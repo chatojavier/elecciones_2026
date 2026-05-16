@@ -85,81 +85,66 @@ export interface AggregateResult {
   pctEmitted: number;
 }
 
-export interface ScopeResult {
+export interface BaseScopeResult<TKind extends ScopeKind = ScopeKind> {
   scopeId: string;
-  kind: "national" | "department" | "foreign_total" | "foreign_continent";
+  kind: TKind;
   label: string;
+  actasContabilizadasPct: number;
+  contabilizadas: number;
+  totalActas: number;
+  participacionCiudadanaPct: number;
+  enviadasJee: number;
+  pendientesJee: number;
+  totalVotosEmitidos: number;
+  totalVotosValidos: number;
+  sourceUpdatedAt: string;
+  candidates: CandidateResult[];
+  featuredCandidates: CandidateResult[];
+  otros: AggregateResult;
+  projectedVotes: Record<string, number>;
+}
+
+interface ElectorateScopeBase<
+  TKind extends "national" | "department" | "foreign_total" | "foreign_continent"
+> extends BaseScopeResult<TKind> {
   electores: number;
   padronShare: number;
-  actasContabilizadasPct: number;
-  contabilizadas: number;
-  totalActas: number;
-  participacionCiudadanaPct: number;
-  enviadasJee: number;
-  pendientesJee: number;
-  totalVotosEmitidos: number;
-  totalVotosValidos: number;
-  sourceUpdatedAt: string;
-  candidates: CandidateResult[];
-  featuredCandidates: CandidateResult[];
-  otros: AggregateResult;
-  projectedVotes: Record<string, number>;
 }
 
-export interface ProvinceResult {
-  scopeId: string;
+export interface ProvinceResult extends BaseScopeResult<"province"> {
   parentScopeId: string;
-  kind: "province";
-  label: string;
-  actasContabilizadasPct: number;
-  contabilizadas: number;
-  totalActas: number;
-  participacionCiudadanaPct: number;
-  enviadasJee: number;
-  pendientesJee: number;
-  totalVotosEmitidos: number;
-  totalVotosValidos: number;
-  sourceUpdatedAt: string;
-  candidates: CandidateResult[];
-  featuredCandidates: CandidateResult[];
-  otros: AggregateResult;
-  projectedVotes: Record<string, number>;
 }
 
-export interface ForeignCountryResult {
-  scopeId: string;
+export interface ForeignCountryResult extends BaseScopeResult<"foreign_country"> {
   parentScopeId: string;
-  kind: "foreign_country";
-  label: string;
-  actasContabilizadasPct: number;
-  contabilizadas: number;
-  totalActas: number;
-  participacionCiudadanaPct: number;
-  enviadasJee: number;
-  pendientesJee: number;
-  totalVotosEmitidos: number;
-  totalVotosValidos: number;
-  sourceUpdatedAt: string;
-  candidates: CandidateResult[];
-  featuredCandidates: CandidateResult[];
-  otros: AggregateResult;
-  projectedVotes: Record<string, number>;
 }
 
-export interface RegionResult extends ScopeResult {
-  kind: "department";
+export interface NationalResult extends ElectorateScopeBase<"national"> {
+}
+
+export interface RegionResult extends ElectorateScopeBase<"department"> {
   provinces: ProvinceResult[];
 }
 
-export interface ForeignContinentResult extends ScopeResult {
-  kind: "foreign_continent";
+export interface ForeignContinentResult extends ElectorateScopeBase<"foreign_continent"> {
   countries: ForeignCountryResult[];
 }
 
-export interface ForeignResult extends ScopeResult {
-  kind: "foreign_total";
+export interface ForeignResult extends ElectorateScopeBase<"foreign_total"> {
   continents: ForeignContinentResult[];
 }
+
+export type ScopeResult =
+  | NationalResult
+  | RegionResult
+  | ForeignResult
+  | ForeignContinentResult;
+
+export type LeafScopeResult = ProvinceResult | ForeignCountryResult;
+
+export type AnyScopeResult = ScopeResult | LeafScopeResult;
+
+export type ComparableScope = AnyScopeResult;
 
 export interface ProjectedNationalSummary {
   totalElectores: number;
@@ -172,7 +157,7 @@ export interface ElectionSnapshot {
   generatedAt: string;
   sourceElectionId: number;
   sourceLastUpdatedAt: string;
-  national: ScopeResult;
+  national: NationalResult;
   foreign: ForeignResult;
   regions: RegionResult[];
   projectedNational: ProjectedNationalSummary;

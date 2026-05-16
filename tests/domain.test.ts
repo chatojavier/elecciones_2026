@@ -1,12 +1,19 @@
 import {
   buildCandidateCatalog,
+  buildForeignResult,
+  buildNationalResult,
   buildProvinceResult,
   buildProjectedNationalSummary,
-  buildScopeResult,
+  buildRegionResult,
   computeIsStale,
   sumProjectedVotes
 } from "../src/lib/domain";
-import type { OnpeParticipant, OnpeTotals } from "../src/lib/types";
+import type {
+  ForeignResult,
+  OnpeParticipant,
+  OnpeTotals,
+  RegionResult
+} from "../src/lib/types";
 
 const totals: OnpeTotals = {
   actasContabilizadas: 80.5,
@@ -94,12 +101,11 @@ const participants: OnpeParticipant[] = [
   }
 ];
 
-describe("buildScopeResult", () => {
+describe("buildNationalResult", () => {
   it("selecciona el top 5 por votos y agrupa el resto en Otros", () => {
     const catalog = buildCandidateCatalog(participants);
-    const scope = buildScopeResult({
+    const scope = buildNationalResult({
       scopeId: "040000",
-      kind: "department",
       label: "AREQUIPA",
       electores: 1000000,
       padronShare: 4.4,
@@ -125,26 +131,26 @@ describe("buildScopeResult", () => {
 describe("buildProjectedNationalSummary", () => {
   it("suma regiones y extranjero para la proyección nacional", () => {
     const catalog = buildCandidateCatalog(participants);
-    const region = buildScopeResult({
+    const region: RegionResult = buildRegionResult({
       scopeId: "040000",
-      kind: "department",
       label: "AREQUIPA",
       electores: 1000000,
       padronShare: 4.4,
       totals,
       participants,
-      candidateCatalog: catalog
+      candidateCatalog: catalog,
+      provinces: []
     });
 
-    const foreign = buildScopeResult({
+    const foreign: ForeignResult = buildForeignResult({
       scopeId: "2",
-      kind: "foreign_total",
       label: "PERUANOS EN EL EXTRANJERO",
       electores: 500000,
       padronShare: 2,
       totals,
       participants,
-      candidateCatalog: catalog
+      candidateCatalog: catalog,
+      continents: []
     });
 
     const projected = buildProjectedNationalSummary(

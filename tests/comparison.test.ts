@@ -9,9 +9,9 @@ import {
   reconcileComparisonPair,
   resolveDefaultComparisonPair
 } from "../src/lib/comparison";
-import type { ElectionSnapshot, RegionResult, ScopeResult } from "../src/lib/types";
+import type { ElectionSnapshot, NationalResult, RegionResult } from "../src/lib/types";
 
-const scope: ScopeResult = {
+const scope: NationalResult = {
   scopeId: "1",
   kind: "national",
   label: "PERÚ",
@@ -791,7 +791,7 @@ describe("comparison pair helpers", () => {
 
 describe("A/B comparison calculations", () => {
   it("calcula la brecha proyectada y actual entre A y B para un scope", () => {
-    const scopeWithThreeCandidates: ScopeResult = {
+    const scopeWithThreeCandidates: NationalResult = {
       ...scope,
       candidates: [
         {

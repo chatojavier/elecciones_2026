@@ -117,7 +117,7 @@ export function ForeignResultsTable({
                           itemSingularLabel="País"
                           itemPluralLabel="países"
                           recompositionLabel="La proyección continental se recompone desde sus países"
-                          scopes={continent.countries ?? []}
+                          scopes={continent.countries}
                           showOthers={showOthers}
                           comparisonMode={comparisonMode}
                           comparisonPair={comparisonPair}

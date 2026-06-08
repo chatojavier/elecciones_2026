@@ -1,6 +1,12 @@
 import { randomUUID } from "node:crypto";
 
-import { SYNC_LOCK_TTL_MS } from "./config";
+import {
+  HEALTH_KEY,
+  SNAPSHOT_KEY,
+  SYNC_LOCK_KEY,
+  SYNC_LOCK_TTL_MS,
+  type RoundStorageConfig
+} from "./config";
 import { getSyncLockState, type SyncInvocationKind } from "./syncGuard";
 import {
   deleteSyncLock,
@@ -22,23 +28,17 @@ function sleep(ms: number) {
   });
 }
 
-async function readVisibleLock(lock: SyncLock) {
-  for (const delay of [0, ...LOCK_VISIBILITY_RETRY_DELAYS_MS]) {
-    if (delay > 0) {
-      await sleep(delay);
-    }
-
-    const lockState = getSyncLockState(await readSyncLock());
-    if (lockState.state === "active" && lockState.lock) {
-      return lockState.lock;
-    }
-  }
-
-  return lock;
-}
-
-export async function acquireSyncLock(kind: SyncInvocationKind, now = Date.now()) {
-  const currentLockState = getSyncLockState(await readSyncLock(), now);
+export async function acquireSyncLock(
+  kind: SyncInvocationKind,
+  storageConfig: RoundStorageConfig = {
+    round: "first",
+    snapshotKey: SNAPSHOT_KEY,
+    healthKey: HEALTH_KEY,
+    syncLockKey: SYNC_LOCK_KEY
+  },
+  now = Date.now()
+) {
+  const currentLockState = getSyncLockState(await readSyncLock(storageConfig), now);
 
   if (currentLockState.state === "active" && currentLockState.lock) {
     return {
@@ -48,7 +48,7 @@ export async function acquireSyncLock(kind: SyncInvocationKind, now = Date.now()
   }
 
   if (currentLockState.state === "expired" || currentLockState.state === "invalid") {
-    await deleteSyncLock();
+    await deleteSyncLock(storageConfig);
   }
 
   const lock: SyncLock = {
@@ -58,9 +58,9 @@ export async function acquireSyncLock(kind: SyncInvocationKind, now = Date.now()
     expiresAt: new Date(now + SYNC_LOCK_TTL_MS).toISOString()
   };
 
-  await writeSyncLock(lock);
+  await writeSyncLock(lock, storageConfig);
 
-  const visibleLock = await readVisibleLock(lock);
+  const visibleLock = await readVisibleLockWithConfig(lock, storageConfig);
   if (visibleLock.id !== lock.id) {
     return {
       state: "active",
@@ -74,8 +74,32 @@ export async function acquireSyncLock(kind: SyncInvocationKind, now = Date.now()
   } satisfies SyncLockAcquireResult;
 }
 
-export async function releaseSyncLock(lock: SyncLock, now = Date.now()) {
+async function readVisibleLockWithConfig(lock: SyncLock, storageConfig: RoundStorageConfig) {
+  for (const delay of [0, ...LOCK_VISIBILITY_RETRY_DELAYS_MS]) {
+    if (delay > 0) {
+      await sleep(delay);
+    }
+
+    const lockState = getSyncLockState(await readSyncLock(storageConfig));
+    if (lockState.state === "active" && lockState.lock) {
+      return lockState.lock;
+    }
+  }
+
+  return lock;
+}
+
+export async function releaseSyncLock(
+  lock: SyncLock,
+  storageConfig: RoundStorageConfig = {
+    round: "first",
+    snapshotKey: SNAPSHOT_KEY,
+    healthKey: HEALTH_KEY,
+    syncLockKey: SYNC_LOCK_KEY
+  },
+  now = Date.now()
+) {
   if (now < new Date(lock.expiresAt).getTime()) {
-    await deleteSyncLock();
+    await deleteSyncLock(storageConfig);
   }
 }

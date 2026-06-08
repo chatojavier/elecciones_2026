@@ -13,7 +13,8 @@ import {
   LoadingScreen,
   MethodologySection,
   QuickInsightsSection,
-  RegionalResultsTable
+  RegionalResultsTable,
+  SecondRoundSummarySection
 } from "./components/sections";
 import {
   initializeAnalytics,
@@ -25,9 +26,7 @@ import { useFreshnessStatus } from "./hooks/useFreshnessStatus";
 import {
   buildNationalComparisonPairItems,
   getScopeComparisonGap,
-  type ComparisonItem,
-  type ComparisonMode,
-  type ComparisonPair
+  type ComparisonMode
 } from "./lib/comparison";
 import { getComparisonColumnLabel, getComparisonPairDetail } from "./lib/comparisonDisplay";
 import {
@@ -48,23 +47,30 @@ import {
 } from "./lib/trust";
 import type {
   ComparableScope,
-  ForeignContinentResult,
-  RegionResult
+  ElectionRound
 } from "./lib/types";
 
 const DEFAULT_REGION_SORT: SortKey = "gap_2v3";
 
-export default function App() {
+function RoundView({
+  round,
+  active,
+  clockNow
+}: {
+  round: ElectionRound;
+  active: boolean;
+  clockNow: number;
+}) {
+  const [hasStarted, setHasStarted] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>(DEFAULT_REGION_SORT);
   const [regionSearchQuery, setRegionSearchQuery] = useState("");
   const [foreignSearchQuery, setForeignSearchQuery] = useState("");
   const [expandedRegionId, setExpandedRegionId] = useState<string | null>(null);
   const [expandedContinentId, setExpandedContinentId] = useState<string | null>(null);
-  const [clockNow, setClockNow] = useState(() => Date.now());
   const {
     data: { snapshot, health, error, loading, refreshing, refreshFeedback },
     actions: { loadInitial, refreshManual, maybeRefreshAuto }
-  } = useElectionData({ clockNow });
+  } = useElectionData({ clockNow, round });
   const {
     appLastSuccessAt,
     appFreshnessStatus,
@@ -111,19 +117,13 @@ export default function App() {
   } = useMobileGlobalControls(globalControlsRef);
 
   useEffect(() => {
-    initializeAnalytics();
-    trackInitialPageView();
+    if (!active || hasStarted) {
+      return;
+    }
 
+    setHasStarted(true);
     void loadInitial();
-  }, [loadInitial]);
-
-  useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      setClockNow(Date.now());
-    }, 15000);
-
-    return () => window.clearInterval(intervalId);
-  }, []);
+  }, [active, hasStarted, loadInitial]);
 
   useEffect(() => {
     if (!snapshot) {
@@ -157,7 +157,7 @@ export default function App() {
   }, [foreignContinents, snapshot]);
 
   useEffect(() => {
-    if (!snapshot || loading || refreshing || !shouldAutoRefresh(appLastSuccessAt, clockNow)) {
+    if (!active || !snapshot || loading || refreshing || !shouldAutoRefresh(appLastSuccessAt, clockNow)) {
       return;
     }
 
@@ -168,7 +168,7 @@ export default function App() {
       refreshKey,
       now: clockNow
     });
-  }, [appLastSuccessAt, clockNow, loading, maybeRefreshAuto, refreshing, snapshot]);
+  }, [active, appLastSuccessAt, clockNow, loading, maybeRefreshAuto, refreshing, snapshot]);
 
   const sortedRegions = useMemo(() => {
     if (!snapshot || !comparisonPair) {
@@ -183,13 +183,7 @@ export default function App() {
     }
 
     return orderedRegions.filter((region) => region.label.toLowerCase().includes(normalizedSearch));
-  }, [
-    comparisonMode,
-    comparisonPair,
-    snapshot,
-    sortKey,
-    regionSearchQuery
-  ]);
+  }, [comparisonMode, comparisonPair, regionSearchQuery, snapshot, sortKey]);
 
   const sortedContinents = useMemo(() => {
     if (!snapshot || !comparisonPair) {
@@ -225,14 +219,7 @@ export default function App() {
         }
       ];
     });
-  }, [
-    comparisonMode,
-    comparisonPair,
-    foreignContinents,
-    foreignSearchQuery,
-    sortKey,
-    snapshot
-  ]);
+  }, [comparisonMode, comparisonPair, foreignContinents, foreignSearchQuery, snapshot, sortKey]);
 
   const featuredComparisonBars = useMemo(() => {
     if (!snapshot || !comparisonPair) {
@@ -241,6 +228,7 @@ export default function App() {
 
     return buildNationalComparisonPairItems(snapshot, comparisonPair);
   }, [comparisonPair, snapshot]);
+
   const comparisonItemsByCode = useMemo(
     () => new Map(featuredComparisonBars.map((item) => [item.code, item])),
     [featuredComparisonBars]
@@ -277,11 +265,12 @@ export default function App() {
       candidateAItem && candidateBItem
         ? candidateAItem.projectedVotes - candidateBItem.projectedVotes
         : undefined,
-    snapshot_generated_at: snapshot?.generatedAt ?? undefined
+    snapshot_generated_at: snapshot?.generatedAt ?? undefined,
+    round
   };
 
   useEffect(() => {
-    if (!snapshot || !comparisonPair) {
+    if (!active || !snapshot || !comparisonPair || round !== "first") {
       return;
     }
 
@@ -293,17 +282,17 @@ export default function App() {
 
     trackEvent("quick_insights_impression", quickInsightsTrackingBase);
     quickInsightsImpressionRef.current = impressionKey;
-  }, [comparisonPair, quickInsightsTrackingBase, snapshot]);
+  }, [active, comparisonPair, quickInsightsTrackingBase, round, snapshot]);
 
   useEffect(() => {
-    if (!snapshot || !health) {
+    if (!active || !snapshot || !health) {
       return;
     }
 
-    const impressionKey = `${snapshot.generatedAt}:${appFreshnessStatus}:${sourceHasNewCut}`;
+    const impressionKey = `${snapshot.generatedAt}:${appFreshnessStatus}:${sourceHasNewCut}:${round}`;
 
     if (freshnessStatusShownRef.current !== impressionKey) {
-      trackEvent("app_freshness_status_shown", appFreshnessPayload);
+      trackEvent("app_freshness_status_shown", { ...appFreshnessPayload, round });
       freshnessStatusShownRef.current = impressionKey;
     }
 
@@ -313,33 +302,35 @@ export default function App() {
     ) {
       trackEvent("app_freshness_status_changed", {
         ...appFreshnessPayload,
-        previous_status: previousFreshnessStatusRef.current
+        previous_status: previousFreshnessStatusRef.current,
+        round
       });
     }
 
     previousFreshnessStatusRef.current = appFreshnessStatus;
-  }, [appFreshnessPayload, appFreshnessStatus, health, snapshot, sourceHasNewCut]);
+  }, [active, appFreshnessPayload, appFreshnessStatus, health, round, snapshot, sourceHasNewCut]);
 
   useEffect(() => {
-    if (!snapshot || sourceHasNewCut) {
+    if (!active || !snapshot || sourceHasNewCut) {
       return;
     }
 
-    const contextKey = `${snapshot.generatedAt}:${sourceHasNewCut}`;
+    const contextKey = `${snapshot.generatedAt}:${sourceHasNewCut}:${round}`;
 
     if (sourceWithoutNewCutRef.current === contextKey) {
       return;
     }
 
-    trackEvent("source_without_new_cut_shown", appFreshnessPayload);
+    trackEvent("source_without_new_cut_shown", { ...appFreshnessPayload, round });
     sourceWithoutNewCutRef.current = contextKey;
-  }, [appFreshnessPayload, snapshot, sourceHasNewCut]);
+  }, [active, appFreshnessPayload, round, snapshot, sourceHasNewCut]);
 
   function handleRefreshClick() {
-    trackEvent("refresh_manual_click", appFreshnessPayload);
+    trackEvent("refresh_manual_click", { ...appFreshnessPayload, round });
     trackEvent("refresh_snapshot", {
       source: "hero_status",
-      ...appFreshnessPayload
+      ...appFreshnessPayload,
+      round
     });
 
     void refreshManual();
@@ -348,7 +339,8 @@ export default function App() {
   function handleSortChange(nextSortKey: SortKey) {
     setSortKey(nextSortKey);
     trackEvent("change_region_sort", {
-      sort_key: nextSortKey
+      sort_key: nextSortKey,
+      round
     });
   }
 
@@ -357,7 +349,8 @@ export default function App() {
     trackEvent("quick_insight_detail_cta_click", {
       source: "quick_insights",
       section_target: "comparativa-central",
-      target_mode: "comparison_pair"
+      target_mode: "comparison_pair",
+      round
     });
   }
 
@@ -367,7 +360,8 @@ export default function App() {
 
       trackEvent("toggle_region_province_drilldown", {
         region_id: regionId,
-        expanded: nextRegionId === regionId
+        expanded: nextRegionId === regionId,
+        round
       });
 
       return nextRegionId;
@@ -380,7 +374,8 @@ export default function App() {
 
       trackEvent("toggle_foreign_country_drilldown", {
         continent_id: continentId,
-        expanded: nextContinentId === continentId
+        expanded: nextContinentId === continentId,
+        round
       });
 
       return nextContinentId;
@@ -421,73 +416,36 @@ export default function App() {
     };
   }
 
-  const quickInsightsTitle = comparisonPair
-    ? `${candidateALabel} vs ${candidateBLabel}`
-    : "Comparación no disponible";
-  const currentCandidateAPercentageValue = candidateAItem
-    ? formatPercent(candidateAItem.actualPercentage, 2)
-    : null;
-  const currentCandidateAVotesValue = candidateAItem
-    ? `${formatNumber(candidateAItem.actualVotes)} votos`
-    : null;
-  const currentCandidateBPercentageValue = candidateBItem
-    ? formatPercent(candidateBItem.actualPercentage, 2)
-    : null;
-  const currentCandidateBVotesValue = candidateBItem
-    ? `${formatNumber(candidateBItem.actualVotes)} votos`
-    : null;
-  const currentGapPpValue =
-    candidateAItem && candidateBItem
-      ? `${formatSignedDecimal(candidateAItem.actualPercentage - candidateBItem.actualPercentage, 2)} pp`
-      : null;
-  const currentGapVotesValue =
-    candidateAItem && candidateBItem
-      ? `${formatSignedNumber(candidateAItem.actualVotes - candidateBItem.actualVotes)} votos`
-      : null;
-  const projectedCandidateAPercentageValue = candidateAItem
-    ? formatPercent(candidateAItem.projectedPercentage, 2)
-    : null;
-  const projectedCandidateAVotesValue = candidateAItem
-    ? `${formatNumber(candidateAItem.projectedVotes)} votos`
-    : null;
-  const projectedCandidateBPercentageValue = candidateBItem
-    ? formatPercent(candidateBItem.projectedPercentage, 2)
-    : null;
-  const projectedCandidateBVotesValue = candidateBItem
-    ? `${formatNumber(candidateBItem.projectedVotes)} votos`
-    : null;
-  const projectedGapPpValue =
-    candidateAItem && candidateBItem
-      ? `${formatSignedDecimal(candidateAItem.projectedPercentage - candidateBItem.projectedPercentage, 2)} pp`
-      : null;
-  const projectedGapVotesValue =
-    candidateAItem && candidateBItem
-      ? `${formatSignedNumber(candidateAItem.projectedVotes - candidateBItem.projectedVotes)} votos`
-      : null;
-  const candidateADeltaPpValue =
-    candidateAItem
-      ? `${formatSignedDecimal(candidateAItem.deltaPercentage, 2)} pp`
-      : null;
-  const candidateBDeltaPpValue =
-    candidateBItem
-      ? `${formatSignedDecimal(candidateBItem.deltaPercentage, 2)} pp`
-      : null;
-  const actasPeruValue = formatPercent(snapshot?.national.actasContabilizadasPct ?? 0, 2);
-  const actasExteriorValue = formatPercent(snapshot?.foreign.actasContabilizadasPct ?? 0, 2);
-  const deltaProyeccionValue = formatSignedNumber(
-    (snapshot?.projectedNational.totalProjectedValidVotes ?? 0) -
-      ((snapshot?.national.totalVotosValidos ?? 0) + (snapshot?.foreign.totalVotosValidos ?? 0))
-  );
+  if (!hasStarted) {
+    return null;
+  }
+
   if (loading) {
-    return <LoadingScreen />;
+    return active ? <LoadingScreen /> : null;
   }
 
   if (error || !snapshot) {
-    return <ErrorScreen error={error} />;
+    return active ? <ErrorScreen error={error} /> : null;
   }
 
+  const heroCopy =
+    round === "second"
+      ? {
+        eyebrow: "Resultados presidenciales 2026 · Segunda vuelta",
+        title: "Conteo oficial ONPE entre los dos finalistas",
+        lede: "Sigue el resultado actual del balotaje, compara a los finalistas y revisa el avance por región y exterior.",
+        primaryCtaLabel: "Explorar regiones",
+        secondaryCtaLabel: "Ver metodología",
+        microcopy: "Esta vista usa el host independiente de ONPE para segunda vuelta."
+      }
+      : undefined;
+
+  const quickInsightsTitle = comparisonPair
+    ? `${candidateALabel} vs ${candidateBLabel}`
+    : "Comparación no disponible";
+
   return (
-    <main className="page-shell">
+    <div hidden={!active}>
       <HeroSection
         appLastSuccessAt={appLastSuccessAt}
         clockNow={clockNow}
@@ -500,6 +458,7 @@ export default function App() {
         onRefreshClick={handleRefreshClick}
         onPrimaryCtaClick={handleHeroPrimaryCtaClick}
         onSecondaryCtaClick={handleHeroSecondaryCtaClick}
+        {...heroCopy}
       />
 
       <GlobalControls
@@ -524,49 +483,74 @@ export default function App() {
         onGlobalReset={handleGlobalReset}
       />
 
-      <QuickInsightsSection
-        quickInsightsTitle={quickInsightsTitle}
-        actasPeruValue={actasPeruValue}
-        actasExteriorValue={actasExteriorValue}
-        deltaProyeccionValue={deltaProyeccionValue}
-        candidateA={{
-          label: candidateALabel,
-          code: comparisonPair?.candidateACode ?? "otros",
-          deltaValue: candidateADeltaPpValue,
-          item: candidateAItem
-        }}
-        candidateB={{
-          label: candidateBLabel,
-          code: comparisonPair?.candidateBCode ?? "otros",
-          deltaValue: candidateBDeltaPpValue,
-          item: candidateBItem
-        }}
-        current={{
-          candidateAPercentageValue: currentCandidateAPercentageValue,
-          candidateAVotesValue: currentCandidateAVotesValue,
-          candidateBPercentageValue: currentCandidateBPercentageValue,
-          candidateBVotesValue: currentCandidateBVotesValue,
-          gapPpValue: currentGapPpValue,
-          gapVotesValue: currentGapVotesValue,
-          gapRaw:
-            candidateAItem && candidateBItem
-              ? candidateAItem.actualPercentage - candidateBItem.actualPercentage
-              : null
-        }}
-        projected={{
-          candidateAPercentageValue: projectedCandidateAPercentageValue,
-          candidateAVotesValue: projectedCandidateAVotesValue,
-          candidateBPercentageValue: projectedCandidateBPercentageValue,
-          candidateBVotesValue: projectedCandidateBVotesValue,
-          gapPpValue: projectedGapPpValue,
-          gapVotesValue: projectedGapVotesValue,
-          gapRaw:
-            candidateAItem && candidateBItem
-              ? candidateAItem.projectedPercentage - candidateBItem.projectedPercentage
-              : null
-        }}
-        onDetailClick={handleQuickInsightDetailClick}
-      />
+      {round === "first" ? (
+        <QuickInsightsSection
+          quickInsightsTitle={quickInsightsTitle}
+          actasPeruValue={formatPercent(snapshot.national.actasContabilizadasPct, 2)}
+          actasExteriorValue={formatPercent(snapshot.foreign.actasContabilizadasPct, 2)}
+          deltaProyeccionValue={formatSignedNumber(
+            snapshot.projectedNational.totalProjectedValidVotes -
+              (snapshot.national.totalVotosValidos + snapshot.foreign.totalVotosValidos)
+          )}
+          candidateA={{
+            label: candidateALabel,
+            code: comparisonPair?.candidateACode ?? "otros",
+            deltaValue: candidateAItem ? `${formatSignedDecimal(candidateAItem.deltaPercentage, 2)} pp` : null,
+            item: candidateAItem
+          }}
+          candidateB={{
+            label: candidateBLabel,
+            code: comparisonPair?.candidateBCode ?? "otros",
+            deltaValue: candidateBItem ? `${formatSignedDecimal(candidateBItem.deltaPercentage, 2)} pp` : null,
+            item: candidateBItem
+          }}
+          current={{
+            candidateAPercentageValue: candidateAItem ? formatPercent(candidateAItem.actualPercentage, 2) : null,
+            candidateAVotesValue: candidateAItem ? `${formatNumber(candidateAItem.actualVotes)} votos` : null,
+            candidateBPercentageValue: candidateBItem ? formatPercent(candidateBItem.actualPercentage, 2) : null,
+            candidateBVotesValue: candidateBItem ? `${formatNumber(candidateBItem.actualVotes)} votos` : null,
+            gapPpValue:
+              candidateAItem && candidateBItem
+                ? `${formatSignedDecimal(candidateAItem.actualPercentage - candidateBItem.actualPercentage, 2)} pp`
+                : null,
+            gapVotesValue:
+              candidateAItem && candidateBItem
+                ? `${formatSignedNumber(candidateAItem.actualVotes - candidateBItem.actualVotes)} votos`
+                : null,
+            gapRaw:
+              candidateAItem && candidateBItem
+                ? candidateAItem.actualPercentage - candidateBItem.actualPercentage
+                : null
+          }}
+          projected={{
+            candidateAPercentageValue: candidateAItem ? formatPercent(candidateAItem.projectedPercentage, 2) : null,
+            candidateAVotesValue: candidateAItem ? `${formatNumber(candidateAItem.projectedVotes)} votos` : null,
+            candidateBPercentageValue: candidateBItem ? formatPercent(candidateBItem.projectedPercentage, 2) : null,
+            candidateBVotesValue: candidateBItem ? `${formatNumber(candidateBItem.projectedVotes)} votos` : null,
+            gapPpValue:
+              candidateAItem && candidateBItem
+                ? `${formatSignedDecimal(candidateAItem.projectedPercentage - candidateBItem.projectedPercentage, 2)} pp`
+                : null,
+            gapVotesValue:
+              candidateAItem && candidateBItem
+                ? `${formatSignedNumber(candidateAItem.projectedVotes - candidateBItem.projectedVotes)} votos`
+                : null,
+            gapRaw:
+              candidateAItem && candidateBItem
+                ? candidateAItem.projectedPercentage - candidateBItem.projectedPercentage
+                : null
+          }}
+          onDetailClick={handleQuickInsightDetailClick}
+        />
+      ) : (
+        <SecondRoundSummarySection
+          candidateA={candidateAItem}
+          candidateB={candidateBItem}
+          sourceLastUpdatedAt={snapshot.sourceLastUpdatedAt}
+          actasPeruPct={snapshot.national.actasContabilizadasPct}
+          actasExteriorPct={snapshot.foreign.actasContabilizadasPct}
+        />
+      )}
 
       <section className="content-grid">
         <FeaturedComparisonSection items={featuredComparisonBars} />
@@ -601,6 +585,50 @@ export default function App() {
         />
         <MethodologySection />
       </section>
+    </div>
+  );
+}
+
+export default function App() {
+  const [activeRound, setActiveRound] = useState<ElectionRound>("second");
+  const [clockNow, setClockNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    initializeAnalytics();
+    trackInitialPageView();
+  }, []);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setClockNow(Date.now());
+    }, 15000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  return (
+    <main className="page-shell">
+      <nav className="round-tabs" aria-label="Seleccionar vuelta electoral">
+        <button
+          type="button"
+          className={`round-tabs__tab ${activeRound === "first" ? "is-active" : ""}`}
+          aria-pressed={activeRound === "first"}
+          onClick={() => setActiveRound("first")}
+        >
+          Primera vuelta
+        </button>
+        <button
+          type="button"
+          className={`round-tabs__tab ${activeRound === "second" ? "is-active" : ""}`}
+          aria-pressed={activeRound === "second"}
+          onClick={() => setActiveRound("second")}
+        >
+          Segunda vuelta
+        </button>
+      </nav>
+
+      <RoundView round="first" active={activeRound === "first"} clockNow={clockNow} />
+      <RoundView round="second" active={activeRound === "second"} clockNow={clockNow} />
     </main>
   );
 }

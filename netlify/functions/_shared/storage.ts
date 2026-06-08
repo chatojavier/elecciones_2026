@@ -1,10 +1,9 @@
 import { getStore } from "@netlify/blobs";
 
 import {
-  HEALTH_KEY,
-  SNAPSHOT_KEY,
-  SYNC_LOCK_KEY,
-  STORAGE_NAME
+  FIRST_ROUND_STORAGE,
+  STORAGE_NAME,
+  type RoundStorageConfig
 } from "./config";
 import {
   parseElectionSnapshot,
@@ -28,28 +27,46 @@ function getStorageStore() {
   return getStore(STORAGE_NAME);
 }
 
-export async function readSnapshot() {
+function resolveStorageConfig(config?: RoundStorageConfig) {
+  return config ?? FIRST_ROUND_STORAGE;
+}
+
+export async function readSnapshot(config?: RoundStorageConfig) {
+  const storage = resolveStorageConfig(config);
   const store = getStorageStore();
-  const snapshot = (await store.get(SNAPSHOT_KEY, { type: "json" })) as unknown;
+  const snapshot = (await store.get(storage.snapshotKey, { type: "json" })) as unknown;
   if (snapshot == null) {
     return null;
   }
   try {
-    return hydrateSnapshotFreshness(normalizeElectionSnapshot(parseElectionSnapshot(snapshot)));
+    const parsedSnapshot = hydrateSnapshotFreshness(
+      normalizeElectionSnapshot(parseElectionSnapshot(snapshot))
+    );
+
+    if (parsedSnapshot.round !== storage.round) {
+      console.warn(
+        `[storage] snapshot round mismatch ignored: expected ${storage.round}, got ${parsedSnapshot.round}`
+      );
+      return null;
+    }
+
+    return parsedSnapshot;
   } catch (error) {
     console.warn(`[storage] invalid snapshot blob ignored: ${(error as Error).message}`);
     return null;
   }
 }
 
-export async function writeSnapshot(snapshot: ElectionSnapshot) {
+export async function writeSnapshot(snapshot: ElectionSnapshot, config?: RoundStorageConfig) {
+  const storage = resolveStorageConfig(config);
   const store = getStorageStore();
-  await store.setJSON(SNAPSHOT_KEY, snapshot);
+  await store.setJSON(storage.snapshotKey, snapshot);
 }
 
-export async function readHealth() {
+export async function readHealth(config?: RoundStorageConfig) {
+  const storage = resolveStorageConfig(config);
   const store = getStorageStore();
-  const health = (await store.get(HEALTH_KEY, { type: "json" })) as unknown;
+  const health = (await store.get(storage.healthKey, { type: "json" })) as unknown;
   if (health == null) {
     return null;
   }
@@ -61,22 +78,26 @@ export async function readHealth() {
   }
 }
 
-export async function writeHealth(health: HealthStatus) {
+export async function writeHealth(health: HealthStatus, config?: RoundStorageConfig) {
+  const storage = resolveStorageConfig(config);
   const store = getStorageStore();
-  await store.setJSON(HEALTH_KEY, health);
+  await store.setJSON(storage.healthKey, health);
 }
 
-export async function readSyncLock() {
+export async function readSyncLock(config?: RoundStorageConfig) {
+  const storage = resolveStorageConfig(config);
   const store = getStorageStore();
-  return (await store.get(SYNC_LOCK_KEY, { type: "json" })) as unknown;
+  return (await store.get(storage.syncLockKey, { type: "json" })) as unknown;
 }
 
-export async function writeSyncLock(lock: SyncLock) {
+export async function writeSyncLock(lock: SyncLock, config?: RoundStorageConfig) {
+  const storage = resolveStorageConfig(config);
   const store = getStorageStore();
-  await store.setJSON(SYNC_LOCK_KEY, lock);
+  await store.setJSON(storage.syncLockKey, lock);
 }
 
-export async function deleteSyncLock() {
+export async function deleteSyncLock(config?: RoundStorageConfig) {
+  const storage = resolveStorageConfig(config);
   const store = getStorageStore();
-  await store.delete(SYNC_LOCK_KEY);
+  await store.delete(storage.syncLockKey);
 }

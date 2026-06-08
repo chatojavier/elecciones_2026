@@ -8,12 +8,18 @@ import {
   getSourceAgeMinutes,
   getSourceHasNewCut
 } from "../lib/trust";
-import type { ElectionSnapshot, HealthStatus } from "../lib/types";
+import type { ElectionRound, ElectionSnapshot, HealthStatus } from "../lib/types";
 import type { RefreshFeedback } from "./useFreshnessStatus";
 
 const AUTO_REFRESH_FAILURE_RETRY_MS = 5 * 60 * 1000;
 
-export function useElectionData({ clockNow }: { clockNow: number }) {
+export function useElectionData({
+  clockNow,
+  round = "first"
+}: {
+  clockNow: number;
+  round?: ElectionRound;
+}) {
   const [snapshot, setSnapshot] = useState<ElectionSnapshot | null>(null);
   const [health, setHealth] = useState<HealthStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +57,7 @@ export function useElectionData({ clockNow }: { clockNow: number }) {
 
       try {
         const previousSnapshot = snapshotRef.current;
-        const data = background ? await refreshAppData() : await fetchAppData();
+        const data = background ? await refreshAppData(round) : await fetchAppData(round);
 
         setSnapshot(data.snapshot);
         setHealth(data.health);
@@ -78,7 +84,8 @@ export function useElectionData({ clockNow }: { clockNow: number }) {
             app_freshness_status: deriveAppFreshnessStatus(data.health.lastSuccessAt, clockNowRef.current),
             source_age_minutes: getSourceAgeMinutes(data.snapshot.sourceLastUpdatedAt, clockNowRef.current),
             source_has_new_cut: sourceHasNewCut,
-            snapshot_generated_at: data.snapshot.generatedAt
+            snapshot_generated_at: data.snapshot.generatedAt,
+            round
           });
         }
       } catch (reason) {
@@ -115,7 +122,8 @@ export function useElectionData({ clockNow }: { clockNow: number }) {
                 )
                 : undefined,
               snapshot_generated_at: currentSnapshot?.generatedAt,
-              error_message: message
+              error_message: message,
+              round
             });
           }
         } else {
@@ -129,7 +137,7 @@ export function useElectionData({ clockNow }: { clockNow: number }) {
         }
       }
     },
-    []
+    [round]
   );
 
   const loadInitial = useCallback(async () => {

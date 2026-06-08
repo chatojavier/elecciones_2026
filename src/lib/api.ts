@@ -1,34 +1,63 @@
 import {
   DEV_REFRESH_ENDPOINT,
   HEALTH_ENDPOINT,
+  SECOND_ROUND_HEALTH_ENDPOINT,
+  SECOND_ROUND_SNAPSHOT_ENDPOINT,
+  SECOND_ROUND_SYNC_ENDPOINT,
   SNAPSHOT_ENDPOINT,
   SYNC_ENDPOINT
 } from "./constants";
 import { parseElectionSnapshot, parseHealthStatus } from "./contracts";
 import { normalizeElectionSnapshot } from "./normalizeSnapshot";
-import type { ElectionSnapshot, HealthStatus } from "./types";
+import type { ElectionRound, ElectionSnapshot, HealthStatus } from "./types";
 
 export interface AppData {
   snapshot: ElectionSnapshot;
   health: HealthStatus;
 }
 
-const DEV_SNAPSHOT_ENDPOINT = "/dev-snapshot.json";
+interface RoundEndpoints {
+  snapshot: string;
+  health: string;
+  sync: string;
+  devSnapshot: string;
+}
+
+const ROUND_ENDPOINTS: Record<ElectionRound, RoundEndpoints> = {
+  first: {
+    snapshot: SNAPSHOT_ENDPOINT,
+    health: HEALTH_ENDPOINT,
+    sync: SYNC_ENDPOINT,
+    devSnapshot: "/dev-snapshot.json"
+  },
+  second: {
+    snapshot: SECOND_ROUND_SNAPSHOT_ENDPOINT,
+    health: SECOND_ROUND_HEALTH_ENDPOINT,
+    sync: SECOND_ROUND_SYNC_ENDPOINT,
+    devSnapshot: "/dev-snapshot-second-round.json"
+  }
+};
 
 function useNetlifyFunctionsInDev() {
   return import.meta.env.VITE_USE_NETLIFY_FUNCTIONS === "true";
 }
 
-function getSnapshotCandidates() {
+function getRoundEndpoints(round: ElectionRound): RoundEndpoints {
+  return ROUND_ENDPOINTS[round];
+}
+
+function getSnapshotCandidates(round: ElectionRound) {
+  const endpoints = getRoundEndpoints(round);
+
   if (import.meta.env.DEV) {
     if (useNetlifyFunctionsInDev()) {
-      return [SNAPSHOT_ENDPOINT];
+      return [endpoints.snapshot];
     }
 
-    return [DEV_SNAPSHOT_ENDPOINT, SNAPSHOT_ENDPOINT];
+    return [endpoints.devSnapshot, endpoints.snapshot];
   }
 
-  return [SNAPSHOT_ENDPOINT];
+  return [endpoints.snapshot];
 }
 
 async function parseSnapshotResponse(endpoint: string, response: Response) {
@@ -137,18 +166,18 @@ async function fetchSnapshotFromEndpoint(endpoint: string) {
   return parseSnapshotResponse(endpoint, response);
 }
 
-async function fetchHealth() {
-  const response = await fetch(buildRequestUrl(HEALTH_ENDPOINT), {
+async function fetchHealth(round: ElectionRound) {
+  const response = await fetch(buildRequestUrl(getRoundEndpoints(round).health), {
     cache: "no-store"
   });
 
   return parseHealthResponse(response);
 }
 
-export async function fetchSnapshot() {
+export async function fetchSnapshot(round: ElectionRound = "first") {
   const errors: string[] = [];
 
-  for (const endpoint of getSnapshotCandidates()) {
+  for (const endpoint of getSnapshotCandidates(round)) {
     try {
       return await fetchSnapshotFromEndpoint(endpoint);
     } catch (error) {
@@ -159,9 +188,9 @@ export async function fetchSnapshot() {
   throw new Error(errors[0] ?? "No se pudo cargar el snapshot público.");
 }
 
-export async function fetchAppData(): Promise<AppData> {
-  const snapshotPromise = fetchSnapshot();
-  const healthPromise = fetchHealth().catch(() => null);
+export async function fetchAppData(round: ElectionRound = "first"): Promise<AppData> {
+  const snapshotPromise = fetchSnapshot(round);
+  const healthPromise = fetchHealth(round).catch(() => null);
 
   const snapshot = await snapshotPromise;
   const health = await healthPromise;
@@ -172,9 +201,12 @@ export async function fetchAppData(): Promise<AppData> {
   };
 }
 
-export async function refreshAppData(): Promise<AppData> {
+export async function refreshAppData(round: ElectionRound = "first"): Promise<AppData> {
+  const endpoints = getRoundEndpoints(round);
   const syncEndpoint =
-    import.meta.env.DEV && !useNetlifyFunctionsInDev() ? DEV_REFRESH_ENDPOINT : SYNC_ENDPOINT;
+    import.meta.env.DEV && !useNetlifyFunctionsInDev() && round === "first"
+      ? DEV_REFRESH_ENDPOINT
+      : endpoints.sync;
   const syncResponse = await fetch(buildRequestUrl(syncEndpoint), {
     method: "POST",
     cache: "no-store"
@@ -188,5 +220,5 @@ export async function refreshAppData(): Promise<AppData> {
     };
   }
 
-  return fetchAppData();
+  return fetchAppData(round);
 }

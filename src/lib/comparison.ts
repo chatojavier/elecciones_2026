@@ -22,7 +22,7 @@ export interface ComparisonPair {
   candidateBCode: string;
 }
 
-export type ComparisonPairInitSource = "default_rank_2v3" | "fallback";
+export type ComparisonPairInitSource = "default_rank_2v3" | "default_finalists" | "fallback";
 
 export interface ComparisonPairResolution {
   pair: ComparisonPair;
@@ -296,10 +296,22 @@ function chooseFallbackCode(
 
 function resolvePairInitSource(
   rankedCandidates: SecondRoundCandidate[],
-  pair: ComparisonPair
+  pair: ComparisonPair,
+  round: ElectionSnapshot["round"]
 ): ComparisonPairInitSource {
+  const rank1 = rankedCandidates[0];
   const rank2 = rankedCandidates[1];
   const rank3 = rankedCandidates[2];
+
+  if (
+    round === "second" &&
+    rank1 &&
+    rank2 &&
+    pair.candidateACode === rank1.code &&
+    pair.candidateBCode === rank2.code
+  ) {
+    return "default_finalists";
+  }
 
   if (
     rank2 &&
@@ -356,13 +368,19 @@ export function resolveDefaultComparisonPair(
   snapshot: ElectionSnapshot
 ): ComparisonPairResolution {
   const rankedCandidates = buildSelectableProjectedVoteEntries(snapshot);
+  const defaultRank1 = rankedCandidates[0];
   const defaultRank2 = rankedCandidates[1];
   const defaultRank3 = rankedCandidates[2];
   const fallbackA = rankedCandidates[0];
   const fallbackB = rankedCandidates[1];
 
   const pair: ComparisonPair =
-    defaultRank2 && defaultRank3
+    snapshot.round === "second" && defaultRank1 && defaultRank2
+      ? {
+        candidateACode: defaultRank1.code,
+        candidateBCode: defaultRank2.code
+      }
+      : defaultRank2 && defaultRank3
       ? {
         candidateACode: defaultRank2.code,
         candidateBCode: defaultRank3.code
@@ -374,7 +392,7 @@ export function resolveDefaultComparisonPair(
 
   return {
     pair,
-    initSource: resolvePairInitSource(rankedCandidates, pair),
+    initSource: resolvePairInitSource(rankedCandidates, pair, snapshot.round),
     status: "initialized"
   };
 }
@@ -392,7 +410,7 @@ export function reconcileComparisonPair(
   if (hasA && hasB && isDistinct) {
     return {
       pair,
-      initSource: resolvePairInitSource(buildSelectableProjectedVoteEntries(snapshot), pair),
+      initSource: resolvePairInitSource(buildSelectableProjectedVoteEntries(snapshot), pair, snapshot.round),
       status: "preserved"
     };
   }
@@ -415,7 +433,11 @@ export function reconcileComparisonPair(
 
   return {
     pair: resolvedPair,
-    initSource: resolvePairInitSource(buildSelectableProjectedVoteEntries(snapshot), resolvedPair),
+    initSource: resolvePairInitSource(
+      buildSelectableProjectedVoteEntries(snapshot),
+      resolvedPair,
+      snapshot.round
+    ),
     status: "reassigned"
   };
 }

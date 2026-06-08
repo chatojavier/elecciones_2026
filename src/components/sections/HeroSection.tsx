@@ -12,7 +12,15 @@ export function HeroSection({
   snapshotGeneratedAt,
   onRefreshClick,
   onPrimaryCtaClick,
-  onSecondaryCtaClick
+  onSecondaryCtaClick,
+  eyebrow = "Resultados presidenciales 2026",
+  title = "Conteo de votos y proyección nacional",
+  lede = "Consulta resultados ONPE, compara candidatos y explora regiones y votos extranjeros con datos actualizados.",
+  primaryCtaLabel = "Explorar regiones",
+  secondaryCtaLabel = "Ver metodología",
+  primaryCtaHref = "#lectura-regional",
+  secondaryCtaHref = "#metodologia",
+  microcopy = "Actualizamos esta vista con nuevos cortes oficiales de ONPE."
 }: {
   appLastSuccessAt: string | null;
   clockNow: number;
@@ -25,35 +33,38 @@ export function HeroSection({
   onRefreshClick: () => void;
   onPrimaryCtaClick: () => void;
   onSecondaryCtaClick: () => void;
+  eyebrow?: string;
+  title?: string;
+  lede?: string;
+  primaryCtaLabel?: string;
+  secondaryCtaLabel?: string;
+  primaryCtaHref?: string;
+  secondaryCtaHref?: string;
+  microcopy?: string;
 }) {
   return (
     <section className="hero">
       <div className="hero__copy">
-        <p className="eyebrow">Resultados presidenciales 2026</p>
-        <h1>Conteo de votos y proyección nacional</h1>
-        <p className="hero__lede">
-          Consulta resultados ONPE, compara candidatos y explora regiones y votos extranjeros con datos
-          actualizados.
-        </p>
+        <p className="eyebrow">{eyebrow}</p>
+        <h1>{title}</h1>
+        <p className="hero__lede">{lede}</p>
         <div className="hero__actions">
           <a
             className="hero__cta hero__cta--primary"
-            href="#lectura-regional"
+            href={primaryCtaHref}
             onClick={onPrimaryCtaClick}
           >
-            Explorar regiones
+            {primaryCtaLabel}
           </a>
           <a
             className="hero__cta hero__cta--secondary"
-            href="#metodologia"
+            href={secondaryCtaHref}
             onClick={onSecondaryCtaClick}
           >
-            Ver metodología
+            {secondaryCtaLabel}
           </a>
         </div>
-        <p className="hero__microcopy">
-          Actualizamos esta vista con nuevos cortes oficiales de ONPE.
-        </p>
+        <p className="hero__microcopy">{microcopy}</p>
       </div>
 
       <div className="hero__status">

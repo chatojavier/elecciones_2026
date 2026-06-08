@@ -10,7 +10,8 @@ function createSnapshot(overrides: Partial<ElectionSnapshot> = {}) {
   return {
     generatedAt: "2026-04-15T12:05:00.000Z",
     sourceLastUpdatedAt: "2026-04-15T12:00:00.000Z",
-    ...overrides
+    ...overrides,
+    round: overrides.round ?? "first"
   } as ElectionSnapshot;
 }
 

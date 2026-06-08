@@ -5,6 +5,7 @@ export type ScopeKind =
   | "foreign_total"
   | "foreign_continent"
   | "foreign_country";
+export type ElectionRound = "first" | "second";
 export type HealthStatusKind = "healthy" | "degraded" | "unknown";
 
 export interface ScopeMeta {
@@ -42,10 +43,10 @@ export interface OnpeTotals {
   actasPendientesJee: number;
   pendientesJee: number;
   fechaActualizacion: number;
-  idUbigeoDepartamento: number;
-  idUbigeoProvincia: number;
-  idUbigeoDistrito: number;
-  idUbigeoDistritoElectoral: number;
+  idUbigeoDepartamento: number | null;
+  idUbigeoProvincia: number | null;
+  idUbigeoDistrito: number | null;
+  idUbigeoDistritoElectoral: number | null;
   totalVotosEmitidos: number;
   totalVotosValidos: number;
   porcentajeVotosEmitidos: number;
@@ -154,6 +155,7 @@ export interface ProjectedNationalSummary {
 }
 
 export interface ElectionSnapshot {
+  round: ElectionRound;
   generatedAt: string;
   sourceElectionId: number;
   sourceLastUpdatedAt: string;

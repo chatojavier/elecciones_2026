@@ -60,6 +60,7 @@ const scope: NationalResult = {
 };
 
 const snapshot: ElectionSnapshot = {
+  round: "first",
   generatedAt: new Date().toISOString(),
   sourceElectionId: 10,
   sourceLastUpdatedAt: new Date().toISOString(),

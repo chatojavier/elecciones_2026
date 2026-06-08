@@ -12,6 +12,60 @@
   --shadow: 0 24px 60px rgba(19, 36, 58, 0.12);
 }
 
+.round-tabs {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.round-tabs__tab {
+  border: 1px solid rgba(19, 36, 58, 0.14);
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 0.75rem 1.1rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.round-tabs__tab.is-active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.second-round-summary__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.second-round-summary__candidate,
+.second-round-summary__metric {
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.second-round-summary__candidate-label {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0;
+  font-weight: 700;
+}
+
+.second-round-summary__candidate-swatch {
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 999px;
+  flex: 0 0 auto;
+}
+
 * {
   box-sizing: border-box;
 }

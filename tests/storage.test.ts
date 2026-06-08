@@ -13,6 +13,7 @@ vi.mock("@netlify/blobs", () => ({
 }));
 
 import { readHealth, readSnapshot } from "../netlify/functions/_shared/storage";
+import { SECOND_ROUND_STORAGE } from "../netlify/functions/_shared/config";
 
 function createSnapshot() {
   const baseScope = {
@@ -43,6 +44,7 @@ function createSnapshot() {
   };
 
   return {
+    round: "first",
     generatedAt: "2026-04-21T12:01:00.000Z",
     sourceElectionId: 10,
     sourceLastUpdatedAt: "2026-04-21T12:00:00.000Z",
@@ -85,6 +87,33 @@ describe("storage contract parsing", () => {
     getMock.mockResolvedValue(createSnapshot());
     const result = await readSnapshot();
     expect(result?.foreign.continents).toEqual([]);
+  });
+
+  it("readSnapshot ignora blob con round distinto al esperado", async () => {
+    getMock.mockResolvedValue({
+      ...createSnapshot(),
+      round: "second"
+    });
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    const result = await readSnapshot();
+
+    expect(result).toBeNull();
+    expect(warnSpy).toHaveBeenCalledWith(
+      "[storage] snapshot round mismatch ignored: expected first, got second"
+    );
+    warnSpy.mockRestore();
+  });
+
+  it("readSnapshot acepta round coincidente para segunda vuelta", async () => {
+    getMock.mockResolvedValue({
+      ...createSnapshot(),
+      round: "second"
+    });
+
+    const result = await readSnapshot(SECOND_ROUND_STORAGE);
+
+    expect(result?.round).toBe("second");
   });
 
   it("readHealth ignora blob invalido", async () => {

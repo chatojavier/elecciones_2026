@@ -12,6 +12,7 @@
     "functions:invoke:sync": "netlify functions:invoke sync",
     "onpe:check": "node scripts/check-onpe-session.mjs",
     "snapshot:dev": "node scripts/generate-dev-snapshot.mjs",
+    "snapshot:dev:second-round": "DEV_SNAPSHOT_ROUND=second node scripts/generate-dev-snapshot.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },

@@ -1,6 +1,7 @@
 import type {
   BaseScopeResult,
   ElectionSnapshot,
+  ElectionRound,
   ForeignContinentResult,
   ForeignCountryResult,
   ForeignResult,
@@ -58,6 +59,14 @@ function requireFiniteNumber(value: unknown, contract: string, path: string) {
   return value;
 }
 
+function requireNullableFiniteNumber(value: unknown, contract: string, path: string) {
+  if (value === null) {
+    return null;
+  }
+
+  return requireFiniteNumber(value, contract, path);
+}
+
 function requireBoolean(value: unknown, contract: string, path: string) {
   if (typeof value !== "boolean") {
     fail(contract, path, "se esperaba boolean");
@@ -89,6 +98,10 @@ function requireIsoDateString(value: unknown, contract: string, path: string) {
 
 function isHealthStatusKind(value: string): value is HealthStatusKind {
   return value === "healthy" || value === "degraded" || value === "unknown";
+}
+
+function isElectionRound(value: string): value is ElectionRound {
+  return value === "first" || value === "second";
 }
 
 function parseCandidateResult(value: unknown, path: string) {
@@ -298,7 +311,13 @@ function parseProjectedNational(value: unknown, path: string): ProjectedNational
 export function parseElectionSnapshot(value: unknown): ElectionSnapshot {
   const contract = "ElectionSnapshot";
   const record = asRecord(value, contract, "root");
+  const rawRound = record.round;
+  const round = rawRound === undefined ? "first" : requireString(rawRound, contract, "round");
+  if (!isElectionRound(round)) {
+    fail(contract, "round", "se esperaba first|second");
+  }
   return {
+    round,
     generatedAt: requireIsoDateString(record.generatedAt, contract, "generatedAt"),
     sourceElectionId: requireFiniteNumber(record.sourceElectionId, contract, "sourceElectionId"),
     sourceLastUpdatedAt: requireIsoDateString(
@@ -405,18 +424,22 @@ export function parseOnpeTotals(value: unknown, path = "root"): OnpeTotals {
       contract,
       `${path}.fechaActualizacion`
     ),
-    idUbigeoDepartamento: requireFiniteNumber(
+    idUbigeoDepartamento: requireNullableFiniteNumber(
       record.idUbigeoDepartamento,
       contract,
       `${path}.idUbigeoDepartamento`
     ),
-    idUbigeoProvincia: requireFiniteNumber(
+    idUbigeoProvincia: requireNullableFiniteNumber(
       record.idUbigeoProvincia,
       contract,
       `${path}.idUbigeoProvincia`
     ),
-    idUbigeoDistrito: requireFiniteNumber(record.idUbigeoDistrito, contract, `${path}.idUbigeoDistrito`),
-    idUbigeoDistritoElectoral: requireFiniteNumber(
+    idUbigeoDistrito: requireNullableFiniteNumber(
+      record.idUbigeoDistrito,
+      contract,
+      `${path}.idUbigeoDistrito`
+    ),
+    idUbigeoDistritoElectoral: requireNullableFiniteNumber(
       record.idUbigeoDistritoElectoral,
       contract,
       `${path}.idUbigeoDistritoElectoral`

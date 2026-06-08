@@ -9,11 +9,18 @@ const FEATURED_CANDIDATE_LIMIT = 5;
 const STALE_AFTER_MINUTES = 30;
 const DEFAULT_BASE_URL = "https://resultadoelectoral.onpe.gob.pe/presentacion-backend";
 const DEFAULT_REFERER = "https://resultadoelectoral.onpe.gob.pe/main/resumen";
+const DEFAULT_SECOND_ROUND_BASE_URL = "https://resultadosegundavuelta.onpe.gob.pe/presentacion-backend";
+const DEFAULT_SECOND_ROUND_REFERER = "https://resultadosegundavuelta.onpe.gob.pe/main/resumen";
 const DEFAULT_USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.4 Safari/605.1.15";
 const DEFAULT_ACCEPT_LANGUAGE = "en-GB,en-US;q=0.9,en;q=0.8";
 const DEFAULT_ELECTION_ID = "10";
 const DEFAULT_OUTPUT_PATH = resolve(process.cwd(), "public", "dev-snapshot.json");
+const DEFAULT_SECOND_ROUND_OUTPUT_PATH = resolve(
+  process.cwd(),
+  "public",
+  "dev-snapshot-second-round.json"
+);
 const PROVINCE_REQUEST_CONCURRENCY = 6;
 
 function round(value, digits = 3) {
@@ -92,18 +99,37 @@ async function loadConfig() {
   const envPath = resolve(process.cwd(), ".env");
   const rawEnv = await readOptionalText(envPath);
   const fileEnv = rawEnv ? parseDotEnv(rawEnv) : {};
+  const round = process.env.DEV_SNAPSHOT_ROUND === "second" ? "second" : "first";
 
   return {
-    baseUrl: process.env.ONPE_BASE_URL ?? fileEnv.ONPE_BASE_URL ?? DEFAULT_BASE_URL,
+    round,
+    baseUrl:
+      round === "second"
+        ? process.env.ONPE_SECOND_ROUND_BASE_URL ??
+          fileEnv.ONPE_SECOND_ROUND_BASE_URL ??
+          DEFAULT_SECOND_ROUND_BASE_URL
+        : process.env.ONPE_BASE_URL ?? fileEnv.ONPE_BASE_URL ?? DEFAULT_BASE_URL,
     cookie: process.env.ONPE_COOKIE ?? fileEnv.ONPE_COOKIE ?? "",
-    referer: process.env.ONPE_REFERER ?? fileEnv.ONPE_REFERER ?? DEFAULT_REFERER,
+    referer:
+      round === "second"
+        ? process.env.ONPE_SECOND_ROUND_REFERER ??
+          fileEnv.ONPE_SECOND_ROUND_REFERER ??
+          DEFAULT_SECOND_ROUND_REFERER
+        : process.env.ONPE_REFERER ?? fileEnv.ONPE_REFERER ?? DEFAULT_REFERER,
     userAgent: process.env.ONPE_USER_AGENT ?? fileEnv.ONPE_USER_AGENT ?? DEFAULT_USER_AGENT,
     acceptLanguage:
       process.env.ONPE_ACCEPT_LANGUAGE ??
       fileEnv.ONPE_ACCEPT_LANGUAGE ??
       DEFAULT_ACCEPT_LANGUAGE,
-    electionId: process.env.ONPE_ELECTION_ID ?? fileEnv.ONPE_ELECTION_ID ?? DEFAULT_ELECTION_ID,
-    outputPath: process.env.DEV_SNAPSHOT_OUTPUT_PATH ?? DEFAULT_OUTPUT_PATH
+    electionId:
+      round === "second"
+        ? process.env.ONPE_SECOND_ROUND_ELECTION_ID ??
+          fileEnv.ONPE_SECOND_ROUND_ELECTION_ID ??
+          DEFAULT_ELECTION_ID
+        : process.env.ONPE_ELECTION_ID ?? fileEnv.ONPE_ELECTION_ID ?? DEFAULT_ELECTION_ID,
+    outputPath:
+      process.env.DEV_SNAPSHOT_OUTPUT_PATH ??
+      (round === "second" ? DEFAULT_SECOND_ROUND_OUTPUT_PATH : DEFAULT_OUTPUT_PATH)
   };
 }
 
@@ -692,6 +718,7 @@ async function buildElectionSnapshot(config) {
   }
 
   return {
+    round: config.round,
     generatedAt: new Date().toISOString(),
     sourceElectionId: Number(config.electionId),
     sourceLastUpdatedAt,

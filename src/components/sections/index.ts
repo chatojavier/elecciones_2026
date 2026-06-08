@@ -5,3 +5,4 @@ export { FeaturedComparisonSection } from "./FeaturedComparisonSection";
 export { RegionalResultsTable } from "./RegionalResultsTable";
 export { ForeignResultsTable } from "./ForeignResultsTable";
 export { MethodologySection } from "./MethodologySection";
+export { SecondRoundSummarySection } from "./SecondRoundSummarySection";

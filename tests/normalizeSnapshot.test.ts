@@ -2,6 +2,7 @@ import { normalizeElectionSnapshot } from "../src/lib/normalizeSnapshot";
 import type { ElectionSnapshot } from "../src/lib/types";
 
 const snapshot = {
+  round: "first",
   generatedAt: new Date("2026-04-16T13:00:00.000Z").toISOString(),
   sourceElectionId: 10,
   sourceLastUpdatedAt: new Date("2026-04-16T12:55:00.000Z").toISOString(),

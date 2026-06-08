@@ -55,4 +55,7 @@ export const SNAPSHOT_ENDPOINT = "/.netlify/functions/snapshot";
 export const SYNC_ENDPOINT = "/.netlify/functions/sync";
 export const DEV_REFRESH_ENDPOINT = "/api/refresh-snapshot";
 export const HEALTH_ENDPOINT = "/.netlify/functions/health";
+export const SECOND_ROUND_SNAPSHOT_ENDPOINT = "/.netlify/functions/snapshot-second-round";
+export const SECOND_ROUND_SYNC_ENDPOINT = "/.netlify/functions/sync-second-round";
+export const SECOND_ROUND_HEALTH_ENDPOINT = "/.netlify/functions/health-second-round";
 export const STALE_AFTER_MINUTES = 15;

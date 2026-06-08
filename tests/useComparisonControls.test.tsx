@@ -77,7 +77,8 @@ function createSnapshot(overrides: Partial<ElectionSnapshot> = {}): ElectionSnap
     },
     featuredCandidateCodes: ["8", "10", "12"],
     isStale: false,
-    ...overrides
+    ...overrides,
+    round: overrides.round ?? "first"
   };
 }
 

@@ -41,6 +41,7 @@ function createSnapshot(): ElectionSnapshot {
   };
 
   return {
+    round: "first",
     generatedAt: "2026-04-21T12:01:00.000Z",
     sourceElectionId: 10,
     sourceLastUpdatedAt: "2026-04-21T12:00:00.000Z",

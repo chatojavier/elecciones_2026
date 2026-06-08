@@ -28,6 +28,19 @@ VITE_USE_NETLIFY_FUNCTIONS=true
 
 `VITE_USE_NETLIFY_FUNCTIONS=true` fuerza al frontend a consumir `/.netlify/functions/*` durante desarrollo local.
 
+Para segunda vuelta, configura además:
+
+```bash
+ONPE_SECOND_ROUND_BASE_URL=https://resultadosegundavuelta.onpe.gob.pe/presentacion-backend
+ONPE_SECOND_ROUND_REFERER=https://resultadosegundavuelta.onpe.gob.pe/main/resumen
+ONPE_SECOND_ROUND_ELECTION_ID=10
+```
+
+La app mantiene dos pipelines paralelos:
+
+- Primera vuelta: `/.netlify/functions/snapshot`, `/.netlify/functions/sync`, `/.netlify/functions/health`
+- Segunda vuelta: `/.netlify/functions/snapshot-second-round`, `/.netlify/functions/sync-second-round`, `/.netlify/functions/health-second-round`
+
 ## Comando único de desarrollo local
 
 ```bash
@@ -44,8 +57,11 @@ Con `npm run dev:netlify` activo:
 ```bash
 curl -i http://localhost:8888/.netlify/functions/health
 curl -i http://localhost:8888/.netlify/functions/snapshot
+curl -i http://localhost:8888/.netlify/functions/snapshot-second-round
 curl -i http://localhost:8888/.netlify/functions/sync
+curl -i http://localhost:8888/.netlify/functions/sync-second-round
 curl -i -X POST http://localhost:8888/.netlify/functions/sync
+curl -i -X POST http://localhost:8888/.netlify/functions/sync-second-round
 ```
 
 Comportamiento esperado de `sync`:
@@ -70,6 +86,8 @@ npm run functions:invoke:sync
 npm test
 npm run build
 npm run netlify:build
+npm run snapshot:dev
+npm run snapshot:dev:second-round
 ```
 
 ## Limitaciones locales conocidas

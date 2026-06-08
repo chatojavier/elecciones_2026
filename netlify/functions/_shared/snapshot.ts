@@ -20,25 +20,16 @@ import type {
   RegionResult,
   ScopeMeta
 } from "../../../src/lib/types";
-import { ONPE_ELECTION_ID } from "./config";
+import {
+  FIRST_ROUND_ONPE_SOURCE,
+  FIRST_ROUND_STORAGE,
+  type OnpeSourceConfig,
+  type RoundStorageConfig
+} from "./config";
 import { getElapsedMinutes } from "./freshness";
 import {
-  fetchDepartments,
-  fetchForeignContinents,
-  fetchForeignContinentParticipants,
-  fetchForeignContinentTotals,
-  fetchForeignCountries,
-  fetchForeignCountryParticipants,
-  fetchForeignCountryTotals,
-  fetchForeignParticipants,
-  fetchForeignTotals,
-  fetchNationalParticipants,
-  fetchNationalTotals,
-  fetchProvinceParticipants,
-  fetchProvinceTotals,
-  fetchProvinces,
-  fetchRegionParticipants,
-  fetchRegionTotals
+  createOnpeClient,
+  type OnpeClient
 } from "./onpe";
 import {
   readHealth,
@@ -97,10 +88,16 @@ async function mapWithConcurrency<T, R>(
   return results;
 }
 
-export async function buildElectionSnapshot() {
+export async function buildElectionSnapshot({
+  onpeSource = FIRST_ROUND_ONPE_SOURCE,
+  onpeClient = createOnpeClient(onpeSource)
+}: {
+  onpeSource?: OnpeSourceConfig;
+  onpeClient?: OnpeClient;
+} = {}) {
   const [departmentList, foreignContinentList] = await Promise.all([
-    fetchDepartments(),
-    fetchForeignContinents()
+    onpeClient.fetchDepartments(),
+    onpeClient.fetchForeignContinents()
   ]);
 
   if (departmentList.length !== 25) {
@@ -109,13 +106,17 @@ export async function buildElectionSnapshot() {
 
   const [nationalTotals, nationalParticipants, foreignTotals, foreignParticipants] =
     await Promise.all([
-      fetchNationalTotals(),
-      fetchNationalParticipants(),
-      fetchForeignTotals(),
-      fetchForeignParticipants()
+      onpeClient.fetchNationalTotals(),
+      onpeClient.fetchNationalParticipants(),
+      onpeClient.fetchForeignTotals(),
+      onpeClient.fetchForeignParticipants()
     ]);
 
-  if (foreignContinentList.length === 0 && foreignTotals.contabilizadas > 0) {
+  if (
+    onpeSource.round === "first" &&
+    foreignContinentList.length === 0 &&
+    foreignTotals.contabilizadas > 0
+  ) {
     throw new Error(
       `ONPE devolvió 0 continentes pero el total extranjero tiene ${foreignTotals.contabilizadas} actas contabilizadas`
     );
@@ -140,9 +141,9 @@ export async function buildElectionSnapshot() {
       departmentList.map(async (department) => {
         const meta = getDepartmentMeta(department.ubigeo);
         const [totals, participants, provinceCatalog] = await Promise.all([
-          fetchRegionTotals(department.ubigeo),
-          fetchRegionParticipants(department.ubigeo),
-          fetchProvinces(department.ubigeo)
+          onpeClient.fetchRegionTotals(department.ubigeo),
+          onpeClient.fetchRegionParticipants(department.ubigeo),
+          onpeClient.fetchProvinces(department.ubigeo)
         ]);
 
         const provinces = (
@@ -151,8 +152,8 @@ export async function buildElectionSnapshot() {
             PROVINCE_REQUEST_CONCURRENCY,
             async (province) => {
               const [provinceTotals, provinceParticipants] = await Promise.all([
-                fetchProvinceTotals(department.ubigeo, province.ubigeo),
-                fetchProvinceParticipants(department.ubigeo, province.ubigeo)
+                onpeClient.fetchProvinceTotals(department.ubigeo, province.ubigeo),
+                onpeClient.fetchProvinceParticipants(department.ubigeo, province.ubigeo)
               ]);
 
               return buildProvinceResult({
@@ -188,9 +189,9 @@ export async function buildElectionSnapshot() {
     Promise.all(
       foreignContinentList.map(async (continent) => {
         const [totals, participants, countryCatalog] = await Promise.all([
-          fetchForeignContinentTotals(continent.ubigeo),
-          fetchForeignContinentParticipants(continent.ubigeo),
-          fetchForeignCountries(continent.ubigeo)
+          onpeClient.fetchForeignContinentTotals(continent.ubigeo),
+          onpeClient.fetchForeignContinentParticipants(continent.ubigeo),
+          onpeClient.fetchForeignCountries(continent.ubigeo)
         ]);
 
         const countries = (
@@ -199,8 +200,8 @@ export async function buildElectionSnapshot() {
             PROVINCE_REQUEST_CONCURRENCY,
             async (country) => {
               const [countryTotals, countryParticipants] = await Promise.all([
-                fetchForeignCountryTotals(continent.ubigeo, country.ubigeo),
-                fetchForeignCountryParticipants(continent.ubigeo, country.ubigeo)
+                onpeClient.fetchForeignCountryTotals(continent.ubigeo, country.ubigeo),
+                onpeClient.fetchForeignCountryParticipants(continent.ubigeo, country.ubigeo)
               ]);
 
               return buildForeignCountryResult({
@@ -216,7 +217,7 @@ export async function buildElectionSnapshot() {
           )
         ).sort((left, right) => left.label.localeCompare(right.label, "es"));
 
-        if (countries.length === 0 && totals.contabilizadas > 0) {
+        if (onpeSource.round === "first" && countries.length === 0 && totals.contabilizadas > 0) {
           throw new Error(
             `Continente ${continent.nombre} tiene ${totals.contabilizadas} actas contabilizadas pero ONPE devolvió 0 países`
           );
@@ -287,8 +288,9 @@ export async function buildElectionSnapshot() {
   );
 
   const snapshot: ElectionSnapshot = {
+    round: onpeSource.round,
     generatedAt,
-    sourceElectionId: ONPE_ELECTION_ID,
+    sourceElectionId: onpeSource.electionId,
     sourceLastUpdatedAt,
     national,
     foreign,
@@ -312,20 +314,28 @@ function healthFromSnapshot(snapshot: ElectionSnapshot): HealthStatus {
   };
 }
 
-export async function runSync() {
+export async function runSync({
+  onpeSource = FIRST_ROUND_ONPE_SOURCE,
+  storage = FIRST_ROUND_STORAGE,
+  onpeClient = createOnpeClient(onpeSource)
+}: {
+  onpeSource?: OnpeSourceConfig;
+  storage?: RoundStorageConfig;
+  onpeClient?: OnpeClient;
+} = {}) {
   try {
-    const snapshot = await buildElectionSnapshot();
+    const snapshot = await buildElectionSnapshot({ onpeSource, onpeClient });
     const health = healthFromSnapshot(snapshot);
 
-    await Promise.all([writeSnapshot(snapshot), writeHealth(health)]);
+    await Promise.all([writeSnapshot(snapshot, storage), writeHealth(health, storage)]);
 
     return {
       snapshot,
       health
     };
   } catch (error) {
-    const previousSnapshot = await readSnapshot();
-    const previousHealth = await readHealth();
+    const previousSnapshot = await readSnapshot(storage);
+    const previousHealth = await readHealth(storage);
     const now = new Date().toISOString();
 
     const staleMinutes = previousSnapshot
@@ -341,7 +351,7 @@ export async function runSync() {
       lastError: (error as Error).message
     };
 
-    await writeHealth(degradedHealth);
+    await writeHealth(degradedHealth, storage);
     throw error;
   }
 }
